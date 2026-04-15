@@ -1,6 +1,6 @@
 {
   "meta": {
-    "version": 1,
+    "version": 2,
     "description": "MultiDeck persona registry. Single source of truth for agent callsigns, colors, voices, working directories, and activation metadata.",
     "last_updated": "2026-04-15"
   },
@@ -54,6 +54,46 @@
       "agent_file": "personas/RESEARCHER_AGENT.md",
       "description": "Investigation, evidence grading, source citation, research.",
       "scope": "investigation"
+    },
+    "launcher-engineer": {
+      "callsign": "Launcher-Engineer",
+      "color_hex": "#14B8A6",
+      "tab_color": "#042F2E",
+      "voice_key": "launcher-engineer",
+      "cwd": "${DISPATCH_ROOT}",
+      "agent_file": "personas/LAUNCHER_ENGINEER_AGENT.md",
+      "description": "MultiDeck launcher UI, dashboard routes, Windows Terminal integration, persona spawning.",
+      "scope": "project:multideck"
+    },
+    "voice-technician": {
+      "callsign": "Voice-Technician",
+      "color_hex": "#8B5CF6",
+      "tab_color": "#1E1B4B",
+      "voice_key": "voice-technician",
+      "cwd": "${DISPATCH_ROOT}/hooks",
+      "agent_file": "personas/VOICE_TECHNICIAN_AGENT.md",
+      "description": "Kokoro TTS hooks, mutex queue, per-session voice isolation, callsign announcements, custom voice blends.",
+      "scope": "project:multideck"
+    },
+    "persona-author": {
+      "callsign": "Persona-Author",
+      "color_hex": "#D946EF",
+      "tab_color": "#3B0764",
+      "voice_key": "persona-author",
+      "cwd": "${DISPATCH_ROOT}/personas",
+      "agent_file": "personas/PERSONA_AUTHOR_AGENT.md",
+      "description": "Meta persona. Writes new AGENT.md files, maintains personas.json registry, keeps templates in sync.",
+      "scope": "project:multideck"
+    },
+    "commercial-producer": {
+      "callsign": "Commercial-Producer",
+      "color_hex": "#F43F5E",
+      "tab_color": "#4C0519",
+      "voice_key": "commercial-producer",
+      "cwd": "${DISPATCH_ROOT}/commercials",
+      "agent_file": "personas/COMMERCIAL_PRODUCER_AGENT.md",
+      "description": "End-to-end commercial production: script, VO, music bed, scene direction, review gate, final master.",
+      "scope": "project:multideck"
     }
   }
 }

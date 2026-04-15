@@ -13,8 +13,17 @@ Users can extend VOICE_MAP with custom personas. Custom voice tensors are added 
 import sys, os, json
 
 VOICE_MAP = {
-    # MultiDeck Framework default personas
-    "dispatch":   {"voice": "af_sky",    "lang": "a", "speed": 0.95, "callsign": "Dispatch"},
+    "dispatch":           {"voice": "af_sky",    "lang": "a", "speed": 0.95, "callsign": "Dispatch"},
+    "architect":          {"voice": "bm_daniel", "lang": "b", "speed": 1.05, "callsign": "Architect"},
+    "engineer":           {"voice": "am_eric",   "lang": "a", "speed": 1.05, "callsign": "Engineer"},
+    "reviewer":           {"voice": "bm_lewis",  "lang": "b", "speed": 1.05, "callsign": "Reviewer"},
+    "researcher":         {"voice": "bf_emma",   "lang": "b", "speed": 1.05, "callsign": "Researcher"},
+    "launcher-engineer":  {"voice": "am_michael","lang": "a", "speed": 1.05, "callsign": "Launcher-Engineer"},
+    "voice-technician":   {"voice": "af_nova",   "lang": "a", "speed": 1.05, "callsign": "Voice-Technician"},
+    "persona-author":     {"voice": "af_heart",  "lang": "a", "speed": 1.0,  "callsign": "Persona-Author"},
+    "commercial-producer":{"voice": "bm_fable",  "lang": "b", "speed": 0.95, "callsign": "Commercial-Producer"},
+    "default":            {"voice": "am_puck",   "lang": "a", "speed": 1.05, "callsign": ""},
+},
     "architect":  {"voice": "bm_daniel", "lang": "b", "speed": 1.05, "callsign": "Architect"},
     "engineer":   {"voice": "am_eric",   "lang": "a", "speed": 1.05, "callsign": "Engineer"},
     "reviewer":   {"voice": "bm_lewis",  "lang": "b", "speed": 1.05, "callsign": "Reviewer"},
