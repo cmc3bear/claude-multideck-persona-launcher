@@ -1,0 +1,5 @@
+kokoro>=0.9.0
+soundfile
+torch
+numpy
+pywin32; sys_platform == 'win32'

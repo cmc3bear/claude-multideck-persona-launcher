@@ -1,0 +1,59 @@
+{
+  "meta": {
+    "version": 1,
+    "description": "MultiDeck persona registry. Single source of truth for agent callsigns, colors, voices, working directories, and activation metadata.",
+    "last_updated": "2026-04-15"
+  },
+  "personas": {
+    "dispatch": {
+      "callsign": "Dispatch",
+      "color_hex": "#00FFCC",
+      "tab_color": "#003833",
+      "voice_key": "dispatch",
+      "cwd": "${DISPATCH_USER_ROOT}",
+      "agent_file": "personas/DISPATCH_AGENT.md",
+      "description": "Workspace-level ambient coordinator. Cross-project routing, calendar, email, briefings.",
+      "scope": "workspace"
+    },
+    "architect": {
+      "callsign": "Architect",
+      "color_hex": "#FFB700",
+      "tab_color": "#3B2900",
+      "voice_key": "architect",
+      "cwd": "${DISPATCH_USER_ROOT}",
+      "agent_file": "personas/ARCHITECT_AGENT.md",
+      "description": "Project structure, PM, documentation, cross-agent coordination.",
+      "scope": "project-structure"
+    },
+    "engineer": {
+      "callsign": "Engineer",
+      "color_hex": "#0088FF",
+      "tab_color": "#002344",
+      "voice_key": "engineer",
+      "cwd": "${DISPATCH_USER_ROOT}",
+      "agent_file": "personas/ENGINEER_AGENT.md",
+      "description": "Code implementation, testing, debugging, build validation.",
+      "scope": "code-implementation"
+    },
+    "reviewer": {
+      "callsign": "Reviewer",
+      "color_hex": "#EF4444",
+      "tab_color": "#450A0A",
+      "voice_key": "reviewer",
+      "cwd": "${DISPATCH_USER_ROOT}",
+      "agent_file": "personas/REVIEWER_AGENT.md",
+      "description": "Quality gate. Reviews every completed job, PASS/FLAG, fix loops, escalation.",
+      "scope": "quality-gate"
+    },
+    "researcher": {
+      "callsign": "Researcher",
+      "color_hex": "#A855F7",
+      "tab_color": "#2E1065",
+      "voice_key": "researcher",
+      "cwd": "${DISPATCH_USER_ROOT}",
+      "agent_file": "personas/RESEARCHER_AGENT.md",
+      "description": "Investigation, evidence grading, source citation, research.",
+      "scope": "investigation"
+    }
+  }
+}

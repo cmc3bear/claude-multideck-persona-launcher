@@ -1,0 +1,63 @@
+# Node modules
+node_modules/
+package-lock.json
+yarn.lock
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.venv/
+venv/
+kokoro-venv/
+
+# Runtime state (allow templates)
+state/*.json
+!state/*.template.json
+
+# Generated content
+briefings/*.md
+tts-output/*.mp3
+tts-output/*.wav
+.kokoro-speak-lock/
+voice-config-*.json
+
+# OS files
+.DS_Store
+Thumbs.db
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.vim/
+
+# Secrets
+.env
+.env.local
+.env.*.local
+secrets/
+*.key
+
+# Test outputs
+coverage/
+.pytest_cache/
+.nyc_output/
+dist/
+build/
+
+# Internal working docs not for distribution
+.internal-*
+
+# Bootstrap scripts with secrets (never commit)
+_bootstrap-git.bat
+_bootstrap-git.log
+commit.log

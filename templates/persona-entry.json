@@ -1,0 +1,10 @@
+{
+  "callsign": "AgentName",
+  "color_hex": "#HEXCODE",
+  "tab_color": "#DARKER_HEX",
+  "voice_key": "voice_identifier",
+  "cwd": "${DISPATCH_USER_ROOT}/path/to/working/directory",
+  "agent_file": "personas/AGENTNAME_AGENT.md",
+  "description": "One-line description of role and scope",
+  "scope": "agent-category-or-domain"
+}
