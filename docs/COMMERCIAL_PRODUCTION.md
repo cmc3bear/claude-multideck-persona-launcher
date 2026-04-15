@@ -4,16 +4,16 @@ Use this workflow when producing commercial deliverables (scripts, documentation
 
 ---
 
-## The Workflow: Draft → Review → Production → Redline → Final Review
+## The Workflow: Draft → Review → Production → Reviewer → Final Review
 
 ```
-DRAFT (Engineer/Broadside writes) 
+DRAFT (Engineer writes) 
   ↓
 REVIEW (Architect/subject-matter expert audits)
   ↓ (conditional: PASS or FLAG)
-PRODUCTION (Broadside produces final media)
+PRODUCTION (Engineer produces final media)
   ↓
-REDLINE (Reviewer quality gate)
+REVIEW (Reviewer quality gate)
   ↓ (conditional: PASS or FLAG+1-loop)
 FINAL REVIEW (Cary or stakeholder approves)
   ↓
@@ -26,7 +26,7 @@ Each stage is a separate job on the job board.
 
 ## Stage 1: DRAFT
 
-**Who:** Engineer or Broadside (content creator)  
+**Who:** Engineer (content creator)  
 **Input:** Brief with objective, success criteria  
 **Output:** Raw draft (script, doc, media outline)  
 **Gate:** Subject-matter review (no quality gate yet)
@@ -70,7 +70,7 @@ Architect reads the draft and evaluates:
 1. **Does it cover the objective?** — All 4 topics mentioned?
 2. **Is it engaging?** — Language natural? Examples clear?
 3. **Is it accurate?** — No technical errors?
-4. **Is it feasible to produce?** — Can Broadside turn this into video?
+4. **Is it feasible to produce?** — Can Engineer turn this into video?
 
 ### Decision
 
@@ -109,10 +109,10 @@ Architect re-checks and approves
 
 ## Stage 3: PRODUCTION
 
-**Who:** Broadside (content producer)  
+**Who:** Engineer (content producer)  
 **Input:** Approved script  
 **Output:** Final media (video, podcast, document)  
-**Gate:** None (Broadside owns this stage)
+**Gate:** None (Engineer owns this stage)
 
 ### Job Creation
 
@@ -120,7 +120,7 @@ Once Stage 2 is approved, create production job:
 
 ```bash
 python scripts/job-board.py create \
-  --agent "broadside" \
+  --agent "engineer" \
   --priority "P1" \
   --summary "Produce: Quickstart video" \
   --description "Produce 5-minute video from approved script. Include: screen recordings, demo walkthrough, background music (Suno), callout graphics." \
@@ -131,7 +131,7 @@ Note the `--depends-on` flag — job doesn't start until Stage 2 is complete.
 
 ### Production Process
 
-Broadside:
+Engineer:
 1. Reads approved script
 2. Records screen captures
 3. Does demo walkthrough
@@ -148,7 +148,7 @@ python scripts/job-board.py submit \
 
 ---
 
-## Stage 4: REDLINE (Quality Gate)
+## Stage 4: REVIEW (Quality Gate)
 
 **Who:** Reviewer (quality gate agent)  
 **Input:** Produced media  
@@ -185,7 +185,7 @@ python scripts/job-board.py review \
 
 ### What Happens If Flagged
 
-- Broadside reads feedback
+- Engineer reads feedback
 - Fixes the specific issue (e.g., re-records the audio section)
 - Resubmits
 
@@ -214,7 +214,7 @@ Approved for publication. Moving to next priority job.
 
 **Hold:**
 ```
-Hold until [condition]. Returning to Broadside for revisions.
+Hold until [condition]. Returning to Engineer for revisions.
 ```
 
 ---
@@ -251,7 +251,7 @@ Each commercial job includes:
 {
   "job_id": "JOB-0060",
   "type": "commercial-draft",
-  "stage": "draft",  // or "review", "production", "redline", "final"
+  "stage": "draft",  // or "review", "production", "review", "final"
   
   "objective": "Create engaging Quickstart script",
   "brief": "5-minute walkthrough covering installation, voice setup, first job, dashboard",
@@ -293,7 +293,7 @@ You can modify stages based on your needs:
 Skip Stage 2 (review) if you trust the author:
 
 ```
-DRAFT → PRODUCTION → REDLINE → SHIPPED
+DRAFT → PRODUCTION → REVIEW → SHIPPED
 ```
 
 ### Longer Workflow (Complex Projects)
@@ -301,7 +301,7 @@ DRAFT → PRODUCTION → REDLINE → SHIPPED
 Add more review layers:
 
 ```
-DRAFT → ARCHITECT-REVIEW → SME-REVIEW → PRODUCTION → REDLINE → FINAL-REVIEW → SHIPPED
+DRAFT → ARCHITECT-REVIEW → SME-REVIEW → PRODUCTION → REVIEW → FINAL-REVIEW → SHIPPED
 ```
 
 Use `depends_on` to chain them.
@@ -312,8 +312,8 @@ Parallel work where possible:
 
 ```
 SCRIPT (Engineer) ━━━┓
-                      ┃→ PRODUCTION (Broadside) → REDLINE → SHIPPED
-VOICEOVER (Broadside)┛
+                      ┃→ PRODUCTION (Engineer) → REVIEW → SHIPPED
+VOICEOVER (Engineer)┛
 GRAPHICS (Designer) ━┛
 ```
 
@@ -332,8 +332,8 @@ Each transition triggers a voice announcement:
 [Architect approves JOB-0060]
 "Architect calling. Quickstart script approved for production."
 
-[Broadside submits JOB-0061]
-"Broadside calling. Quickstart video produced and submitted for quality review."
+[Engineer submits JOB-0061]
+"Engineer calling. Quickstart video produced and submitted for quality review."
 
 [Reviewer approves JOB-0061]
 "Reviewer calling. Quickstart video approved for publication."

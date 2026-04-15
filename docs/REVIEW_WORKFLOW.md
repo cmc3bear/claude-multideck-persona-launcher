@@ -1,4 +1,4 @@
-# Review Workflow: Redline Gate and Quality Standards
+# Review Workflow: Review Gate and Quality Standards
 
 **Reviewer** is the quality gate agent. Every completed job passes through Reviewer before shipping.
 

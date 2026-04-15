@@ -1,0 +1,22 @@
+{
+  "presets": [
+    {
+      "id": "full-roster",
+      "name": "Full Roster",
+      "description": "All five default agents deployed together",
+      "personas": ["dispatch", "architect", "engineer", "reviewer", "researcher"]
+    },
+    {
+      "id": "build-team",
+      "name": "Build Team",
+      "description": "Architect + Engineer + Reviewer — implementation focus",
+      "personas": ["architect", "engineer", "reviewer"]
+    },
+    {
+      "id": "investigation",
+      "name": "Investigation",
+      "description": "Researcher + Reviewer — research with source grading and review",
+      "personas": ["researcher", "reviewer"]
+    }
+  ]
+}

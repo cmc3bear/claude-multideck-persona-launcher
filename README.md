@@ -133,7 +133,7 @@ The framework includes 5 default personas:
 | dispatch | af_sky | Central coordination |
 | architect | bm_daniel | System design & architecture |
 | engineer | am_eric | Code implementation & debugging |
-| reviewer | bm_lewis | Quality assurance & redline |
+| reviewer | bm_lewis | Quality assurance and review gate |
 | researcher | bf_emma | Research & analysis |
 
 Users can add custom personas with `dispatch-agent.py add`.

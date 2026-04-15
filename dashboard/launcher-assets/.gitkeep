@@ -1,0 +1,12 @@
+# Launcher assets directory
+
+Place persona portrait PNGs, intro MP3s, and music tracks here.
+
+Structure:
+  launcher-assets/
+    portraits/<persona-key>.png     persona portrait (64x64 or 128x128, pixel art recommended)
+    intros/<persona-key>.mp3         persona intro clip (played on selection)
+    intros/<persona-key>-deploy.mp3  persona deploy confirmation clip
+    music/*.mp3                       background music tracks (auto-listed on /launcher/music)
+
+This directory is empty by default. The launcher gracefully handles missing assets.

@@ -30,7 +30,7 @@ Framework distribution skeleton for multi-persona Claude Code coordination.
 ## Planned Features (Roadmap)
 
 - Discord bot integration with slash commands
-- Workflow templates (e.g., commercial production script → review → Redline → publication)
+- Workflow templates (e.g., commercial production script → review → Reviewer → publication)
 - Agent dependency graphs (job A blocks job B until complete)
 - Advanced audio feed with voice activity detection and speaker identification
 - Mobile app (beyond browser-based views)

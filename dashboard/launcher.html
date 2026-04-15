@@ -1,0 +1,2741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>// MULTIDECK //</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&family=Share+Tech+Mono&display=swap');
+
+  :root {
+    --bg: #0a0014;
+    --bg-grid: #1a0033;
+    --neon-cyan: #00FFCC;
+    --neon-pink: #FF00AA;
+    --neon-yellow: #FFD700;
+    --neon-red: #FF0055;
+    --text: #c0e0ff;
+    --text-dim: #607090;
+    --scanline: rgba(0, 255, 204, 0.03);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'VT323', 'Share Tech Mono', monospace;
+    overflow: hidden;
+    cursor: crosshair;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      var(--scanline) 0px,
+      var(--scanline) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+    pointer-events: none;
+    z-index: 9999;
+    animation: flicker 0.15s infinite;
+  }
+
+  body::after {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: radial-gradient(ellipse at center, transparent 0%, rgba(0,0,0,0.6) 100%);
+    pointer-events: none;
+    z-index: 9998;
+  }
+
+  @keyframes flicker {
+    0% { opacity: 0.97; }
+    50% { opacity: 1; }
+    100% { opacity: 0.98; }
+  }
+
+  .grid-bg {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-image:
+      linear-gradient(var(--bg-grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--bg-grid) 1px, transparent 1px);
+    background-size: 40px 40px;
+    opacity: 0.3;
+    z-index: 0;
+    perspective: 500px;
+    transform: rotateX(60deg) translateZ(-100px);
+    transform-origin: center center;
+  }
+
+  .stars {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .star {
+    position: absolute;
+    width: 2px;
+    height: 2px;
+    background: var(--neon-cyan);
+    box-shadow: 0 0 4px var(--neon-cyan);
+    animation: twinkle 2s infinite;
+  }
+
+  @keyframes twinkle {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 1; }
+  }
+
+  .screen {
+    position: relative;
+    z-index: 10;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    overflow-y: auto;
+  }
+
+  .screen.hidden { display: none; }
+
+  /* ============ TITLE SCREEN ============ */
+  .title-logo {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 72px;
+    color: var(--neon-cyan);
+    text-shadow:
+      0 0 12px var(--neon-cyan),
+      0 0 26px var(--neon-cyan),
+      0 0 50px rgba(0, 255, 204, 0.6),
+      6px 0 0 var(--neon-pink),
+      -6px 0 0 rgba(0, 255, 204, 0.5),
+      8px 8px 0 rgba(0, 0, 0, 0.6);
+    margin-bottom: 12px;
+    letter-spacing: 6px;
+    position: relative;
+    z-index: 11;
+    opacity: 0;
+  }
+
+  @keyframes title-glow {
+    0%, 100% { filter: brightness(1); opacity: 1; }
+    50%      { filter: brightness(1.3); opacity: 1; }
+  }
+
+  /* Lightning-strike entrance, fired on press-start. The title starts hidden,
+     then a white flash slams in, the logo materializes with a violent jitter,
+     residual electric arcs fade. */
+  .title-logo.strike {
+    animation: title-strike 1.5s cubic-bezier(0.16, 1, 0.3, 1) forwards,
+               title-glow 3s ease-in-out 1.6s infinite;
+  }
+
+  @keyframes title-strike {
+    0%   { opacity: 0; transform: scale(2.2) skewX(-12deg); filter: brightness(8) blur(8px); }
+    8%   { opacity: 1; transform: scale(0.7) skewX(8deg);   filter: brightness(8) blur(0);   }
+    14%  { opacity: 1; transform: scale(1.15) skewX(-4deg); filter: brightness(4) blur(0);   }
+    22%  { opacity: 1; transform: scale(0.95) skewX(2deg);  filter: brightness(2) blur(0);   }
+    32%  { opacity: 1; transform: scale(1.05) skewX(-1deg); filter: brightness(3) blur(0);   }
+    44%  { opacity: 1; transform: scale(0.98);              filter: brightness(1.5);          }
+    60%  { opacity: 1; transform: scale(1.02);              filter: brightness(2);            }
+    80%  { opacity: 1; transform: scale(1) skewX(0);        filter: brightness(1.2);          }
+    100% { opacity: 1; transform: scale(1) skewX(0);        filter: brightness(1);            }
+  }
+
+  /* Full-screen white flash overlay played alongside the strike */
+  .lightning-flash {
+    position: fixed;
+    inset: 0;
+    background: white;
+    z-index: 9997;
+    pointer-events: none;
+    opacity: 0;
+  }
+  .lightning-flash.fire {
+    animation: lightning-flash 1.2s ease-out forwards;
+  }
+  @keyframes lightning-flash {
+    0%   { opacity: 0; }
+    4%   { opacity: 0.95; }
+    9%   { opacity: 0.05; }
+    13%  { opacity: 0.6; }
+    18%  { opacity: 0.05; }
+    24%  { opacity: 0.3; }
+    32%  { opacity: 0; }
+    100% { opacity: 0; }
+  }
+
+  /* Electric arc lines that crawl off the logo for ~1s after the strike */
+  .lightning-arcs {
+    position: absolute;
+    inset: -40px;
+    pointer-events: none;
+    opacity: 0;
+    background-image:
+      linear-gradient(95deg, transparent 48%, var(--neon-cyan) 49%, var(--neon-cyan) 51%, transparent 52%),
+      linear-gradient(82deg, transparent 48%, var(--neon-pink) 49%, var(--neon-pink) 51%, transparent 52%),
+      linear-gradient(105deg, transparent 48%, var(--neon-cyan) 49%, var(--neon-cyan) 51%, transparent 52%);
+    background-size: 200% 100%, 200% 100%, 200% 100%;
+    background-position: -100% 0, 100% 0, -100% 0;
+    background-repeat: no-repeat;
+    mix-blend-mode: screen;
+  }
+  .lightning-arcs.fire {
+    animation: arcs-crawl 0.9s ease-out forwards;
+  }
+  @keyframes arcs-crawl {
+    0%   { opacity: 0; background-position: -100% 0,  100% 0, -100% 0; }
+    20%  { opacity: 0.9; }
+    100% { opacity: 0; background-position:  100% 0, -100% 0,  100% 0; }
+  }
+
+  .title-sub {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 14px;
+    color: var(--neon-pink);
+    text-shadow: 0 0 8px var(--neon-pink);
+    margin-bottom: 60px;
+    letter-spacing: 2px;
+  }
+
+  .menu {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    align-items: center;
+  }
+
+  .menu-item {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 18px;
+    color: var(--text);
+    padding: 12px 40px;
+    border: 2px solid var(--text-dim);
+    background: transparent;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    transition: all 0.15s;
+    position: relative;
+    min-width: 360px;
+    text-align: center;
+  }
+
+  .menu-item::before {
+    content: '>';
+    position: absolute;
+    left: 12px;
+    opacity: 0;
+    transition: all 0.15s;
+    color: var(--neon-cyan);
+  }
+
+  .menu-item:hover,
+  .menu-item.kbd-active {
+    color: var(--neon-cyan);
+    border-color: var(--neon-cyan);
+    text-shadow: 0 0 8px var(--neon-cyan);
+    box-shadow: 0 0 20px rgba(0, 255, 204, 0.4);
+    padding-left: 60px;
+  }
+
+  .menu-item:hover::before,
+  .menu-item.kbd-active::before {
+    opacity: 1;
+  }
+
+  .footer {
+    position: fixed;
+    bottom: 20px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 14px;
+    letter-spacing: 2px;
+    z-index: 10;
+  }
+
+  .footer .blink {
+    animation: blink 1s infinite;
+  }
+
+  @keyframes blink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0; }
+  }
+
+  /* ============ PROJECT / DASHBOARD SELECT ============ */
+  .select-header {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 24px;
+    color: var(--neon-cyan);
+    text-shadow: 0 0 10px var(--neon-cyan);
+    margin-bottom: 8px;
+    letter-spacing: 3px;
+  }
+
+  .select-sub {
+    font-size: 18px;
+    color: var(--text-dim);
+    margin-bottom: 30px;
+    letter-spacing: 2px;
+  }
+
+  .project-grid, .dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 18px;
+    max-width: 900px;
+    width: 100%;
+    margin-bottom: 24px;
+  }
+
+  .project-card, .dashboard-card {
+    border: 2px solid var(--text-dim);
+    background: rgba(10, 0, 20, 0.85);
+    padding: 18px 16px;
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
+  }
+
+  .project-card:hover, .project-card.kbd-active,
+  .dashboard-card:hover, .dashboard-card.kbd-active {
+    transform: translateY(-3px);
+    border-color: var(--neon-cyan);
+    color: var(--neon-cyan);
+    box-shadow: 0 0 24px rgba(0, 255, 204, 0.4);
+  }
+
+  .project-name, .dashboard-name {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 13px;
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+    color: var(--neon-cyan);
+    text-shadow: 0 0 6px var(--neon-cyan);
+  }
+
+  .project-path {
+    font-size: 14px;
+    color: var(--text-dim);
+    word-break: break-all;
+    margin-bottom: 6px;
+  }
+
+  .project-desc, .dashboard-desc {
+    font-size: 15px;
+    color: var(--text);
+    font-style: italic;
+  }
+
+  /* ============ NEW PROJECT FORM ============ */
+  .form-box {
+    border: 2px solid var(--neon-cyan);
+    background: rgba(10, 0, 20, 0.9);
+    padding: 30px 40px;
+    max-width: 560px;
+    width: 100%;
+    box-shadow: 0 0 30px rgba(0, 255, 204, 0.25);
+  }
+
+  .form-label {
+    display: block;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 11px;
+    color: var(--neon-pink);
+    letter-spacing: 2px;
+    margin-bottom: 10px;
+    text-shadow: 0 0 6px var(--neon-pink);
+  }
+
+  .form-input {
+    width: 100%;
+    background: var(--bg);
+    border: 2px solid var(--text-dim);
+    color: var(--neon-cyan);
+    font-family: 'VT323', monospace;
+    font-size: 22px;
+    padding: 10px 14px;
+    margin-bottom: 18px;
+    letter-spacing: 1px;
+    text-shadow: 0 0 6px var(--neon-cyan);
+  }
+
+  .form-input:focus {
+    outline: none;
+    border-color: var(--neon-cyan);
+    box-shadow: 0 0 14px rgba(0, 255, 204, 0.4);
+  }
+
+  .form-help {
+    font-size: 14px;
+    color: var(--text-dim);
+    margin-top: -10px;
+    margin-bottom: 18px;
+  }
+
+  .form-actions {
+    display: flex;
+    gap: 14px;
+    margin-top: 6px;
+  }
+
+  .form-msg {
+    font-size: 16px;
+    margin-top: 12px;
+    min-height: 22px;
+  }
+
+  .form-msg.err { color: var(--neon-red); text-shadow: 0 0 6px var(--neon-red); }
+  .form-msg.ok { color: var(--neon-cyan); text-shadow: 0 0 6px var(--neon-cyan); }
+
+  /* ============ CHARACTER SELECT ============ */
+  .select-layout {
+    display: flex;
+    gap: 30px;
+    align-items: stretch;
+    width: 100%;
+    max-width: 1500px;
+    margin-bottom: 18px;
+  }
+  .select-left {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .select-right {
+    flex: 0 0 340px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .character-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 14px;
+    width: 100%;
+  }
+
+  /* ============ SF2 PORTRAIT PANEL ============ */
+  .portrait-panel {
+    border: 3px solid var(--accent, var(--neon-cyan));
+    background: linear-gradient(180deg, rgba(20, 0, 40, 0.92) 0%, rgba(10, 0, 20, 0.92) 100%);
+    box-shadow:
+      0 0 26px var(--accent, var(--neon-cyan)),
+      inset 0 0 30px rgba(0, 0, 0, 0.6);
+    position: relative;
+    padding: 14px 14px 18px;
+    overflow: hidden;
+  }
+
+  /* Corner brackets */
+  .portrait-panel::before,
+  .portrait-panel::after {
+    content: '';
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    border: 3px solid var(--accent, var(--neon-cyan));
+    box-shadow: 0 0 8px var(--accent, var(--neon-cyan));
+  }
+  .portrait-panel::before {
+    top: -3px; left: -3px;
+    border-right: none; border-bottom: none;
+  }
+  .portrait-panel::after {
+    bottom: -3px; right: -3px;
+    border-left: none; border-top: none;
+  }
+
+  .portrait-tag {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px;
+    color: var(--accent, var(--neon-cyan));
+    text-shadow: 0 0 6px var(--accent, var(--neon-cyan));
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+    text-align: center;
+    padding: 4px 0;
+    border-bottom: 1px dashed var(--accent, var(--neon-cyan));
+    opacity: 0.9;
+  }
+
+  .portrait-stage {
+    position: relative;
+    height: 280px;
+    background:
+      repeating-linear-gradient(
+        0deg,
+        rgba(0,0,0,0) 0px,
+        rgba(0,0,0,0) 2px,
+        rgba(0,0,0,0.25) 2px,
+        rgba(0,0,0,0.25) 3px
+      ),
+      radial-gradient(ellipse at center, var(--accent, var(--neon-cyan)) 0%, rgba(10,0,20,0.0) 70%);
+    background-color: rgba(0, 0, 0, 0.4);
+    border: 2px solid rgba(255, 255, 255, 0.12);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  /* Faint perspective grid floor inside the portrait stage */
+  .portrait-stage::before {
+    content: '';
+    position: absolute;
+    left: -20%; right: -20%;
+    bottom: -40%;
+    height: 70%;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.18) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.18) 1px, transparent 1px);
+    background-size: 28px 28px;
+    transform: perspective(280px) rotateX(60deg);
+    transform-origin: center bottom;
+    opacity: 0.6;
+    pointer-events: none;
+  }
+  /* Scanline overlay on portrait */
+  .portrait-stage::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      rgba(0,255,204,0.05) 0px,
+      rgba(0,255,204,0.05) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+    pointer-events: none;
+    mix-blend-mode: screen;
+  }
+
+  /* The big avatar — pixel-art portrait with chromatic glow stack */
+  .portrait-avatar {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 130px;
+    color: var(--accent, var(--neon-cyan));
+    line-height: 1;
+    text-shadow:
+      0 0 18px var(--accent, var(--neon-cyan)),
+      0 0 36px var(--accent, var(--neon-cyan)),
+      4px 0 0 var(--neon-pink),
+      -4px 0 0 var(--neon-cyan),
+      8px 8px 0 rgba(0, 0, 0, 0.55);
+    z-index: 2;
+    animation: avatar-bob 3.2s ease-in-out infinite;
+    image-rendering: pixelated;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .portrait-avatar img {
+    height: 100%;
+    max-height: 260px;
+    width: auto;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    filter:
+      drop-shadow(0 0 8px var(--accent, var(--neon-cyan)))
+      drop-shadow(0 0 16px var(--accent, var(--neon-cyan)));
+  }
+  @keyframes avatar-bob {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-6px); }
+  }
+
+  .portrait-name {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 18px;
+    color: var(--accent, var(--neon-cyan));
+    text-shadow: 0 0 10px var(--accent, var(--neon-cyan));
+    letter-spacing: 3px;
+    text-align: center;
+    margin-top: 12px;
+  }
+  .portrait-class {
+    font-size: 14px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+    text-align: center;
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+
+  .portrait-mini-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px 16px;
+    margin-top: 12px;
+    padding: 10px 8px 4px;
+    border-top: 1px dashed var(--accent, var(--neon-cyan));
+    font-size: 14px;
+  }
+  .portrait-mini-stats .lbl { color: var(--text-dim); letter-spacing: 1px; }
+  .portrait-mini-stats .val {
+    color: var(--accent, var(--neon-cyan));
+    text-shadow: 0 0 6px var(--accent, var(--neon-cyan));
+    text-align: right;
+  }
+
+  .portrait-status {
+    margin-top: 8px;
+    text-align: center;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px;
+    color: var(--neon-yellow);
+    text-shadow: 0 0 6px var(--neon-yellow);
+    letter-spacing: 2px;
+    animation: blink 1.2s infinite;
+    min-height: 14px;
+  }
+  .portrait-status.ready {
+    color: var(--accent, var(--neon-cyan));
+    text-shadow: 0 0 6px var(--accent, var(--neon-cyan));
+    animation: none;
+  }
+
+  .character-card {
+    border: 2px solid var(--text-dim);
+    background: rgba(10, 0, 20, 0.8);
+    padding: 12px 8px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    min-height: 160px;
+  }
+
+  .character-card:hover,
+  .character-card.kbd-active,
+  .character-card.selected {
+    transform: translateY(-4px);
+    box-shadow: 0 0 30px var(--accent, var(--neon-cyan));
+    border-color: var(--accent, var(--neon-cyan));
+  }
+
+  .character-card.selected::before {
+    content: '> ACTIVE';
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--bg);
+    padding: 0 8px;
+    font-size: 10px;
+    color: var(--accent);
+    font-family: 'Press Start 2P', monospace;
+    letter-spacing: 1px;
+  }
+
+  /* Team mode badge: numbered yellow circle in top-left corner */
+  .character-card .team-badge {
+    position: absolute;
+    top: -10px;
+    left: -10px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--bg);
+    border: 2px solid var(--neon-yellow);
+    color: var(--neon-yellow);
+    text-shadow: 0 0 6px var(--neon-yellow);
+    box-shadow: 0 0 12px var(--neon-yellow);
+    font-family: 'Press Start 2P', monospace;
+    font-size: 11px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 5;
+  }
+  .character-card.in-team .team-badge { display: flex; }
+  .character-card.in-team {
+    border-color: var(--neon-yellow) !important;
+    box-shadow: 0 0 22px var(--neon-yellow) !important;
+  }
+
+  .portrait {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 10px;
+    border: 2px solid var(--accent, var(--neon-cyan));
+    background: var(--bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 32px;
+    color: var(--accent, var(--neon-cyan));
+    text-shadow: 0 0 10px var(--accent, var(--neon-cyan));
+    image-rendering: pixelated;
+  }
+
+  .callsign {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 11px;
+    color: var(--accent, var(--text));
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+  }
+
+  .class-tag {
+    font-size: 13px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .bio-panel {
+    border: 2px solid var(--neon-cyan);
+    background: rgba(10, 0, 20, 0.9);
+    padding: 20px;
+    max-width: 800px;
+    width: 100%;
+    min-height: 180px;
+    box-shadow: 0 0 30px rgba(0, 255, 204, 0.2);
+    font-size: 18px;
+    line-height: 1.5;
+  }
+
+  .bio-empty {
+    color: var(--text-dim);
+    text-align: center;
+    font-style: italic;
+  }
+
+  .bio-name {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 18px;
+    color: var(--accent);
+    margin-bottom: 4px;
+    letter-spacing: 2px;
+    text-shadow: 0 0 8px var(--accent);
+  }
+
+  .bio-class {
+    font-size: 14px;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .bio-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 20px;
+    margin-bottom: 12px;
+  }
+
+  .bio-stat {
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 1px dashed var(--text-dim);
+    padding: 2px 0;
+  }
+
+  .bio-stat-label { color: var(--text-dim); letter-spacing: 1px; }
+  .bio-stat-value { color: var(--neon-cyan); letter-spacing: 1px; }
+
+  .bio-flavor {
+    color: var(--text);
+    font-size: 17px;
+    margin-top: 10px;
+    font-style: italic;
+    line-height: 1.5;
+  }
+
+  /* Options + launch */
+  .options {
+    display: flex;
+    gap: 30px;
+    margin: 16px 0;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .checkbox-line {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    font-size: 16px;
+    letter-spacing: 1px;
+    color: var(--text);
+    user-select: none;
+  }
+
+  .checkbox-line input { display: none; }
+
+  .checkbox-line .box {
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--neon-red);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 12px;
+    color: var(--neon-red);
+    text-shadow: 0 0 6px var(--neon-red);
+  }
+
+  .checkbox-line input:checked + .box::before { content: 'X'; }
+
+  .checkbox-line.danger {
+    color: var(--neon-red);
+    text-shadow: 0 0 6px var(--neon-red);
+    text-transform: uppercase;
+  }
+
+  .checkbox-line.team-mode {
+    color: var(--neon-yellow);
+    text-shadow: 0 0 6px var(--neon-yellow);
+    text-transform: uppercase;
+  }
+  .checkbox-line.team-mode .box {
+    border-color: var(--neon-yellow);
+    color: var(--neon-yellow);
+    text-shadow: 0 0 6px var(--neon-yellow);
+  }
+
+  .prompt-input {
+    background: var(--bg);
+    border: 2px solid var(--text-dim);
+    color: var(--neon-cyan);
+    font-family: 'VT323', monospace;
+    font-size: 18px;
+    padding: 8px 12px;
+    width: 360px;
+    letter-spacing: 1px;
+  }
+
+  .prompt-input:focus {
+    outline: none;
+    border-color: var(--neon-cyan);
+    box-shadow: 0 0 10px rgba(0, 255, 204, 0.3);
+  }
+
+  .launch-btn {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 20px;
+    padding: 16px 50px;
+    background: transparent;
+    border: 3px solid var(--neon-cyan);
+    color: var(--neon-cyan);
+    cursor: pointer;
+    letter-spacing: 4px;
+    text-shadow: 0 0 10px var(--neon-cyan);
+    box-shadow: 0 0 20px rgba(0, 255, 204, 0.3);
+    transition: all 0.15s;
+    margin-top: 10px;
+  }
+
+  .launch-btn:hover:not(:disabled) {
+    background: var(--neon-cyan);
+    color: var(--bg);
+    transform: scale(1.05);
+    box-shadow: 0 0 40px var(--neon-cyan);
+  }
+
+  .launch-btn:disabled {
+    border-color: var(--text-dim);
+    color: var(--text-dim);
+    text-shadow: none;
+    box-shadow: none;
+    cursor: not-allowed;
+  }
+
+  .form-btn {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 12px;
+    padding: 12px 24px;
+    background: transparent;
+    border: 2px solid var(--neon-cyan);
+    color: var(--neon-cyan);
+    cursor: pointer;
+    letter-spacing: 2px;
+    text-shadow: 0 0 6px var(--neon-cyan);
+  }
+
+  .form-btn:hover {
+    background: var(--neon-cyan);
+    color: var(--bg);
+  }
+
+  .form-btn.cancel {
+    border-color: var(--text-dim);
+    color: var(--text-dim);
+    text-shadow: none;
+  }
+
+  .form-btn.cancel:hover {
+    background: var(--text-dim);
+    color: var(--bg);
+  }
+
+  .back-btn {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 11px;
+    padding: 8px 16px;
+    background: transparent;
+    border: 2px solid var(--text-dim);
+    color: var(--text-dim);
+    cursor: pointer;
+    letter-spacing: 2px;
+    z-index: 20;
+  }
+
+  .back-btn:hover {
+    color: var(--neon-cyan);
+    border-color: var(--neon-cyan);
+  }
+
+  .top-hud {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    font-size: 14px;
+    color: var(--neon-cyan);
+    text-shadow: 0 0 6px var(--neon-cyan);
+    letter-spacing: 2px;
+    z-index: 20;
+    text-align: right;
+    max-width: 50vw;
+  }
+
+  .top-hud .label { color: var(--text-dim); margin-right: 6px; }
+
+  /* ============ LAUNCHING OVERLAY ============ */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 10, 0.92);
+    z-index: 10000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .overlay.show { display: flex; }
+
+  .overlay-text {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 28px;
+    color: var(--neon-cyan);
+    text-shadow: 0 0 14px var(--neon-cyan);
+    letter-spacing: 4px;
+  }
+
+  .overlay-sub {
+    font-size: 18px;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+  }
+
+  .overlay-bar {
+    width: 360px;
+    height: 12px;
+    border: 2px solid var(--neon-cyan);
+    background: var(--bg);
+    overflow: hidden;
+  }
+
+  .overlay-bar-fill {
+    height: 100%;
+    background: var(--neon-cyan);
+    box-shadow: 0 0 14px var(--neon-cyan);
+    width: 0%;
+    animation: load-bar 1.6s ease-out forwards;
+  }
+
+  @keyframes load-bar {
+    from { width: 0%; }
+    to { width: 100%; }
+  }
+
+  .overlay.error .overlay-text { color: var(--neon-red); text-shadow: 0 0 14px var(--neon-red); }
+  .overlay.error .overlay-bar { border-color: var(--neon-red); }
+  .overlay.error .overlay-bar-fill { background: var(--neon-red); box-shadow: 0 0 14px var(--neon-red); animation: none; width: 100%; }
+
+  /* Hint bar */
+  .hint-bar {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    right: 20px;
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 13px;
+    letter-spacing: 2px;
+    z-index: 10;
+  }
+
+  .hint-bar .key {
+    display: inline-block;
+    border: 1px solid var(--text-dim);
+    padding: 2px 8px;
+    margin: 0 4px;
+    color: var(--neon-cyan);
+    border-color: var(--neon-cyan);
+  }
+
+  /* ============ BOOT SCREEN ============ */
+  #boot-screen {
+    background: #000;
+    justify-content: flex-start;
+    align-items: flex-start;
+    padding: 60px 80px;
+  }
+
+  .boot-header {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 14px;
+    color: var(--neon-cyan);
+    text-shadow: 0 0 6px var(--neon-cyan);
+    letter-spacing: 2px;
+    margin-bottom: 6px;
+  }
+
+  .boot-copy {
+    font-family: 'VT323', monospace;
+    font-size: 18px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+    margin-bottom: 28px;
+  }
+
+  .boot-log {
+    font-family: 'VT323', 'Share Tech Mono', monospace;
+    font-size: 20px;
+    color: var(--neon-cyan);
+    letter-spacing: 1px;
+    line-height: 1.45;
+    text-shadow: 0 0 4px rgba(0, 255, 204, 0.6);
+    white-space: pre;
+    margin-bottom: 24px;
+  }
+
+  .boot-log .ok    { color: #00FFCC; }
+  .boot-log .warn  { color: var(--neon-yellow); }
+  .boot-log .info  { color: var(--text); }
+  .boot-log .dim   { color: var(--text-dim); }
+  .boot-log .ready { color: var(--neon-pink); text-shadow: 0 0 8px var(--neon-pink); }
+
+  .boot-cursor {
+    display: inline-block;
+    width: 10px;
+    height: 18px;
+    background: var(--neon-cyan);
+    box-shadow: 0 0 6px var(--neon-cyan);
+    vertical-align: middle;
+    animation: blink 0.8s infinite;
+  }
+
+  .boot-bar-wrap {
+    width: 480px;
+    margin-top: 12px;
+  }
+
+  .boot-bar-label {
+    font-family: 'VT323', monospace;
+    font-size: 16px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .boot-bar {
+    width: 100%;
+    height: 14px;
+    border: 2px solid var(--neon-cyan);
+    background: #000;
+    box-shadow: 0 0 10px rgba(0, 255, 204, 0.3);
+  }
+
+  .boot-bar-fill {
+    height: 100%;
+    background: var(--neon-cyan);
+    box-shadow: 0 0 12px var(--neon-cyan);
+    width: 0%;
+    transition: width 0.18s linear;
+  }
+
+  .boot-skip {
+    position: fixed;
+    bottom: 24px;
+    right: 32px;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+  }
+  .boot-skip .key {
+    display: inline-block;
+    border: 1px solid var(--text-dim);
+    padding: 2px 6px;
+    margin: 0 4px;
+    color: var(--neon-cyan);
+    border-color: var(--neon-cyan);
+  }
+
+  /* ============ STUDIO SPLASH ============ */
+  #studio-screen {
+    background: #000;
+    cursor: crosshair;
+  }
+
+  .studio-tag {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 6px;
+    margin-bottom: 30px;
+    opacity: 0;
+    animation: studio-fade-in 0.6s ease-out 0.3s forwards;
+  }
+
+  .studio-logo {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 72px;
+    color: var(--neon-cyan);
+    text-shadow:
+      0 0 14px var(--neon-cyan),
+      0 0 28px var(--neon-cyan),
+      4px 4px 0 var(--neon-pink);
+    letter-spacing: 8px;
+    margin-bottom: 18px;
+    opacity: 0;
+    animation: studio-fade-in 0.8s ease-out 0.6s forwards;
+  }
+
+  .studio-sub {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 16px;
+    color: var(--neon-pink);
+    text-shadow: 0 0 8px var(--neon-pink);
+    letter-spacing: 4px;
+    opacity: 0;
+    animation: studio-fade-in 0.6s ease-out 1.2s forwards;
+  }
+
+  .studio-bar {
+    width: 200px;
+    height: 2px;
+    background: var(--neon-cyan);
+    box-shadow: 0 0 8px var(--neon-cyan);
+    margin: 36px 0 0;
+    transform: scaleX(0);
+    animation: studio-bar 1.2s ease-out 1.6s forwards;
+    transform-origin: center;
+  }
+
+  @keyframes studio-fade-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes studio-bar {
+    from { transform: scaleX(0); }
+    to   { transform: scaleX(1); }
+  }
+
+  /* ============ PRESS START ============ */
+  #title-menu.gated {
+    display: none;
+  }
+
+  .press-start {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 20px;
+    color: var(--neon-yellow);
+    text-shadow: 0 0 12px var(--neon-yellow);
+    letter-spacing: 4px;
+    margin-top: 12px;
+    animation: press-blink 1.2s infinite;
+    cursor: pointer;
+  }
+  .press-start.hidden { display: none; }
+
+  @keyframes press-blink {
+    0%, 49%   { opacity: 1; }
+    50%, 100% { opacity: 0.15; }
+  }
+
+  /* ============ TEAMS SELECT ============ */
+  .team-presets-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 16px;
+    max-width: 1100px;
+    width: 100%;
+    margin-bottom: 24px;
+  }
+
+  .preset-card {
+    border: 2px solid var(--accent, var(--text-dim));
+    background: rgba(10, 0, 20, 0.85);
+    padding: 16px;
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+  }
+
+  .preset-card:hover,
+  .preset-card.kbd-active {
+    transform: translateY(-3px);
+    box-shadow: 0 0 26px var(--accent, var(--neon-cyan));
+  }
+
+  .preset-glyph {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 30px;
+    color: var(--accent, var(--neon-cyan));
+    text-shadow: 0 0 10px var(--accent, var(--neon-cyan));
+    width: 56px;
+    height: 56px;
+    border: 2px solid var(--accent, var(--neon-cyan));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 56px;
+    background: rgba(0, 0, 0, 0.4);
+  }
+
+  .preset-body { flex: 1 1 auto; min-width: 0; }
+
+  .preset-name {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 12px;
+    color: var(--accent, var(--neon-cyan));
+    text-shadow: 0 0 8px var(--accent, var(--neon-cyan));
+    letter-spacing: 2px;
+    margin-bottom: 6px;
+  }
+
+  .preset-sub {
+    font-size: 15px;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+    line-height: 1.3;
+    font-style: italic;
+  }
+
+  .preset-roster {
+    font-size: 13px;
+    color: var(--text);
+    letter-spacing: 1px;
+  }
+  .preset-roster .count {
+    color: var(--neon-yellow);
+    font-family: 'Press Start 2P', monospace;
+    font-size: 10px;
+    margin-right: 6px;
+  }
+
+  /* ============ JUKEBOX (MUSIC SELECT) ============ */
+  .music-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 14px;
+    max-width: 980px;
+    width: 100%;
+    margin-bottom: 24px;
+  }
+
+  .track-card {
+    border: 2px solid var(--text-dim);
+    background: rgba(10, 0, 20, 0.85);
+    padding: 14px 16px;
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .track-card:hover, .track-card.kbd-active {
+    transform: translateY(-2px);
+    border-color: var(--neon-cyan);
+    box-shadow: 0 0 22px rgba(0, 255, 204, 0.4);
+  }
+
+  .track-card.now-playing {
+    border-color: var(--neon-yellow);
+    box-shadow: 0 0 24px rgba(255, 215, 0, 0.45);
+  }
+
+  .track-card.now-playing .track-title { color: var(--neon-yellow); text-shadow: 0 0 8px var(--neon-yellow); }
+
+  .track-glyph {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 22px;
+    color: var(--neon-cyan);
+    text-shadow: 0 0 6px var(--neon-cyan);
+    width: 32px;
+    text-align: center;
+    flex: 0 0 32px;
+  }
+  .track-card.now-playing .track-glyph {
+    color: var(--neon-yellow);
+    text-shadow: 0 0 8px var(--neon-yellow);
+    animation: blink 1s infinite;
+  }
+
+  .track-info { flex: 1 1 auto; min-width: 0; }
+  .track-title {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 11px;
+    color: var(--text);
+    letter-spacing: 1px;
+    line-height: 1.4;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .track-meta {
+    font-size: 13px;
+    color: var(--text-dim);
+    margin-top: 4px;
+    letter-spacing: 1px;
+  }
+  .track-meta .alt {
+    color: var(--neon-pink);
+    text-shadow: 0 0 4px var(--neon-pink);
+  }
+
+  /* ============ AUDIO TOGGLE ============ */
+  .audio-toggle {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 50;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 10px;
+    color: var(--neon-cyan);
+    border: 2px solid var(--neon-cyan);
+    background: rgba(10, 0, 20, 0.85);
+    padding: 8px 12px;
+    cursor: pointer;
+    letter-spacing: 2px;
+    text-shadow: 0 0 6px var(--neon-cyan);
+    box-shadow: 0 0 12px rgba(0, 255, 204, 0.3);
+    user-select: none;
+  }
+  .audio-toggle.muted {
+    color: var(--text-dim);
+    border-color: var(--text-dim);
+    text-shadow: none;
+    box-shadow: none;
+  }
+  .audio-toggle:hover { background: rgba(0, 255, 204, 0.15); }
+</style>
+</head>
+<body>
+  <div class="grid-bg"></div>
+  <div class="stars" id="stars"></div>
+  <div class="lightning-flash" id="lightning-flash"></div>
+
+  <!-- ============ BACKGROUND AUDIO ============ -->
+  <audio id="bgm" loop preload="auto"></audio>
+  <audio id="intro-audio" preload="none"></audio>
+  <div class="audio-toggle muted" id="audio-toggle" title="Toggle music">[ &#9834; MUSIC OFF ]</div>
+
+  <!-- ============ BOOT SCREEN ============ -->
+  <div class="screen" id="boot-screen">
+    <div class="boot-header">MULTIDECK v1.0</div>
+    <div class="boot-copy">COPYRIGHT (C) OQE LABS 2026 &middot; ALL RIGHTS RESERVED</div>
+    <div class="boot-log" id="boot-log"></div>
+    <div class="boot-bar-wrap">
+      <div class="boot-bar-label"><span id="boot-bar-text">BOOT SEQUENCE</span><span id="boot-bar-pct">0%</span></div>
+      <div class="boot-bar"><div class="boot-bar-fill" id="boot-bar-fill"></div></div>
+    </div>
+    <div class="boot-skip">PRESS <span class="key">ANY KEY</span> TO SKIP</div>
+  </div>
+
+  <!-- ============ STUDIO SPLASH ============ -->
+  <div class="screen hidden" id="studio-screen">
+    <div class="studio-tag">A</div>
+    <div class="studio-logo">OQE LABS</div>
+    <div class="studio-sub">PRODUCTION</div>
+    <div class="studio-bar"></div>
+  </div>
+
+  <!-- ============ TITLE SCREEN ============ -->
+  <div class="screen hidden" id="title-screen">
+    <div class="title-logo" id="title-logo">MULTIDECK<div class="lightning-arcs" id="title-arcs"></div></div>
+    <div class="title-sub">// PERSONA NETWORK DECK &middot; v1.0 //</div>
+    <div class="menu gated" id="title-menu">
+      <button class="menu-item" data-action="continue" id="menu-continue">CONTINUE</button>
+      <button class="menu-item" data-action="load">LOAD</button>
+      <button class="menu-item" data-action="new-game">NEW GAME</button>
+      <button class="menu-item" data-action="teams">TEAMS</button>
+      <button class="menu-item" data-action="music">MUSIC</button>
+      <button class="menu-item" data-action="options">OPTIONS</button>
+      <button class="menu-item" data-action="quit">QUIT</button>
+    </div>
+    <div class="press-start" id="press-start">PRESS START</div>
+    <div class="footer">
+      <span class="blink">&#9654;</span> AWAITING INPUT <span class="blink">&#9664;</span>
+    </div>
+  </div>
+
+  <!-- ============ PROJECT SELECT ============ -->
+  <div class="screen hidden" id="project-screen">
+    <button class="back-btn" data-back="title-screen">[ ESC ] BACK</button>
+    <div class="select-header">TARGET NODE</div>
+    <div class="select-sub">// select operating zone</div>
+    <div class="project-grid" id="project-grid"></div>
+    <div class="hint-bar">
+      <span class="key">&larr;&uarr;&darr;&rarr;</span> NAVIGATE
+      <span class="key">ENTER</span> SELECT
+      <span class="key">ESC</span> BACK
+    </div>
+  </div>
+
+  <!-- ============ NEW PROJECT ============ -->
+  <div class="screen hidden" id="new-project-screen">
+    <button class="back-btn" data-back="title-screen">[ ESC ] BACK</button>
+    <div class="select-header">SPIN UP NODE</div>
+    <div class="select-sub">// initialize fresh operating zone</div>
+    <div class="form-box">
+      <label class="form-label">PROJECT NAME</label>
+      <input class="form-input" type="text" id="new-project-name" placeholder="my-new-project" autocomplete="off">
+      <div class="form-help">// created at D:\Dev\01-ACTIVE\&lt;name&gt; · letters, digits, dashes only</div>
+      <div class="form-actions">
+        <button class="form-btn" id="new-project-create">[ CREATE ]</button>
+        <button class="form-btn cancel" data-back="title-screen">[ CANCEL ]</button>
+      </div>
+      <div class="form-msg" id="new-project-msg"></div>
+    </div>
+  </div>
+
+  <!-- ============ TEAMS SELECT ============ -->
+  <div class="screen hidden" id="teams-screen">
+    <button class="back-btn" data-back="title-screen">[ ESC ] BACK</button>
+    <div class="select-header">TEAM PRESETS</div>
+    <div class="select-sub">// pre-built squads, one click deploy</div>
+    <div class="team-presets-grid" id="team-presets-grid"></div>
+    <div class="hint-bar">
+      <span class="key">&larr;&uarr;&darr;&rarr;</span> NAVIGATE
+      <span class="key">ENTER</span> LOAD TEAM
+      <span class="key">ESC</span> BACK
+    </div>
+  </div>
+
+  <!-- ============ MUSIC SELECT ============ -->
+  <div class="screen hidden" id="music-screen">
+    <button class="back-btn" data-back="title-screen">[ ESC ] BACK</button>
+    <div class="select-header">JUKEBOX</div>
+    <div class="select-sub">// pick your soundtrack</div>
+    <div class="music-grid" id="music-grid"></div>
+    <div class="hint-bar">
+      <span class="key">&larr;&uarr;&darr;&rarr;</span> NAVIGATE
+      <span class="key">ENTER</span> PLAY
+      <span class="key">ESC</span> BACK
+    </div>
+  </div>
+
+  <!-- ============ DASHBOARDS (OPTIONS) ============ -->
+  <div class="screen hidden" id="dashboards-screen">
+    <button class="back-btn" data-back="title-screen">[ ESC ] BACK</button>
+    <div class="select-header">MONITORS</div>
+    <div class="select-sub">// surveillance &amp; signal feeds</div>
+    <div class="dashboard-grid" id="dashboard-grid"></div>
+    <div class="hint-bar">
+      <span class="key">&larr;&uarr;&darr;&rarr;</span> NAVIGATE
+      <span class="key">ENTER</span> OPEN
+      <span class="key">ESC</span> BACK
+    </div>
+  </div>
+
+  <!-- ============ CHARACTER SELECT ============ -->
+  <div class="screen hidden" id="select-screen">
+    <button class="back-btn" data-back="project-screen">[ ESC ] BACK</button>
+    <div class="top-hud" id="top-hud"><span class="label">PROJECT:</span> <span id="hud-project">-</span></div>
+    <div class="select-header">SELECT OPERATIVE</div>
+    <div class="select-sub" id="select-sub">// scanning available agents</div>
+
+    <div class="select-layout">
+      <div class="select-left">
+        <div class="character-grid" id="grid"></div>
+        <div class="bio-panel" id="bio">
+          <div class="bio-empty">[ HOVER OR CLICK AN OPERATIVE TO VIEW DOSSIER ]</div>
+        </div>
+        <div class="options">
+          <label class="checkbox-line danger">
+            <input type="checkbox" id="dangerous-mode" checked>
+            <span class="box"></span>
+            <span>// DANGEROUS MODE //</span>
+          </label>
+          <label class="checkbox-line team-mode">
+            <input type="checkbox" id="team-mode">
+            <span class="box"></span>
+            <span>// TEAM MODE //</span>
+          </label>
+          <input type="text" class="prompt-input" id="initial-prompt" placeholder="initial prompt (optional)" autocomplete="off">
+        </div>
+        <button class="launch-btn" id="launch-btn" disabled>[ DEPLOY ]</button>
+      </div>
+
+      <div class="select-right">
+        <div class="portrait-panel" id="portrait-panel">
+          <div class="portrait-tag" id="portrait-tag">// NOW SELECTING //</div>
+          <div class="portrait-stage">
+            <div class="portrait-avatar" id="portrait-avatar">?</div>
+          </div>
+          <div class="portrait-name" id="portrait-name">--</div>
+          <div class="portrait-class" id="portrait-class">awaiting input</div>
+          <div class="portrait-mini-stats" id="portrait-stats">
+            <span class="lbl">CPU</span><span class="val" id="ps-cpu">--</span>
+            <span class="lbl">MEM</span><span class="val" id="ps-mem">--</span>
+            <span class="lbl">NET</span><span class="val" id="ps-net">--</span>
+            <span class="lbl">SEC</span><span class="val" id="ps-sec">--</span>
+          </div>
+          <div class="portrait-status" id="portrait-status">STANDBY</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="hint-bar">
+      <span class="key">&larr;&uarr;&darr;&rarr;</span> NAVIGATE
+      <span class="key">ENTER</span> DEPLOY
+      <span class="key">ESC</span> BACK
+    </div>
+  </div>
+
+  <!-- ============ LAUNCHING OVERLAY ============ -->
+  <div class="overlay" id="overlay">
+    <div class="overlay-text" id="overlay-text">DEPLOYING...</div>
+    <div class="overlay-sub" id="overlay-sub">establishing uplink</div>
+    <div class="overlay-bar"><div class="overlay-bar-fill" id="overlay-bar-fill"></div></div>
+  </div>
+
+  <!-- ============ SHUTDOWN SCREEN ============ -->
+  <div class="screen hidden" id="shutdown-screen" style="background:#000; justify-content:flex-start; align-items:flex-start; padding:60px 80px;">
+    <div class="boot-header">MULTIDECK v1.0</div>
+    <div class="boot-copy">SHUTDOWN SEQUENCE INITIATED</div>
+    <div class="boot-log" id="shutdown-log"></div>
+    <div class="boot-bar-wrap">
+      <div class="boot-bar-label"><span id="shutdown-bar-text">SHUTTING DOWN</span><span id="shutdown-bar-pct">100%</span></div>
+      <div class="boot-bar"><div class="boot-bar-fill" id="shutdown-bar-fill" style="width:100%;"></div></div>
+    </div>
+  </div>
+
+<script>
+// ============ STATIC DATA ============
+const GLYPHS = {
+  dispatch: 'D', architect: 'A', engineer: 'E', reviewer: 'R', researcher: 'Q',
+};
+
+const STATS = {
+  dispatch:   { hp: 999, atk: 60, def: 85, int: 95, class: 'Coordinator',  flavor: 'Workspace-level ambient coordinator. Routes tasks across projects, tracks jobs, enforces OQE discipline on every task. Never implements, always delegates.' },
+  architect:  { hp:  80, atk: 50, def: 90, int: 98, class: 'Strategist',   flavor: 'Project structure, builds, documentation, and cross-agent coordination. Authors charters, sets PM discipline. The meta-builder.' },
+  engineer:   { hp:  85, atk: 90, def: 70, int: 85, class: 'Implementer',  flavor: 'Code implementation, testing, debugging. Writes the code that ships. Fast, precise, doesn\u2019t miss.' },
+  reviewer:   { hp:  80, atk: 70, def: 95, int: 96, class: 'Quality Gate', flavor: 'OQE review on every completed job. PASS or FLAG with a single fix loop. Nothing ships without a green light.' },
+  researcher: { hp:  90, atk: 80, def: 75, int: 94, class: 'Investigator', flavor: 'Source-cited investigation, grading STRONG, MODERATE, or LIMITED per OQE discipline. Never speculates. Flags single-source claims.' },
+};
+
+const DASHBOARDS = [
+  { name: 'DESKTOP',      url: '/',             desc: 'Full dispatch board: actions, calendar, escalations, intel.' },
+  { name: 'MOBILE',       url: '/mobile',       desc: 'Compact ops view tuned for phone over Tailscale.' },
+  { name: 'BRIEFING',     url: '/briefing',     desc: 'Morning pipeline rundown for the day ahead.' },
+  { name: 'INTELLIGENCE', url: '/intelligence', desc: 'OSINT signal feeds and indicator activity.' },
+];
+
+// ============ APP STATE ============
+const state = {
+  personas: {},      // raw from registry
+  projects: [],      // raw from server
+  filteredPersonas: [], // ordered list shown on character select
+  tracks: [],        // music tracks from /launcher/music
+  currentTrack: null, // currently selected track url
+  teamPresets: [],   // named team presets from /launcher/team-presets
+  currentProject: null,
+  selectedPersona: null,
+  teamMode: false,
+  team: [],          // ordered list of selected persona keys when in team mode
+  currentScreen: 'boot-screen',
+  kbdIndex: 0,
+  bootDone: false,
+  studioDone: false,
+  titleGateOpen: false,
+};
+
+const MUSIC_KEY = 'dispatch_launcher_track';
+const DEFAULT_TRACK_FILE = 'Neon Conveyor Dreams.mp3';
+
+// ============ STARS ============
+(function makeStars() {
+  const c = document.getElementById('stars');
+  for (let i = 0; i < 80; i++) {
+    const s = document.createElement('div');
+    s.className = 'star';
+    s.style.left = Math.random() * 100 + '%';
+    s.style.top = Math.random() * 100 + '%';
+    s.style.animationDelay = Math.random() * 2 + 's';
+    c.appendChild(s);
+  }
+})();
+
+// ============ FETCH DATA ============
+async function loadData() {
+  try {
+    const [pr, pj, mu, tp] = await Promise.all([
+      fetch('/launcher/personas').then(r => r.json()),
+      fetch('/launcher/projects').then(r => r.json()),
+      fetch('/launcher/music').then(r => r.json()),
+      fetch('/launcher/team-presets').then(r => r.json()),
+    ]);
+    state.personas = pr.personas || {};
+    state.projects = pj.projects || [];
+    state.tracks = mu.tracks || [];
+    state.teamPresets = tp.presets || [];
+    renderProjectGrid();
+    renderMusicGrid();
+    renderTeamPresetsGrid();
+    initBgmSrc();
+    refreshContinueLabel();
+  } catch (e) {
+    console.error('failed to load launcher data', e);
+  }
+}
+
+// ============ TEAM PRESETS ============
+function renderTeamPresetsGrid() {
+  const grid = document.getElementById('team-presets-grid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  state.teamPresets.forEach((preset, i) => {
+    const card = document.createElement('div');
+    card.className = 'preset-card';
+    card.style.setProperty('--accent', preset.color || '#00FFCC');
+    card.dataset.idx = i;
+    card.dataset.id = preset.id;
+    // Build a compact roster line showing callsigns
+    const callsigns = preset.personas
+      .map(key => (state.personas[key] && state.personas[key].callsign) || key)
+      .join(' \u00b7 ');
+    card.innerHTML = `
+      <div class="preset-glyph">${escapeHtml(preset.glyph || '#')}</div>
+      <div class="preset-body">
+        <div class="preset-name">${escapeHtml(preset.name)}</div>
+        <div class="preset-sub">${escapeHtml(preset.subtitle || '')}</div>
+        <div class="preset-roster"><span class="count">[${preset.personas.length}]</span>${escapeHtml(callsigns)}</div>
+      </div>
+    `;
+    card.addEventListener('click', () => loadTeamPreset(preset));
+    card.addEventListener('mouseenter', () => setKbdIndex(i, '#team-presets-grid .preset-card'));
+    grid.appendChild(card);
+  });
+}
+
+function loadTeamPreset(preset) {
+  // Pick the right project for the preset
+  const project = state.projects.find(p => p.id === preset.project) || state.projects[0];
+  if (project) {
+    state.currentProject = project;
+    document.getElementById('hud-project').textContent = project.name + '  [' + project.path + ']';
+    state.filteredPersonas = personasForProject(project);
+  }
+  renderCharacterGrid();
+  // Enable team mode and pre-select the preset's personas
+  const teamToggle = document.getElementById('team-mode');
+  teamToggle.checked = true;
+  setTeamMode(true);
+  state.team = preset.personas.filter(k => state.filteredPersonas.some(p => p.key === k));
+  refreshTeamBadges();
+  refreshTeamLaunchButton();
+  showScreen('select-screen');
+}
+
+// ============ MUSIC ============
+function initBgmSrc() {
+  let saved = null;
+  try { saved = localStorage.getItem(MUSIC_KEY); } catch {}
+  let track = state.tracks.find(t => t.file === saved);
+  if (!track) track = state.tracks.find(t => t.file === DEFAULT_TRACK_FILE);
+  if (!track && state.tracks.length) track = state.tracks[0];
+  if (!track) return;
+  state.currentTrack = track;
+  bgm.src = track.url;
+}
+
+function renderMusicGrid() {
+  const grid = document.getElementById('music-grid');
+  grid.innerHTML = '';
+  state.tracks.forEach((t, i) => {
+    const card = document.createElement('div');
+    card.className = 'track-card';
+    card.dataset.idx = i;
+    card.dataset.file = t.file;
+    if (state.currentTrack && state.currentTrack.file === t.file) {
+      card.classList.add('now-playing');
+    }
+    const sizeMb = (t.size / 1024 / 1024).toFixed(1);
+    const altTag = t.isAlt ? '<span class="alt">[ ALT ]</span>  ' : '';
+    card.innerHTML = `
+      <div class="track-glyph">${t.isAlt ? '\u266B' : '\u266A'}</div>
+      <div class="track-info">
+        <div class="track-title">${escapeHtml(t.title)}</div>
+        <div class="track-meta">${altTag}${sizeMb} MB</div>
+      </div>
+    `;
+    card.addEventListener('click', () => selectTrack(t));
+    card.addEventListener('mouseenter', () => setKbdIndex(i, '#music-grid .track-card'));
+    grid.appendChild(card);
+  });
+}
+
+function selectTrack(t) {
+  state.currentTrack = t;
+  try { localStorage.setItem(MUSIC_KEY, t.file); } catch {}
+  // Crossfade-ish: fade out, swap, fade in
+  const wasPlaying = !bgm.paused && audioStarted;
+  const startVol = bgm.volume;
+  if (wasPlaying) {
+    fadeBgm(0, 250, () => {
+      bgm.src = t.url;
+      bgm.play().then(() => fadeBgm(startVol, 400)).catch(() => {});
+    });
+  } else {
+    bgm.src = t.url;
+    if (audioStarted) bgm.play().catch(() => {});
+  }
+  // Refresh the grid highlight
+  document.querySelectorAll('#music-grid .track-card').forEach(c => {
+    c.classList.toggle('now-playing', c.dataset.file === t.file);
+  });
+}
+
+function fadeBgm(target, duration, done) {
+  const start = bgm.volume;
+  const steps = Math.max(4, Math.floor(duration / 50));
+  let i = 0;
+  const iv = setInterval(() => {
+    i++;
+    bgm.volume = start + (target - start) * (i / steps);
+    if (i >= steps) {
+      bgm.volume = target;
+      clearInterval(iv);
+      if (done) done();
+    }
+  }, duration / steps);
+}
+
+// ============ ENRICH PERSONA ============
+function enrichPersona(key, raw) {
+  const stats = STATS[key] || { hp: 75, atk: 70, def: 70, int: 80, class: 'Operator', flavor: raw.description || '' };
+  return {
+    key,
+    name: (raw.callsign || key).toUpperCase(),
+    callsign: raw.callsign || key,
+    color: raw.color_hex || '#00FFCC',
+    glyph: GLYPHS[key] || (raw.callsign || key).charAt(0).toUpperCase(),
+    cwd: raw.cwd || '',
+    scope: raw.scope || '',
+    description: raw.description || '',
+    hp: stats.hp, atk: stats.atk, def: stats.def, int: stats.int,
+    class: stats.class,
+    flavor: stats.flavor || raw.description || '',
+  };
+}
+
+// ============ FILTER PERSONAS BY PROJECT ============
+function personasForProject(project) {
+  const all = Object.entries(state.personas).map(([k, v]) => enrichPersona(k, v));
+  if (!project || project.id === 'workspace') return all;
+  const projPath = (project.path || '').toLowerCase();
+  return all.filter(p => {
+    if (p.scope === 'workspace') return true;
+    const cwd = (p.cwd || '').toLowerCase();
+    if (!cwd) return false;
+    return cwd === projPath || cwd.startsWith(projPath + '\\') || cwd.startsWith(projPath + '/');
+  });
+}
+
+// ============ RENDER PROJECT GRID ============
+function renderProjectGrid() {
+  const grid = document.getElementById('project-grid');
+  grid.innerHTML = '';
+  state.projects.forEach((p, i) => {
+    const card = document.createElement('div');
+    card.className = 'project-card';
+    card.dataset.idx = i;
+    card.innerHTML = `
+      <div class="project-name">${escapeHtml(p.name)}</div>
+      <div class="project-path">${escapeHtml(p.path)}</div>
+      <div class="project-desc">${escapeHtml(p.description || '')}</div>
+    `;
+    card.addEventListener('click', () => selectProject(p));
+    card.addEventListener('mouseenter', () => setKbdIndex(i, '#project-grid .project-card'));
+    grid.appendChild(card);
+  });
+}
+
+function selectProject(p) {
+  state.currentProject = p;
+  document.getElementById('hud-project').textContent = p.name + '  [' + p.path + ']';
+  state.filteredPersonas = personasForProject(p);
+  renderCharacterGrid();
+  showScreen('select-screen');
+}
+
+// ============ RENDER CHARACTER GRID ============
+function renderCharacterGrid() {
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+  const sub = document.getElementById('select-sub');
+  sub.textContent = '// ' + state.filteredPersonas.length + ' available \u00b7 use mouse or keyboard';
+
+  state.filteredPersonas.forEach((p, i) => {
+    const card = document.createElement('div');
+    card.className = 'character-card';
+    card.style.setProperty('--accent', p.color);
+    card.dataset.key = p.key;
+    card.dataset.idx = i;
+    card.innerHTML = `
+      <div class="team-badge"></div>
+      <div class="portrait">${escapeHtml(p.glyph)}</div>
+      <div class="callsign">${escapeHtml(p.name)}</div>
+      <div class="class-tag">${escapeHtml(p.class)}</div>
+    `;
+    card.addEventListener('mouseenter', () => { showBio(p); setKbdIndex(i, '#grid .character-card'); });
+    card.addEventListener('click', () => onPersonaClick(p, card));
+    grid.appendChild(card);
+  });
+
+  state.selectedPersona = null;
+  resetLaunchBtn();
+  if (state.filteredPersonas.length > 0) {
+    const firstCard = grid.querySelector('.character-card');
+    selectPersona(state.filteredPersonas[0], firstCard);
+  } else {
+    document.getElementById('bio').innerHTML = '<div class="bio-empty">[ NO OPERATIVES ASSIGNED TO THIS PROJECT ]</div>';
+  }
+}
+
+function showBio(p) {
+  const bio = document.getElementById('bio');
+  bio.style.setProperty('--accent', p.color);
+  bio.style.borderColor = p.color;
+  bio.style.boxShadow = `0 0 30px ${p.color}55`;
+  bio.innerHTML = `
+    <div class="bio-name">${escapeHtml(p.name)}</div>
+    <div class="bio-class">CLASS: ${escapeHtml(p.class.toUpperCase())} \u00b7 SCOPE: ${escapeHtml(p.scope || '-')}</div>
+    <div class="bio-stats">
+      <div class="bio-stat"><span class="bio-stat-label">CPU</span><span class="bio-stat-value">${p.hp}</span></div>
+      <div class="bio-stat"><span class="bio-stat-label">MEM</span><span class="bio-stat-value">${p.atk}</span></div>
+      <div class="bio-stat"><span class="bio-stat-label">NET</span><span class="bio-stat-value">${p.def}</span></div>
+      <div class="bio-stat"><span class="bio-stat-label">SEC</span><span class="bio-stat-value">${p.int}</span></div>
+    </div>
+    <div class="bio-flavor">${escapeHtml(p.flavor)}</div>
+  `;
+  updatePortraitPanel(p);
+}
+
+function updatePortraitPanel(p, locked) {
+  const panel = document.getElementById('portrait-panel');
+  panel.style.setProperty('--accent', p.color);
+  const avatar = document.getElementById('portrait-avatar');
+  // Try the pixel-art portrait first; fall back to the glyph if it 404s
+  avatar.innerHTML = `<img src="/launcher/assets/portraits/${p.key}.png" alt="${p.name}" onerror="this.parentElement.textContent='${p.glyph}'">`;
+  document.getElementById('portrait-name').textContent = p.name;
+  document.getElementById('portrait-class').textContent = p.class.toUpperCase();
+  document.getElementById('ps-cpu').textContent = p.hp;
+  document.getElementById('ps-mem').textContent = p.atk;
+  document.getElementById('ps-net').textContent = p.def;
+  document.getElementById('ps-sec').textContent = p.int;
+  const status = document.getElementById('portrait-status');
+  const tag = document.getElementById('portrait-tag');
+  if (locked) {
+    status.textContent = '> LOCKED IN <';
+    status.classList.add('ready');
+    tag.textContent = '// READY //';
+  } else {
+    status.textContent = 'STANDBY';
+    status.classList.remove('ready');
+    tag.textContent = '// NOW SELECTING //';
+  }
+}
+
+function onPersonaClick(p, card) {
+  if (state.teamMode) {
+    toggleTeamMember(p, card);
+  } else {
+    selectPersona(p, card);
+  }
+}
+
+function selectPersona(p, card) {
+  document.querySelectorAll('#grid .character-card.selected').forEach(c => c.classList.remove('selected'));
+  if (card) card.classList.add('selected');
+  state.selectedPersona = p;
+  const btn = document.getElementById('launch-btn');
+  btn.disabled = false;
+  btn.style.borderColor = p.color;
+  btn.style.color = p.color;
+  btn.style.textShadow = `0 0 10px ${p.color}`;
+  btn.style.boxShadow = `0 0 20px ${p.color}55`;
+  btn.textContent = `[ DEPLOY ${p.name} ]`;
+  showBio(p);
+  updatePortraitPanel(p, true);
+}
+
+function toggleTeamMember(p, card) {
+  const idx = state.team.indexOf(p.key);
+  if (idx >= 0) {
+    state.team.splice(idx, 1);
+  } else {
+    state.team.push(p.key);
+  }
+  // Most recently touched persona shows in portrait panel + bio
+  state.selectedPersona = p;
+  showBio(p);
+  updatePortraitPanel(p, idx < 0);
+  refreshTeamBadges();
+  refreshTeamLaunchButton();
+}
+
+function refreshTeamBadges() {
+  document.querySelectorAll('#grid .character-card').forEach((c) => {
+    const key = c.dataset.key;
+    const order = state.team.indexOf(key);
+    const badge = c.querySelector('.team-badge');
+    if (order >= 0) {
+      c.classList.add('in-team');
+      if (badge) badge.textContent = String(order + 1);
+    } else {
+      c.classList.remove('in-team');
+      if (badge) badge.textContent = '';
+    }
+  });
+}
+
+function refreshTeamLaunchButton() {
+  const btn = document.getElementById('launch-btn');
+  if (!state.teamMode) return;
+  if (state.team.length === 0) {
+    btn.disabled = true;
+    btn.style.borderColor = '';
+    btn.style.color = '';
+    btn.style.textShadow = '';
+    btn.style.boxShadow = '';
+    btn.textContent = '[ DEPLOY TEAM (0) ]';
+    return;
+  }
+  btn.disabled = false;
+  btn.style.borderColor = 'var(--neon-yellow)';
+  btn.style.color = 'var(--neon-yellow)';
+  btn.style.textShadow = '0 0 10px var(--neon-yellow)';
+  btn.style.boxShadow = '0 0 22px rgba(255, 215, 0, 0.5)';
+  btn.textContent = `[ DEPLOY TEAM (${state.team.length}) ]`;
+}
+
+function setTeamMode(on) {
+  state.teamMode = on;
+  if (on) {
+    refreshTeamBadges();
+    refreshTeamLaunchButton();
+  } else {
+    state.team = [];
+    document.querySelectorAll('#grid .character-card').forEach((c) => {
+      c.classList.remove('in-team');
+      const badge = c.querySelector('.team-badge');
+      if (badge) badge.textContent = '';
+    });
+    // Restore single-persona launch button
+    if (state.selectedPersona) {
+      selectPersona(state.selectedPersona, document.querySelector(`#grid .character-card[data-key="${state.selectedPersona.key}"]`));
+    } else {
+      resetLaunchBtn();
+    }
+  }
+}
+
+function resetLaunchBtn() {
+  const btn = document.getElementById('launch-btn');
+  btn.disabled = true;
+  btn.style.borderColor = '';
+  btn.style.color = '';
+  btn.style.textShadow = '';
+  btn.style.boxShadow = '';
+  btn.textContent = '[ DEPLOY ]';
+}
+
+// ============ RENDER DASHBOARD GRID ============
+function renderDashboardGrid() {
+  const grid = document.getElementById('dashboard-grid');
+  grid.innerHTML = '';
+  DASHBOARDS.forEach((d, i) => {
+    const card = document.createElement('div');
+    card.className = 'dashboard-card';
+    card.dataset.idx = i;
+    card.innerHTML = `
+      <div class="dashboard-name">${escapeHtml(d.name)}</div>
+      <div class="dashboard-desc">${escapeHtml(d.desc)}</div>
+    `;
+    card.addEventListener('click', () => { window.location.href = d.url; });
+    card.addEventListener('mouseenter', () => setKbdIndex(i, '#dashboard-grid .dashboard-card'));
+    grid.appendChild(card);
+  });
+}
+renderDashboardGrid();
+
+// ============ SCREEN MANAGEMENT ============
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+  const target = document.getElementById(id);
+  if (target) target.classList.remove('hidden');
+  state.currentScreen = id;
+  state.kbdIndex = 0;
+  setTimeout(() => {
+    const sel = currentSelector();
+    if (sel) setKbdIndex(0, sel);
+  }, 10);
+}
+
+function currentSelector() {
+  switch (state.currentScreen) {
+    case 'title-screen':       return '#title-menu .menu-item';
+    case 'project-screen':     return '#project-grid .project-card';
+    case 'dashboards-screen':  return '#dashboard-grid .dashboard-card';
+    case 'teams-screen':       return '#team-presets-grid .preset-card';
+    case 'music-screen':       return '#music-grid .track-card';
+    case 'select-screen':      return '#grid .character-card';
+    default:                   return null;
+  }
+}
+
+function setKbdIndex(i, selector) {
+  const items = document.querySelectorAll(selector);
+  if (!items.length) return;
+  state.kbdIndex = Math.max(0, Math.min(i, items.length - 1));
+  items.forEach(el => el.classList.remove('kbd-active'));
+  const active = items[state.kbdIndex];
+  active.classList.add('kbd-active');
+  if (selector.includes('character-card')) {
+    const p = state.filteredPersonas[state.kbdIndex];
+    if (p) showBio(p);
+  }
+}
+
+// ============ TITLE MENU ACTIONS ============
+document.getElementById('title-menu').addEventListener('click', (e) => {
+  const btn = e.target.closest('.menu-item');
+  if (!btn) return;
+  handleTitleAction(btn.dataset.action);
+});
+
+function handleTitleAction(action) {
+  switch (action) {
+    case 'continue': {
+      const save = loadSaveData();
+      if (!save) {
+        flashMenuMessage('NO SAVE DATA');
+        return;
+      }
+      const project = state.projects.find(p => p.id === save.projectId) || state.projects[0];
+      if (!project) {
+        flashMenuMessage('NO SAVE DATA');
+        return;
+      }
+      state.currentProject = project;
+      document.getElementById('hud-project').textContent = project.name + '  [' + project.path + ']';
+      state.filteredPersonas = personasForProject(project);
+      renderCharacterGrid();
+      // Try to pre-select the saved persona
+      const savedIdx = state.filteredPersonas.findIndex(p => p.key === save.personaKey);
+      if (savedIdx >= 0) {
+        const cards = document.querySelectorAll('#grid .character-card');
+        selectPersona(state.filteredPersonas[savedIdx], cards[savedIdx]);
+      }
+      showScreen('select-screen');
+      break;
+    }
+    case 'load':
+      showScreen('project-screen');
+      break;
+    case 'new-game':
+      showScreen('new-project-screen');
+      setTimeout(() => document.getElementById('new-project-name').focus(), 50);
+      break;
+    case 'teams':
+      showScreen('teams-screen');
+      break;
+    case 'music':
+      showScreen('music-screen');
+      break;
+    case 'options':
+      showScreen('dashboards-screen');
+      break;
+    case 'quit':
+      runShutdown();
+      break;
+  }
+}
+
+// ============ SAVE / LOAD STATE ============
+const SAVE_KEY = 'dispatch_launcher_save';
+
+function saveLastSession(projectId, personaKey) {
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify({
+      projectId, personaKey, ts: Date.now(),
+    }));
+  } catch {}
+}
+
+function loadSaveData() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+function refreshContinueLabel() {
+  const save = loadSaveData();
+  const btn = document.getElementById('menu-continue');
+  if (!btn) return;
+  if (save && state.personas[save.personaKey]) {
+    const p = state.personas[save.personaKey];
+    btn.textContent = `CONTINUE  \u00b7  ${(p.callsign || save.personaKey).toUpperCase()}`;
+  } else {
+    btn.textContent = 'CONTINUE';
+    btn.style.opacity = '0.5';
+  }
+}
+
+function flashMenuMessage(msg) {
+  const btn = document.getElementById('menu-continue');
+  const orig = btn.textContent;
+  btn.textContent = '// ' + msg + ' //';
+  btn.style.color = 'var(--neon-red)';
+  btn.style.borderColor = 'var(--neon-red)';
+  setTimeout(() => {
+    btn.textContent = orig;
+    btn.style.color = '';
+    btn.style.borderColor = '';
+  }, 1400);
+}
+
+// ============ SHUTDOWN SEQUENCE ============
+const SHUTDOWN_LINES = [
+  { text: 'flushing dispatch queue ...... ', result: 'OK',     cls: 'ok',   delay: 160 },
+  { text: 'closing uplink ............... ', result: 'OK',     cls: 'ok',   delay: 140 },
+  { text: 'unmount /dev/dispatch ........ ', result: 'OK',     cls: 'ok',   delay: 120 },
+  { text: 'persona registry .............',  result: 'STOWED', cls: 'ok',   delay: 140 },
+  { text: 'crt power down ............... ', result: 'OK',     cls: 'ok',   delay: 120 },
+  { text: '',                                 result: '',       cls: 'dim',  delay: 80 },
+  { text: 'GOODBYE',                          result: '',       cls: 'ready', delay: 360 },
+];
+
+function runShutdown() {
+  showScreenRaw('shutdown-screen');
+  // Fade music out
+  const fadeStart = bgm.volume;
+  const fadeSteps = 20;
+  let step = 0;
+  const fadeInt = setInterval(() => {
+    step++;
+    bgm.volume = Math.max(0, fadeStart * (1 - step / fadeSteps));
+    if (step >= fadeSteps) { clearInterval(fadeInt); bgm.pause(); }
+  }, 80);
+
+  const log = document.getElementById('shutdown-log');
+  const fill = document.getElementById('shutdown-bar-fill');
+  const pct = document.getElementById('shutdown-bar-pct');
+  const text = document.getElementById('shutdown-bar-text');
+  log.innerHTML = '';
+  let i = 0;
+  const total = SHUTDOWN_LINES.length;
+
+  function step2() {
+    if (i >= total) {
+      text.textContent = 'OFFLINE';
+      pct.textContent = '0%';
+      fill.style.width = '0%';
+      setTimeout(() => {
+        // Try to close the tab; browsers only allow this for windows opened via JS,
+        // so fall back to a "you can close this tab" message if it fails.
+        window.close();
+        setTimeout(() => {
+          // If we're still here, window.close() was blocked
+          log.innerHTML += '<div><span class="info">connection terminated. </span><span class="warn">you can close this tab.</span></div>';
+        }, 200);
+      }, 600);
+      return;
+    }
+    const line = SHUTDOWN_LINES[i];
+    const span = document.createElement('div');
+    if (line.result) {
+      span.innerHTML = `<span class="info">${line.text}</span><span class="${line.cls}">[ ${line.result} ]</span>`;
+    } else {
+      span.innerHTML = `<span class="${line.cls}">${line.text || '&nbsp;'}</span>`;
+    }
+    log.appendChild(span);
+    i++;
+    const remain = Math.round(((total - i) / total) * 100);
+    fill.style.width = remain + '%';
+    pct.textContent = remain + '%';
+    setTimeout(step2, line.delay);
+  }
+  step2();
+}
+
+// ============ NEW PROJECT FORM ============
+document.getElementById('new-project-create').addEventListener('click', createProject);
+document.getElementById('new-project-name').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { e.preventDefault(); createProject(); }
+});
+
+async function createProject() {
+  const input = document.getElementById('new-project-name');
+  const msg = document.getElementById('new-project-msg');
+  const name = input.value.trim();
+  msg.className = 'form-msg';
+  msg.textContent = '';
+  if (!name) {
+    msg.textContent = 'project name required';
+    msg.classList.add('err');
+    return;
+  }
+  try {
+    const r = await fetch('/launcher/projects', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    });
+    const data = await r.json();
+    if (!r.ok) {
+      msg.textContent = data.error || 'create failed';
+      msg.classList.add('err');
+      return;
+    }
+    msg.textContent = 'created ' + data.project.path;
+    msg.classList.add('ok');
+    input.value = '';
+    state.projects.push(data.project);
+    renderProjectGrid();
+    setTimeout(() => showScreen('project-screen'), 700);
+  } catch (e) {
+    msg.textContent = 'network error: ' + e.message;
+    msg.classList.add('err');
+  }
+}
+
+// ============ BACK BUTTONS ============
+document.querySelectorAll('[data-back]').forEach(b => {
+  b.addEventListener('click', () => showScreen(b.dataset.back));
+});
+
+// ============ LAUNCH ============
+document.getElementById('launch-btn').addEventListener('click', launchSelected);
+
+async function launchSelected() {
+  if (state.teamMode && state.team.length > 0) {
+    return launchTeam();
+  }
+  console.log('[DEPLOY] clicked', { selected: state.selectedPersona });
+  if (!state.selectedPersona) {
+    console.warn('[DEPLOY] no persona selected, aborting');
+    return;
+  }
+  const persona = state.selectedPersona;
+  const dangerous = document.getElementById('dangerous-mode').checked;
+  const prompt = document.getElementById('initial-prompt').value.trim();
+  const overlay = document.getElementById('overlay');
+  const text = document.getElementById('overlay-text');
+  const sub = document.getElementById('overlay-sub');
+  const fill = document.getElementById('overlay-bar-fill');
+  overlay.classList.remove('error');
+  text.textContent = 'DEPLOYING...';
+  sub.textContent = 'uplink to ' + persona.name;
+  fill.style.animation = 'none';
+  void fill.offsetWidth;
+  fill.style.animation = 'load-bar 1.6s ease-out forwards';
+  overlay.classList.add('show');
+  console.log('[DEPLOY] overlay shown, posting to /launcher/launch');
+
+  // Duck background music and play the persona intro
+  playPersonaIntro(persona.key);
+
+  try {
+    const r = await fetch('/launcher/launch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        persona: persona.key,
+        project: state.currentProject ? state.currentProject.id : null,
+        dangerous,
+        prompt,
+      }),
+    });
+    console.log('[DEPLOY] response status', r.status);
+    const data = await r.json();
+    console.log('[DEPLOY] response body', data);
+    if (!r.ok || !data.ok) {
+      overlay.classList.add('error');
+      text.textContent = 'DEPLOY FAILED';
+      sub.textContent = data.error || 'unknown error';
+      setTimeout(() => overlay.classList.remove('show'), 4000);
+      return;
+    }
+    // Save successful deploy as the continue point
+    if (state.currentProject) {
+      saveLastSession(state.currentProject.id, persona.key);
+      refreshContinueLabel();
+    }
+    setTimeout(() => {
+      text.textContent = 'UPLINK ACTIVE';
+      sub.textContent = persona.callsign + ' on the wire';
+    }, 1600);
+    setTimeout(() => overlay.classList.remove('show'), 3500);
+  } catch (e) {
+    console.error('[DEPLOY] network error', e);
+    overlay.classList.add('error');
+    text.textContent = 'NETWORK ERROR';
+    sub.textContent = e.message;
+    setTimeout(() => overlay.classList.remove('show'), 4000);
+  }
+}
+
+async function launchTeam() {
+  console.log('[TEAM DEPLOY]', state.team);
+  const overlay = document.getElementById('overlay');
+  const text = document.getElementById('overlay-text');
+  const sub = document.getElementById('overlay-sub');
+  const fill = document.getElementById('overlay-bar-fill');
+  const dangerous = document.getElementById('dangerous-mode').checked;
+  const prompt = document.getElementById('initial-prompt').value.trim();
+
+  overlay.classList.remove('error');
+  text.textContent = 'DEPLOYING TEAM...';
+  sub.textContent = `${state.team.length} operatives jacking in`;
+  fill.style.animation = 'none';
+  void fill.offsetWidth;
+  fill.style.animation = 'load-bar 2.4s ease-out forwards';
+  overlay.classList.add('show');
+
+  // Queue all team members' short deploy stubs back-to-back
+  playTeamDeploySequence(state.team);
+
+  try {
+    const r = await fetch('/launcher/launch-team', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        personas: state.team,
+        project: state.currentProject ? state.currentProject.id : null,
+        dangerous,
+        prompt,
+      }),
+    });
+    const data = await r.json();
+    console.log('[TEAM DEPLOY] response', r.status, data);
+    if (!r.ok || !data.ok) {
+      overlay.classList.add('error');
+      text.textContent = 'TEAM DEPLOY FAILED';
+      sub.textContent = data.error || 'unknown error';
+      setTimeout(() => overlay.classList.remove('show'), 4000);
+      return;
+    }
+    // Save the last team member as the continue point so CONTINUE re-loads someone meaningful
+    if (state.currentProject && state.team.length) {
+      saveLastSession(state.currentProject.id, state.team[state.team.length - 1]);
+      refreshContinueLabel();
+    }
+    setTimeout(() => {
+      text.textContent = 'TEAM DEPLOYED';
+      sub.textContent = data.deployed.map(d => d.callsign).join(' \u00b7 ');
+    }, 2000);
+    setTimeout(() => overlay.classList.remove('show'), 4500);
+  } catch (e) {
+    console.error('[TEAM DEPLOY] network error', e);
+    overlay.classList.add('error');
+    text.textContent = 'NETWORK ERROR';
+    sub.textContent = e.message;
+    setTimeout(() => overlay.classList.remove('show'), 4000);
+  }
+}
+
+// Wire the team-mode toggle
+document.getElementById('team-mode').addEventListener('change', (e) => {
+  setTeamMode(e.target.checked);
+});
+
+// ============ KEYBOARD NAV ============
+document.addEventListener('keydown', (e) => {
+  // First key in any pre-game screen also kicks off audio
+  if (!audioStarted &&
+      (state.currentScreen === 'boot-screen' ||
+       state.currentScreen === 'studio-screen' ||
+       state.currentScreen === 'title-screen')) {
+    tryStartAudio();
+  }
+
+  // Boot screen: any key skips
+  if (state.currentScreen === 'boot-screen') {
+    e.preventDefault();
+    finishBoot();
+    return;
+  }
+  // Studio splash: any key skips
+  if (state.currentScreen === 'studio-screen') {
+    e.preventDefault();
+    skipStudio();
+    return;
+  }
+  // Title screen with gate closed: any key opens menu
+  if (state.currentScreen === 'title-screen' && !state.titleGateOpen) {
+    e.preventDefault();
+    openTitleGate();
+    return;
+  }
+
+  // Ignore when typing in form inputs
+  const tag = (e.target && e.target.tagName) || '';
+  if (tag === 'INPUT' || tag === 'TEXTAREA') {
+    if (e.key === 'Escape') { e.target.blur(); }
+    return;
+  }
+
+  if (e.key === 'Escape') {
+    e.preventDefault();
+    if (state.currentScreen === 'select-screen')      showScreen('project-screen');
+    else if (state.currentScreen === 'project-screen' ||
+             state.currentScreen === 'new-project-screen' ||
+             state.currentScreen === 'dashboards-screen' ||
+             state.currentScreen === 'teams-screen' ||
+             state.currentScreen === 'music-screen') showScreen('title-screen');
+    return;
+  }
+
+  const sel = currentSelector();
+  if (!sel) return;
+  const items = document.querySelectorAll(sel);
+  if (!items.length) return;
+
+  const cols = computeCols(sel);
+
+  if (e.key === 'ArrowRight') { e.preventDefault(); setKbdIndex(state.kbdIndex + 1, sel); }
+  else if (e.key === 'ArrowLeft') { e.preventDefault(); setKbdIndex(state.kbdIndex - 1, sel); }
+  else if (e.key === 'ArrowDown') { e.preventDefault(); setKbdIndex(state.kbdIndex + cols, sel); }
+  else if (e.key === 'ArrowUp')   { e.preventDefault(); setKbdIndex(state.kbdIndex - cols, sel); }
+  else if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    const active = items[state.kbdIndex];
+    if (!active) return;
+    if (state.currentScreen === 'select-screen') {
+      const p = state.filteredPersonas[state.kbdIndex];
+      if (p) {
+        if (state.selectedPersona && state.selectedPersona.key === p.key) {
+          launchSelected();
+        } else {
+          selectPersona(p, active);
+        }
+      }
+    } else {
+      active.click();
+    }
+  }
+});
+
+function computeCols(selector) {
+  const items = document.querySelectorAll(selector);
+  if (items.length < 2) return 1;
+  const firstTop = items[0].offsetTop;
+  for (let i = 1; i < items.length; i++) {
+    if (items[i].offsetTop !== firstTop) return i;
+  }
+  return items.length;
+}
+
+// ============ HELPERS ============
+function escapeHtml(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[c]));
+}
+
+// ============ BOOT SEQUENCE ============
+const BOOT_LINES = [
+  { text: 'POST  ........................ ',                  result: 'OK',     cls: 'ok',   delay: 220 },
+  { text: 'kernel ...................... ',                   result: 'LOADED', cls: 'ok',   delay: 180 },
+  { text: 'memory check  16384 MB ....... ',                  result: 'OK',     cls: 'ok',   delay: 140 },
+  { text: 'mount /dev/dispatch .......... ',                  result: 'OK',     cls: 'ok',   delay: 120 },
+  { text: 'persona registry  11 entries . ',                  result: 'OK',     cls: 'ok',   delay: 140 },
+  { text: 'state synchronization ........ ',                  result: 'OK',     cls: 'ok',   delay: 120 },
+  { text: 'establishing uplink .......... ',                  result: 'LIVE',   cls: 'ok',   delay: 200 },
+  { text: 'CRT calibration .............. ',                  result: 'OK',     cls: 'ok',   delay: 100 },
+  { text: 'dangerous mode ............... ',                  result: 'ARMED',  cls: 'warn', delay: 220 },
+  { text: '',                                                  result: '',       cls: 'dim',  delay: 120 },
+  { text: 'SYSTEM READY',                                      result: '',       cls: 'ready', delay: 360 },
+];
+
+let bootSkipped = false;
+
+function runBoot() {
+  const log = document.getElementById('boot-log');
+  const fill = document.getElementById('boot-bar-fill');
+  const pct = document.getElementById('boot-bar-pct');
+  const text = document.getElementById('boot-bar-text');
+  let i = 0;
+  let progress = 0;
+  const total = BOOT_LINES.length;
+
+  function step() {
+    if (bootSkipped) { finishBoot(); return; }
+    if (i >= total) { finishBoot(); return; }
+    const line = BOOT_LINES[i];
+    const span = document.createElement('div');
+    if (line.result) {
+      span.innerHTML = `<span class="${line.cls === 'warn' ? 'info' : 'info'}">${line.text}</span><span class="${line.cls}">[ ${line.result} ]</span>`;
+    } else {
+      span.innerHTML = `<span class="${line.cls}">${line.text || '&nbsp;'}</span>`;
+    }
+    log.appendChild(span);
+    i++;
+    progress = Math.round((i / total) * 100);
+    fill.style.width = progress + '%';
+    pct.textContent = progress + '%';
+    if (i === total) text.textContent = 'BOOT COMPLETE';
+    setTimeout(step, line.delay);
+  }
+  step();
+}
+
+function finishBoot() {
+  if (state.bootDone) return;
+  state.bootDone = true;
+  bootSkipped = true;
+  const fill = document.getElementById('boot-bar-fill');
+  const pct = document.getElementById('boot-bar-pct');
+  const text = document.getElementById('boot-bar-text');
+  fill.style.width = '100%';
+  pct.textContent = '100%';
+  text.textContent = 'BOOT COMPLETE';
+  setTimeout(() => showScreenRaw('studio-screen'), 250);
+  setTimeout(() => runStudio(), 350);
+}
+
+// ============ STUDIO SPLASH ============
+function runStudio() {
+  // CSS animations carry the timing; total length ~3.0s (last animation ends ~2.8s)
+  setTimeout(() => {
+    if (state.studioDone) return;
+    state.studioDone = true;
+    showScreenRaw('title-screen');
+  }, 3000);
+}
+
+function skipStudio() {
+  if (state.studioDone) return;
+  state.studioDone = true;
+  showScreenRaw('title-screen');
+}
+
+// ============ TITLE GATE (PRESS START) ============
+function openTitleGate() {
+  if (state.titleGateOpen) return;
+  state.titleGateOpen = true;
+  // Lightning strike: flash overlay + electric arcs + logo materialize
+  const flash = document.getElementById('lightning-flash');
+  const logo  = document.getElementById('title-logo');
+  const arcs  = document.getElementById('title-arcs');
+  if (flash) {
+    flash.classList.remove('fire');
+    void flash.offsetWidth;
+    flash.classList.add('fire');
+  }
+  if (logo) {
+    logo.classList.remove('strike');
+    logo.style.opacity = '';
+    void logo.offsetWidth;
+    logo.classList.add('strike');
+    // Belt-and-suspenders: lock opacity to 1 once the strike settles, so the
+    // infinite glow loop can't accidentally revert to the base opacity:0 state.
+    setTimeout(() => { logo.style.opacity = '1'; }, 1600);
+  }
+  if (arcs) {
+    arcs.classList.remove('fire');
+    void arcs.offsetWidth;
+    arcs.classList.add('fire');
+  }
+  // Hide press-start immediately, reveal menu after the strike crests (~700ms)
+  document.getElementById('press-start').classList.add('hidden');
+  setTimeout(() => {
+    document.getElementById('title-menu').classList.remove('gated');
+    setKbdIndex(0, '#title-menu .menu-item');
+  }, 700);
+}
+
+function showScreenRaw(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+  const t = document.getElementById(id);
+  if (t) t.classList.remove('hidden');
+  state.currentScreen = id;
+}
+
+// ============ CLICK HANDLERS FOR BOOT / STUDIO / PRESS START ============
+document.getElementById('boot-screen').addEventListener('click', () => { tryStartAudio(); finishBoot(); });
+document.getElementById('studio-screen').addEventListener('click', () => { tryStartAudio(); skipStudio(); });
+document.getElementById('press-start').addEventListener('click', () => { tryStartAudio(); openTitleGate(); });
+document.getElementById('title-screen').addEventListener('click', (e) => {
+  if (!state.titleGateOpen && !e.target.closest('.menu-item')) { tryStartAudio(); openTitleGate(); }
+});
+
+// ============ AUDIO ============
+const bgm = document.getElementById('bgm');
+bgm.volume = 0.40;
+const audioToggle = document.getElementById('audio-toggle');
+let audioStarted = false;
+
+function tryStartAudio() {
+  if (audioStarted) return;
+  audioStarted = true;
+  bgm.play().then(() => {
+    audioToggle.classList.remove('muted');
+    audioToggle.innerHTML = '[ &#9834; MUSIC ON ]';
+  }).catch((e) => {
+    console.warn('audio autoplay blocked', e);
+    audioStarted = false;
+  });
+}
+
+// ============ PERSONA INTRO PLAYBACK ============
+const introAudio = document.getElementById('intro-audio');
+let bgmDuckedFromVolume = null;
+
+// Track the currently-bound listeners so we can detach them before binding
+// new ones. Avoids "single-deploy ended -> restore music" firing during a
+// team-deploy queue.
+let _introOnEnded = null;
+let _introOnError = null;
+function clearIntroListeners() {
+  if (_introOnEnded) introAudio.removeEventListener('ended', _introOnEnded);
+  if (_introOnError) introAudio.removeEventListener('error', _introOnError);
+  _introOnEnded = null;
+  _introOnError = null;
+  introAudio.pause();
+  try { introAudio.currentTime = 0; } catch {}
+}
+
+function duckBgm() {
+  if (!bgm.paused && bgmDuckedFromVolume === null) {
+    bgmDuckedFromVolume = bgm.volume;
+    bgm.volume = Math.min(bgm.volume, 0.10);
+  }
+}
+
+function playPersonaIntro(personaKey) {
+  // Single-deploy: play the long intro (~15 sec dossier line)
+  clearIntroListeners();
+  introAudio.src = `/launcher/assets/intros/${personaKey}.mp3`;
+  introAudio.volume = 1.0;
+  duckBgm();
+  _introOnEnded = restoreBgm;
+  _introOnError = restoreBgm;
+  introAudio.addEventListener('ended', _introOnEnded);
+  introAudio.addEventListener('error', _introOnError);
+  introAudio.play().catch((e) => {
+    console.warn('[INTRO] playback failed', e);
+    restoreBgm();
+  });
+}
+
+function playTeamDeploySequence(personaKeys) {
+  // Team-deploy: queue the short "<name> deployed" stubs back to back so the
+  // user hears every operative announce themselves without any one of them
+  // running long enough to drown the rest.
+  if (!personaKeys || !personaKeys.length) return;
+  clearIntroListeners();
+  introAudio.volume = 1.0;
+  duckBgm();
+  const queue = personaKeys.map(k => `/launcher/assets/intros/${k}-deploy.mp3`);
+  let i = 0;
+  const playNext = () => {
+    if (i >= queue.length) {
+      restoreBgm();
+      return;
+    }
+    introAudio.src = queue[i++];
+    introAudio.play().catch(() => setTimeout(playNext, 50));
+  };
+  _introOnEnded = playNext;
+  _introOnError = () => setTimeout(playNext, 50);
+  introAudio.addEventListener('ended', _introOnEnded);
+  introAudio.addEventListener('error', _introOnError);
+  playNext();
+}
+
+function restoreBgm() {
+  if (bgmDuckedFromVolume !== null) {
+    // Smooth fade back up over 600ms
+    const target = bgmDuckedFromVolume;
+    bgmDuckedFromVolume = null;
+    const start = bgm.volume;
+    const steps = 12;
+    let i = 0;
+    const iv = setInterval(() => {
+      i++;
+      bgm.volume = start + (target - start) * (i / steps);
+      if (i >= steps) { bgm.volume = target; clearInterval(iv); }
+    }, 50);
+  }
+}
+
+audioToggle.addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (bgm.paused) {
+    bgm.play().then(() => {
+      audioStarted = true;
+      audioToggle.classList.remove('muted');
+      audioToggle.innerHTML = '[ &#9834; MUSIC ON ]';
+    }).catch(() => {});
+  } else {
+    bgm.pause();
+    audioToggle.classList.add('muted');
+    audioToggle.innerHTML = '[ &#9834; MUSIC OFF ]';
+  }
+});
+
+// ============ INIT ============
+loadData();
+showScreenRaw('boot-screen');
+runBoot();
+</script>
+</body>
+</html>
