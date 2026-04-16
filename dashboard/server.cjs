@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
 const { renderAudioFeedPage } = require('./audio-feed-page.cjs');
+const { renderJobBoardPage } = require('./job-board-page.cjs');
 
 // ============================================================
 // Configuration via environment variables
@@ -606,9 +607,14 @@ const server = http.createServer((req, res) => {
     res.end(JSON.stringify(loadState(), null, 2));
     return;
   }
+  if (url === '/jobs' || url === '/jobs/') {
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    res.end(renderJobBoardPage(STATE_DIR));
+    return;
+  }
 
   res.writeHead(404, { 'Content-Type': 'text/plain' });
-  res.end('Not Found. Try / or /launcher or /audio-feed or /briefing or /state.json');
+  res.end('Not Found. Try / or /launcher or /audio-feed or /briefing or /jobs or /state.json');
 });
 
 server.listen(PORT, '0.0.0.0', () => {
@@ -617,6 +623,7 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log(`  /launcher                MultiDeck launcher (cyberpunk character select)`);
   console.log(`  /briefing                Morning briefing`);
   console.log(`  /audio-feed              Auto-play Kokoro TTS feed`);
+  console.log(`  /jobs                    Visual job board dashboard`);
   console.log(`  /state.json              Raw state data`);
   console.log(``);
   console.log(`  State directory: ${STATE_DIR}`);
