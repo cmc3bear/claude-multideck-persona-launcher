@@ -117,15 +117,19 @@ The master registry is `personas/personas.json`. Here's the structure:
 
 ## Default Framework Roster
 
-MultiDeck ships with five agents:
+MultiDeck ships with nine operatives:
 
 | Key | Callsign | Color | Voice | Scope |
 |-----|----------|-------|-------|-------|
 | `dispatch` | Dispatch | #00FFCC | af_sky | workspace |
-| `architect` | Architect | #FFB700 | af_sky | project-structure |
+| `architect` | Architect | #FFB700 | bm_daniel | project-structure |
 | `engineer` | Engineer | #0088FF | am_eric | code-implementation |
 | `reviewer` | Reviewer | #EF4444 | bm_lewis | quality-gate |
 | `researcher` | Researcher | #A855F7 | bf_emma | investigation |
+| `launcher-engineer` | Launcher-Engineer | #00CCFF | am_michael | launcher-ui |
+| `voice-technician` | Voice-Technician | #22C55E | af_nova | tts-pipeline |
+| `persona-author` | Persona-Author | #F59E0B | af_heart | agent-design |
+| `commercial-producer` | Commercial-Producer | #EC4899 | bm_fable | media-production |
 
 ---
 

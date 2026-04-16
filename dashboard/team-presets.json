@@ -3,8 +3,8 @@
     {
       "id": "full-roster",
       "name": "Full Roster",
-      "description": "All five default agents deployed together",
-      "personas": ["dispatch", "architect", "engineer", "reviewer", "researcher"]
+      "description": "All nine operatives deployed together",
+      "personas": ["dispatch", "architect", "engineer", "reviewer", "researcher", "launcher-engineer", "voice-technician", "persona-author", "commercial-producer"]
     },
     {
       "id": "build-team",

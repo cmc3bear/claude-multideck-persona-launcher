@@ -2,7 +2,7 @@
 
 **A multi-agent orchestration framework for Claude Code that looks like a video game title screen. On purpose.**
 
-Five AI operatives. Five voices. One launcher. You pick your team from a character-select screen, hit JACK IN, and real Claude Code sessions spin up in color-coded terminal tabs, each with its own persona, scope, and synthesized voice. A job board tracks the work. A quality gate reviews it. An audio feed plays their reports out loud so you can walk away from the keyboard and just listen.
+Nine AI operatives. Nine voices. One launcher. You pick your team from a character-select screen, hit JACK IN, and real Claude Code sessions spin up in color-coded terminal tabs, each with its own persona, scope, and synthesized voice. A job board tracks the work. A quality gate reviews it. An audio feed plays their reports out loud so you can walk away from the keyboard and just listen.
 
 It runs entirely local. Zero API cost with a Claude Code CLI membership. Fork it, add your own operatives, your own voices, your own background music. Make it yours.
 
@@ -84,7 +84,7 @@ Visit `http://localhost:3045`. The launcher is at `/launcher`. The audio feed is
 
 ## The Deck
 
-MultiDeck ships with five default operatives. Each one has a callsign, a terminal tab color, a Kokoro voice, and a defined scope of work.
+MultiDeck ships with nine operatives. Each one has a callsign, a terminal tab color, a Kokoro voice, and a defined scope of work.
 
 | Callsign | Voice | Role |
 |---|---|---|
@@ -93,6 +93,10 @@ MultiDeck ships with five default operatives. Each one has a callsign, a termina
 | **Engineer** | am_eric | Code implementation, testing, debugging. Writes the code that ships. |
 | **Reviewer** | bm_lewis | Quality gate. Reviews every completed job. One fix loop, then pass or escalate. |
 | **Researcher** | bf_emma | Investigation and source grading. Finds answers, cites evidence, rates confidence. |
+| **Launcher-Engineer** | am_michael | Launcher UI, dashboard routes, persona spawning, Windows Terminal integration. |
+| **Voice-Technician** | af_nova | Kokoro TTS hooks, voice config, audio pipeline, voice quality. |
+| **Persona-Author** | af_heart | Persona design, agent markdown authoring, roster management. |
+| **Commercial-Producer** | bm_fable | Demo video production. Script, audio, video, review gate, final. |
 
 Operatives are defined in `personas/personas.json`. Each entry maps a callsign to a color, voice, working directory, and agent markdown file that defines behavior and scope.
 

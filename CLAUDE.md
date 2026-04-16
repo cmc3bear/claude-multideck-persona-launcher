@@ -10,7 +10,7 @@ When a Claude Code session opens this directory, this file provides the project-
 
 MultiDeck is the public distribution of a persona-driven Claude Code orchestration framework. It ships with:
 
-- **Five default personas** — Dispatch (workspace coordinator), Architect (structure + docs), Engineer (code), Reviewer (quality gates), Researcher (investigation). Each persona has its own voice, color, callsign, and OQE discipline. Personas spawn in dedicated terminal windows with distinct tab colors via the launcher system.
+- **Nine personas** — Dispatch (workspace coordinator), Architect (structure + docs), Engineer (code), Reviewer (quality gates), Researcher (investigation), Launcher-Engineer (launcher UI + spawning), Voice-Technician (Kokoro TTS pipeline), Persona-Author (agent design + roster), Commercial-Producer (demo video production). Each persona has its own voice, color, callsign, and OQE discipline. Personas spawn in dedicated terminal windows with distinct tab colors via the launcher system.
 
 - **A cyberpunk character-select launcher** — `dashboard/launcher.html` renders a retro-themed UI where you click an operative card, optionally check dangerous mode, hit "JACK IN", and a new Windows Terminal tab opens with the persona pre-loaded.
 
@@ -61,7 +61,11 @@ dispatch-framework/
 │   ├── ARCHITECT_AGENT.md      Structure + docs
 │   ├── ENGINEER_AGENT.md       Code implementation
 │   ├── REVIEWER_AGENT.md       Quality gate
-│   └── RESEARCHER_AGENT.md     Investigation + source grading
+│   ├── RESEARCHER_AGENT.md     Investigation + source grading
+│   ├── LAUNCHER_ENGINEER_AGENT.md  Launcher UI + persona spawning
+│   ├── VOICE_TECHNICIAN_AGENT.md   Kokoro TTS pipeline
+│   ├── PERSONA_AUTHOR_AGENT.md     Agent design + roster management
+│   └── COMMERCIAL_PRODUCER_AGENT.md Demo video production
 ├── scripts/
 │   ├── launch-persona.ps1      Windows launcher (Windows Terminal tab with color + title)
 │   ├── launch-persona.sh       Linux/macOS launcher
@@ -205,7 +209,7 @@ Before you commit and push:
 
 - [ ] No author-specific handles, emails, or absolute paths in any new content
 - [ ] No author's private project content (internal project names, proprietary data)
-- [ ] No author-specific persona names in active code or docs (the 5 framework defaults are the only in-scope roster)
+- [ ] No author-specific persona names in active code or docs (the 9 shipped operatives are the only in-scope roster)
 - [ ] Environment variables used instead of hardcoded paths
 - [ ] OQE discipline applied to all writing (Objective → Qualitative → Evidence)
 - [ ] Voice rules followed for any text that might be spoken
