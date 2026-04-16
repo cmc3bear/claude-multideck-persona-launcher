@@ -50,6 +50,26 @@ node dashboard/server.cjs
 
 Visit `http://localhost:3045` to see the real-time dashboard with state, calendar, actions, and audio feed.
 
+## Screenshots
+
+### Launcher Boot Sequence
+![MultiDeck Boot](docs/screenshots/launcher-boot.png)
+
+### Title Menu
+![Title Menu](docs/screenshots/launcher-title.png)
+
+### Character Select (Operative Deck)
+![Character Select](docs/screenshots/launcher-select.png)
+
+### Persona Detail (Engineer Selected)
+![Persona Detail](docs/screenshots/launcher-persona-detail.png)
+
+### Dashboard
+![Dashboard](docs/screenshots/dashboard-main.png)
+
+### Audio Feed (Auto-Play TTS)
+![Audio Feed](docs/screenshots/audio-feed.png)
+
 ## Directory Structure
 
 ```
