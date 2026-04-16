@@ -132,6 +132,34 @@ function renderAudioFeedPage() {
     margin-top: 10px;
     line-height: 1.5;
   }
+  .progress-bar {
+    width: 100%;
+    height: 6px;
+    background: #1a1a2e;
+    margin-top: 12px;
+    cursor: pointer;
+    position: relative;
+  }
+  .progress-bar .fill {
+    height: 100%;
+    background: #00FFCC;
+    box-shadow: 0 0 6px #00FFCC;
+    width: 0%;
+    transition: width 0.3s linear;
+  }
+  .progress-bar .time {
+    position: absolute;
+    right: 0;
+    top: 10px;
+    font-size: 13px;
+    color: #607090;
+  }
+  li { cursor: pointer; transition: all 0.15s; }
+  li:hover:not(.current) {
+    border-left-color: #FF00AA;
+    color: #FF00AA;
+    text-shadow: 0 0 4px #FF00AA;
+  }
 </style>
 </head>
 <body>
@@ -143,14 +171,20 @@ function renderAudioFeedPage() {
     <div class="np-label">NOT PLAYING</div>
     <div class="np-file" id="np-file">Leave this tab open. New audio will play automatically.</div>
     <audio id="player" preload="none"></audio>
-    <div class="hint">Browsers may block autoplay until you interact with the page once. Click RESUME or any button to unlock.</div>
+    <div class="progress-bar" id="progress-bar" onclick="seekTo(event)">
+      <div class="fill" id="progress-fill"></div>
+      <div class="time" id="progress-time"></div>
+    </div>
+    <div class="hint">Browsers may block autoplay until you interact with the page once. Click RESUME or any button to unlock. Click any entry in the history to replay it.</div>
   </div>
 
   <div class="controls">
-    <button id="autoplay-toggle" class="on" onclick="toggleAutoplay()">AUTOPLAY: ON</button>
-    <button onclick="markAllPlayed()">SKIP ALL</button>
+    <button onclick="playPrevious()">PREV</button>
     <button onclick="document.getElementById('player').pause()">PAUSE</button>
     <button onclick="resumePlayback()">RESUME</button>
+    <button onclick="skipCurrent()">SKIP</button>
+    <button id="autoplay-toggle" class="on" onclick="toggleAutoplay()">AUTOPLAY: ON</button>
+    <button onclick="markAllPlayed()">CLEAR ALL</button>
   </div>
 
   <div class="queue-label">// FEED HISTORY</div>
@@ -168,6 +202,9 @@ function renderAudioFeedPage() {
   let allFiles = [];
   let autoplayEnabled = true;
   let currentFile = null;
+  let playHistory = []; // ordered list of played filenames for PREV navigation
+  const progressFill = document.getElementById('progress-fill');
+  const progressTime = document.getElementById('progress-time');
 
   function savePlayed() {
     sessionStorage.setItem('multideck-audio-played', JSON.stringify(Array.from(playedFiles)));
@@ -178,12 +215,18 @@ function renderAudioFeedPage() {
       let cls = 'pending';
       if (f.filename === currentFile) cls = 'current';
       else if (playedFiles.has(f.filename)) cls = 'played';
-      return '<li class="' + cls + '">' + f.filename + '</li>';
+      return '<li class="' + cls + '" data-file="' + f.filename.replace(/"/g, '&quot;') + '">' + f.filename + '</li>';
     }).join('');
   }
 
+  historyEl.addEventListener('click', (e) => {
+    const li = e.target.closest('li[data-file]');
+    if (li) playSpecific(li.dataset.file);
+  });
+
   function markPlaying(filename) {
     currentFile = filename;
+    if (playHistory[playHistory.length - 1] !== filename) playHistory.push(filename);
     npEl.classList.remove('idle');
     npEl.querySelector('.np-label').textContent = 'NOW PLAYING';
     npFile.textContent = filename;
@@ -217,6 +260,8 @@ function renderAudioFeedPage() {
 
   player.addEventListener('ended', () => {
     if (currentFile) { playedFiles.add(currentFile); savePlayed(); }
+    progressFill.style.width = '0%';
+    progressTime.textContent = '';
     playNext();
   });
 
@@ -268,6 +313,78 @@ function renderAudioFeedPage() {
     } else if (playQueue.length > 0) {
       playNext();
     }
+  }
+
+  function skipCurrent() {
+    if (currentFile) {
+      playedFiles.add(currentFile);
+      savePlayed();
+    }
+    player.pause();
+    player.currentTime = 0;
+    playNext();
+  }
+
+  function playPrevious() {
+    if (playHistory.length < 2 && !currentFile) return;
+    // If currently playing, go back to current track start if past 3s, else go to previous
+    if (currentFile && player.currentTime > 3) {
+      player.currentTime = 0;
+      player.play();
+      return;
+    }
+    // Remove current from history and replay the one before it
+    if (currentFile) playHistory.pop();
+    const prev = playHistory.pop();
+    if (!prev) return;
+    // Put current back in queue front if it was playing
+    if (currentFile && currentFile !== prev) {
+      playQueue.unshift(currentFile);
+    }
+    currentFile = null;
+    markPlaying(prev);
+    player.src = '/audio-feed/mp3/' + encodeURIComponent(prev);
+    player.play().catch(() => {});
+  }
+
+  function playSpecific(filename) {
+    // If something is playing, mark it played and put remaining queue aside
+    if (currentFile) {
+      playedFiles.add(currentFile);
+      savePlayed();
+    }
+    player.pause();
+    // Remove from queue if it was pending
+    playQueue = playQueue.filter(f => f !== filename);
+    // Remove from played set so it replays
+    playedFiles.delete(filename);
+    savePlayed();
+    markPlaying(filename);
+    player.src = '/audio-feed/mp3/' + encodeURIComponent(filename);
+    player.play().catch(() => {});
+  }
+
+  function formatTime(s) {
+    if (!s || isNaN(s)) return '0:00';
+    const m = Math.floor(s / 60);
+    const sec = Math.floor(s % 60);
+    return m + ':' + (sec < 10 ? '0' : '') + sec;
+  }
+
+  player.addEventListener('timeupdate', () => {
+    if (player.duration) {
+      const pct = (player.currentTime / player.duration) * 100;
+      progressFill.style.width = pct + '%';
+      progressTime.textContent = formatTime(player.currentTime) + ' / ' + formatTime(player.duration);
+    }
+  });
+
+  function seekTo(e) {
+    if (!player.duration) return;
+    const bar = document.getElementById('progress-bar');
+    const rect = bar.getBoundingClientRect();
+    const pct = (e.clientX - rect.left) / rect.width;
+    player.currentTime = pct * player.duration;
   }
 
   poll();
