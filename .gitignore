@@ -14,6 +14,7 @@ kokoro-venv/
 
 # Runtime state (allow templates)
 state/*.json
+state/*.md
 !state/*.template.json
 
 # Generated content
@@ -76,3 +77,13 @@ _push-v4.bat
 cv4.log
 pv4.log
 
+# Draft personas not yet in registry
+personas/FOREMAN_AGENT.md
+personas/INSPECTOR_AGENT.md
+personas/KERNEL_AGENT.md
+personas/PACKER_AGENT.md
+personas/PRODUCER_AGENT.md
+personas/RESONANCE_AGENT.md
+
+# Local coordination state (project-specific, not distributable)
+coordination/

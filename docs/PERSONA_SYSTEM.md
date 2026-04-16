@@ -53,7 +53,7 @@ For framework defaults, use environment variables:
 ```
 
 At runtime, the dispatcher expands:
-- `${DISPATCH_FRAMEWORK_ROOT}` → absolute path to dispatch-framework/
+- `${DISPATCH_ROOT}` → absolute path to dispatch-framework/
 - `${DISPATCH_USER_ROOT}` → user's home or workspace root
 
 This keeps personas portable across machines.
@@ -249,7 +249,7 @@ Claude reads `personas/[CALLSIGN]_AGENT.md` and adopts that identity.
 
 Or explicitly:
 ```
-Load this persona: ${DISPATCH_FRAMEWORK_ROOT}/personas/ARCHITECT_AGENT.md
+Load this persona: ${DISPATCH_ROOT}/personas/ARCHITECT_AGENT.md
 ```
 
 ---

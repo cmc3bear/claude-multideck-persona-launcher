@@ -34,6 +34,7 @@ voices = [
     ('af_nicole', 'American Female'),
     ('af_sky', 'American Female'),
     ('af_heart', 'American Female'),
+    ('af_nova', 'American Female'),
     ('bf_emma', 'British Female'),
     ('bf_lily', 'British Female'),
     ('bf_alice', 'British Female'),

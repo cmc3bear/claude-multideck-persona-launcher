@@ -108,7 +108,7 @@ When you are editing MultiDeck (as opposed to using it for another project), her
 
 **Adding a dashboard route:** edit `dashboard/server.cjs`. Add a new condition in the request handler (alongside the existing `handleLauncher`, `handleAudioFeed`, and core route matches). Use the `sendJson(res, status, obj)` helper for JSON responses and `fs.createReadStream` for binary streaming.
 
-**Changing voice behavior:** edit `hooks/kokoro-speak.py` (playback with mutex), `hooks/kokoro-generate-mp3.py` (one-shot MP3 generation), or `hooks/set-voice.py` (voice registry). Keep VOICE_MAP in sync across all three files. The mkdir mutex at `LOCK_DIR` is critical — never remove it or parallel sessions overlap.
+**Changing voice behavior:** the three files with a VOICE_MAP are `hooks/set-voice.py` (voice registry), `hooks/kokoro-generate-mp3.py` (one-shot MP3 generation), and `hooks/kokoro-summary.py` (summary narration) — keep VOICE_MAP in sync across all three. `hooks/kokoro-speak.py` has no VOICE_MAP; it reads voice config from JSON files written by `set-voice.py`. The mkdir mutex at `LOCK_DIR` in kokoro-speak.py is critical — never remove it or parallel sessions overlap.
 
 **Adding a persona:** run `python scripts/dispatch-agent.py add` and follow the interactive prompts. It updates `personas.json`, generates the agent markdown from `templates/AGENT_TEMPLATE.md`, creates a launch shortcut, and updates `set-voice.py` VOICE_MAP. Don't edit `personas.json` by hand unless you're fixing a typo.
 

@@ -28,5 +28,8 @@
     "tts",
     "kokoro",
     "launcher"
-  ]
+  ],
+  "devDependencies": {
+    "puppeteer-core": "^24.41.0"
+  }
 }

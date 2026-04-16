@@ -6,7 +6,13 @@ Nine AI operatives. Nine voices. One launcher. You pick your team from a charact
 
 It runs entirely local. Zero API cost with a Claude Code CLI membership. Fork it, add your own operatives, your own voices, your own background music. Make it yours.
 
-![MultiDeck Boot Sequence](docs/screenshots/launcher-boot.png)
+![MultiDeck Boot Sequence](docs/media/boot-sequence.gif)
+
+### Watch: How Do You Claude?
+
+https://github.com/cmc3bear/claude-multideck-persona-launcher/raw/main/docs/media/how-do-you-claude.mp4
+
+*A 40-second look at the difference between vanilla Claude Code and Claude Code running inside MultiDeck.*
 
 ---
 
@@ -41,6 +47,17 @@ It runs entirely local. Zero API cost with a Claude Code CLI membership. Fork it
 
 ### Audio feed. Leave this tab open. Every operative report plays automatically.
 ![Audio Feed](docs/screenshots/audio-feed.png)
+
+---
+
+## Requirements
+
+- **Claude Code CLI** — [claude.ai/code](https://claude.ai/code). MultiDeck orchestrates Claude Code sessions. A CLI membership gives you unlimited agent runs at zero marginal cost.
+- **Python 3.10+** — Required for Kokoro TTS hooks, job board CLI, and agent management scripts.
+- **Node.js 18+** — Required for the dashboard server.
+- **Windows Terminal** (Windows) or any terminal emulator (Linux/macOS) — The launcher opens color-coded tabs per operative.
+- **Tailscale** (recommended) — [tailscale.com](https://tailscale.com). Tailscale creates a private mesh network between your devices. With it, you can open the audio feed (`/audio-feed`) or mobile dashboard (`/mobile`) on your phone from anywhere, not just your local network. This is what enables "operator mode," where you walk away from the desk and listen to your agents work from another room or another building. Without Tailscale, the dashboard is only accessible on localhost or your LAN.
+- **ffplay** (optional) — Part of FFmpeg. Required for Kokoro TTS audio playback. Install FFmpeg and ensure `ffplay` is on your PATH.
 
 ---
 
@@ -191,10 +208,12 @@ Key environment variables:
 | `DISPATCH_PORT` | Dashboard HTTP port | `3045` |
 | `DISPATCH_ROOT` | Framework root directory | auto-detected |
 | `DISPATCH_STATE_DIR` | Runtime state JSON directory | `./state` |
+| `DISPATCH_PERSONAS_JSON` | Path to personas registry | `$DISPATCH_ROOT/personas/personas.json` |
 | `DISPATCH_TTS_OUTPUT` | Kokoro MP3 output directory | `./tts-output` |
 | `DISPATCH_PROJECTS_DIR` | Projects directory to scan | unset |
 | `DISPATCH_LAUNCHER_ASSETS` | Portraits, intros, music | `./dashboard/launcher-assets` |
 | `DISPATCH_TEAM_PRESETS` | Team preset definitions | `./dashboard/team-presets.json` |
+| `DISPATCH_WORKSPACE_ROOT` | Workspace root for state context | `$DISPATCH_ROOT` |
 
 Everything coordinates via filesystem. No database. No message broker. JSON state files with atomic writes and mkdir-based file locks. Add as many operatives as you want. They will not step on each other.
 

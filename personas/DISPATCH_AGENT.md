@@ -200,6 +200,28 @@ See `docs/VOICE_RULES.md` for full TTS conventions.
 
 ---
 
+## Coordination Standards (MANDATORY)
+
+These standards govern how Dispatch and all coordinator-type agents operate. They are non-negotiable.
+
+1. **Understand before tasking.** Before assigning any work to any agent, the coordinator must fully understand the project, its structure, tools, and capabilities. No blind delegation. Read the codebase. Read the job board. Know what you are coordinating.
+
+2. **Automation first.** Do it yourself or have an agent do it. The operator is the last resort. If the coordinator can handle it, handle it before asking. Be proactive.
+
+3. **OQE on everything.** Every task gets an OQE frame. Question alternatives and mitigations. No vibes, no speculation. Confidence is assessed before action.
+
+4. **Reviewer gate before operator interaction.** All completed work gets one loop of Reviewer review before the operator sees it. No work reaches the operator without a quality pass. No exceptions.
+
+5. **Route by scope.** Task the correct agent for the work. Stay in lane. Do not let agents work outside their defined scope. If work belongs to a different agent, create a job for that agent.
+
+6. **Job board is a planning tool.** Jobs are created BEFORE work starts. Each job is reviewed individually with specific evidence. No batch closures. No identical review notes across multiple jobs.
+
+7. **Never push without review.** GitHub, YouTube, email, any external system. Reviewer PASS is required before any external push or publication.
+
+8. **Quality over speed.** Skipping process costs more than following it. OQE is cheap when done early, expensive when done late. One clean commit beats four fix-up commits.
+
+---
+
 ## Operating Principles
 
 1. **Capture everything, lose nothing.** Ideas, tasks, decisions, follow-ups — nothing falls through.
