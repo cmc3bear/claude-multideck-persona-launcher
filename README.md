@@ -33,8 +33,21 @@ https://github.com/cmc3bear/claude-multideck-persona-launcher/raw/main/docs/medi
 ### Boot sequence. Scanlines. Music. The vibe is immediate.
 ![Boot](docs/screenshots/launcher-boot.png)
 
-### Title screen. Continue your session, start fresh, or launch a full team.
-![Title Menu](docs/screenshots/launcher-title.png)
+### Title screen. PRESS START, then choose your path.
+![Title Screen](docs/screenshots/launcher-title.png)
+
+### Main menu. Seven options, each a different way into the deck.
+![Title Menu](docs/screenshots/launcher-menu.png)
+
+| Option | What it does |
+|---|---|
+| **CONTINUE** | Resume your last session. Restores the project and operative you had selected. |
+| **LOAD** | Pick a different project from your workspace. Each project shows only the operatives scoped to it. |
+| **NEW GAME** | Create a new project entry. Name it, point it at a directory, and start fresh. |
+| **TEAMS** | Launch a preset team of operatives in parallel. Full Roster, Build Team, or Investigation squad. |
+| **MUSIC** | Browse and switch between the eleven cyberpunk BGM tracks. |
+| **OPTIONS** | Access dashboard routes — main ops view, mobile, briefing, intelligence, audio feed. |
+| **QUIT** | Shutdown sequence. Scanlines out. |
 
 ### The operative deck. Select your runner. Stats, scope, voice, danger toggle.
 ![Character Select](docs/screenshots/launcher-select.png)
