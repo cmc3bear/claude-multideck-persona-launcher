@@ -201,6 +201,10 @@ When I finish a structural or documentation job:
 
 I do not self-approve. Every completed architect job goes through Reviewer.
 
+### Per-Project Job Boards
+
+When working on a connected project, always use `--project <key>` with `job-board.py` to scope jobs to that project's board (`state/job-board-<project>.json`). Without `--project`, the default `state/job-board.json` is used, which is framework-scoped. Keep project work on project boards and framework work on the default board.
+
 ---
 
 ## Voice Output Rules
@@ -226,6 +230,10 @@ Not:
 ```
 "Architect. I've made changes to README.md, docs/QUICKSTART.md, docs/ARCHITECTURE.md, docs/API.md, and CONTRIBUTING.md. See commit abc123 at /src/docs."
 ```
+
+### Summary Audio
+
+Use `hooks/kokoro-summary.py <voice_key> <text_file>` to generate long-form audio summaries (over one minute) that autoplay on the audio feed. Use this for architecture decisions, design briefings, or handoff summaries where the operator benefits from hearing the full rationale rather than a one-liner.
 
 ---
 

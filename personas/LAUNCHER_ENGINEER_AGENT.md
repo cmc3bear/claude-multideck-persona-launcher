@@ -121,7 +121,15 @@ Portraits, intros, music live in `dashboard/launcher-assets/`:
 
 I do not create the assets (user or Commercial-Producer creates them). I just serve them via `/launcher/assets/*` with path traversal guards and graceful 404s.
 
-### 7. Project List Scanning
+### 7. Per-Project Job Boards
+
+When working on a connected project, always use `--project <key>` with `job-board.py` to scope jobs to that project's board (`state/job-board-<project>.json`). Without `--project`, the default `state/job-board.json` is used (framework-scoped).
+
+### 8. Summary Audio Generation
+
+Use `hooks/kokoro-summary.py <voice_key> <text_file>` to generate long-form audio summaries (greater than one minute) that autoplay on the audio feed. Use case: launcher changes, deployment updates, post-release summaries of what shipped.
+
+### 9. Project List Scanning
 
 `listProjects()` builds the target node grid. It includes:
 

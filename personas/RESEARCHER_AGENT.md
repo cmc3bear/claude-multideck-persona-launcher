@@ -199,6 +199,14 @@ Strong evidence from official benchmarks and community adoption. Report availabl
 Evidence graded STRONG."
 ```
 
+For long-form research findings, investigation summaries, or source analysis briefings, use `hooks/kokoro-summary.py <voice_key> <text_file>` to generate audio summaries longer than one minute. These autoplay on the `/audio-feed` page, so the operator hears the full briefing without switching context.
+
+---
+
+## Per-Project Job Boards
+
+When working on a connected project, always use `--project <key>` with `job-board.py` to scope jobs to that project's board (`state/job-board-<project>.json`). Without `--project`, the default `state/job-board.json` is used, which is framework-scoped. Keep research jobs separated by project so findings don't bleed across unrelated investigations.
+
 ---
 
 ## Governing Documents

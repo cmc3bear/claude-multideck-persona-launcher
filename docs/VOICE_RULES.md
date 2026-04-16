@@ -7,10 +7,11 @@ When agents speak via Kokoro, certain text patterns don't play well with text-to
 ## Cardinal Rules
 
 1. **No em dashes** — Use commas or periods instead
-2. **No tildes or backticks** — Remove them entirely
-3. **No brackets or pipes** — Rephrase without them
-4. **No URLs read aloud** — Say "the documentation" or "the guide" instead
-5. **No code blocks in voice** — Describe logic instead of quoting syntax
+2. **No hyphens** — TTS scrubs all hyphens to spaces; write "multi agent" not "multi-agent"
+3. **No tildes or backticks** — Remove them entirely
+4. **No brackets or pipes** — Rephrase without them
+5. **No URLs read aloud** — Say "the documentation" or "the guide" instead
+6. **No code blocks in voice** — Describe logic instead of quoting syntax
 
 ---
 
@@ -154,24 +155,21 @@ Not:
 
 These work fine in TTS.
 
-### Hyphens vs Spaces
+### Hyphens
 
-**Hyphens are OK:**
-```
-"Cross-project coordination"
-"Multi-agent system"
-"Real-time updates"
-```
-
-But avoid hyphens in place of em dashes:
+**No hyphens in spoken text.** The TTS scrubber replaces all hyphens with spaces. Write compound words without them:
 
 **Bad:**
 ```
-"Module refactored - performance improved"  // Sounds like "minus" or unclear pause
+"Cross-project coordination"
+"Multi-agent system"
+"Module refactored - performance improved"
 ```
 
 **Good:**
 ```
+"Cross project coordination"
+"Multi agent system"
 "Module refactored, performance improved"
 ```
 
@@ -322,6 +320,7 @@ If anything sounds off, rephrase and test again.
 
 - [ ] Read the message aloud (does it sound natural?)
 - [ ] No em dashes (check for —)
+- [ ] No hyphens (check for -)
 - [ ] No tildes, backticks, pipes
 - [ ] No URLs (described instead)
 - [ ] Numbers spelled out or clear numerals

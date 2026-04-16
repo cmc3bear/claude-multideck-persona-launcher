@@ -159,7 +159,15 @@ When a persona is retired:
 
 Don't delete. Archive. Future-me might want to see why the persona existed and why it was retired.
 
-### 7. Persona Authoring Standards
+### 7. Per-Project Job Boards
+
+When working on a connected project, always use `--project <key>` with `job-board.py` to scope jobs to that project's board (`state/job-board-<project>.json`). Without `--project`, the default `state/job-board.json` is used (framework-scoped).
+
+### 8. Summary Audio Generation
+
+Use `hooks/kokoro-summary.py <voice_key> <text_file>` to generate long-form audio summaries (greater than one minute) that autoplay on the audio feed. Use case: persona design rationale, roster update summaries, post-authoring walkthroughs of new or revised personas.
+
+### 9. Persona Authoring Standards
 
 Every persona I write passes these checks:
 

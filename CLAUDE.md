@@ -18,9 +18,11 @@ MultiDeck is the public distribution of a persona-driven Claude Code orchestrati
 
 - **Kokoro TTS integration** — `hooks/kokoro-speak.py` plays generated audio with an atomic mkdir mutex so parallel Claude Code sessions don't overlap. Each persona prepends its callsign to spoken text so you learn which voice belongs to which role. `hooks/kokoro-generate-mp3.py` produces MP3s for programmatic use. `hooks/set-voice.py` writes per-session voice config via CLAUDE_CODE_SSE_PORT so each session has its own voice without clobbering others.
 
-- **An auto-play audio feed** — `dashboard/audio-feed-page.cjs` renders a browser page that polls for new TTS MP3s and plays them automatically. Leave a tab open on `/audio-feed`, and every Dispatch audio response plays without you needing to click.
+- **An auto-play audio feed** — `dashboard/audio-feed-page.cjs` renders a browser page that polls for new TTS MP3s and plays them automatically. Leave a tab open on `/audio-feed`, and every Dispatch audio response plays without you needing to click. Works on any device that can reach the dashboard (including over Tailscale).
 
-- **A job board system** — `scripts/job-board.py` is a CLI for creating jobs, assigning to agents, submitting for review, running the Reviewer gate, and closing with dependency tracking.
+- **Long-form audio summaries** — `hooks/kokoro-summary.py` generates >1 minute MP3 summaries from text and drops them into `tts-output/` for automatic audio feed playback. Any persona can use this to broadcast status updates, briefings, or handoff summaries that the operator listens to passively on a connected device.
+
+- **A job board system** — `scripts/job-board.py` is a CLI for creating jobs, assigning to agents, submitting for review, running the Reviewer gate, and closing with dependency tracking. Supports per-project scoping via `--project <key>` so each connected project gets its own `state/job-board-<project>.json`.
 
 - **A reviewer process capability** — `scripts/reviewer-review.py` runs a sanitization and quality check on any job artifact. The review gate fires on every completed job with a one-loop fix window before escalation.
 
@@ -72,6 +74,7 @@ dispatch-framework/
 │   ├── set-voice.py            Per-session Kokoro voice config writer
 │   ├── kokoro-speak.py         TTS playback worker (with mkdir mutex + callsign prepend)
 │   ├── kokoro-generate-mp3.py  Programmatic MP3 generator
+│   ├── kokoro-summary.py       Long-form summary MP3 → tts-output for audio feed autoplay
 │   ├── voice-audition.py       Voice preview tool
 │   └── requirements.txt        Python deps: kokoro, soundfile, torch, numpy
 ├── dashboard/
@@ -131,7 +134,7 @@ Full explanation in `docs/OQE_DISCIPLINE.md`.
 
 When any persona writes text that will be spoken aloud:
 
-- No em dashes, en dashes, tildes, backticks, brackets, pipes, code blocks, tables, or URLs in spoken output
+- No em dashes, en dashes, hyphens, tildes, backticks, brackets, pipes, code blocks, tables, or URLs in spoken output
 - Commas instead of dashes for pauses
 - Say "home directory" not tilde
 - Collapse file paths to top directory plus last part when speaking them

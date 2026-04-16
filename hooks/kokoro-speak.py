@@ -118,6 +118,7 @@ def main():
     text = text.replace('/', ' ')
     text = text.replace('\\', ' ')
     text = text.replace('_', ' ')
+    text = text.replace('-', ' ')
     text = re.sub(r'\s+', ' ', text).strip()
 
     # Read voice config — try session-specific first, then shared fallback

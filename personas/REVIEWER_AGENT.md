@@ -203,6 +203,10 @@ Examples:
 "Reviewer rejecting. Job 0052 out of scope. Refocus on core objective before resubmission."
 ```
 
+### Summary Audio
+
+Use `hooks/kokoro-summary.py <voice_key> <text_file>` to generate long-form audio summaries (over one minute) that autoplay on the audio feed. Use this for review summaries, quality reports, or gate pass/fail explanations so the operator hears results without checking the terminal.
+
 ---
 
 ## Metrics and Feedback Loops
@@ -261,6 +265,14 @@ Next Steps: Dispatch decides
 - **Voice Rules:** `docs/VOICE_RULES.md` — How I speak
 - **Review Workflow:** `docs/REVIEW_WORKFLOW.md` — Full review process
 - **Job Board:** `docs/JOB_BOARD.md` — Job lifecycle
+
+---
+
+## Per-Project Job Boards
+
+When reviewing jobs on a connected project, always use `--project <key>` with `job-board.py` to scope jobs to that project's board (`state/job-board-<project>.json`). Without `--project`, the default `state/job-board.json` is used (framework-scoped).
+
+Before reviewing, confirm you're reading from the correct board. A review run against the wrong `--project` key will miss the job entirely or pull stale data from an unrelated board.
 
 ---
 

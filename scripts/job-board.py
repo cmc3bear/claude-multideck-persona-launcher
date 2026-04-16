@@ -13,12 +13,17 @@ Commands:
   python job-board.py close <job-id>
   python job-board.py show <job-id>
 
+All commands accept --project <key> to scope to a per-project job board.
+Without --project, uses the default state/job-board.json.
+With --project, uses state/job-board-<project-key>.json.
+
 Uses state/job-board.json as persistent state. File-locked for concurrent access.
 
 Status flow: open → assigned → in_progress → submitted → pending_review → [passed/flagged] → closed
 """
 import sys
 import os
+import re
 import json
 import argparse
 import time
@@ -31,29 +36,37 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 FRAMEWORK_ROOT = SCRIPT_DIR.parent
 JOB_BOARD_FILE = FRAMEWORK_ROOT / "state" / "job-board.json"
 
+
+def job_board_path(project=None):
+    """Return the job board file path, optionally scoped to a project."""
+    if not project:
+        return JOB_BOARD_FILE
+    safe = re.sub(r"[^a-z0-9-]", "", project.lower())
+    if not safe:
+        return JOB_BOARD_FILE
+    return FRAMEWORK_ROOT / "state" / f"job-board-{safe}.json"
+
 # File locking with simple retry
 @contextmanager
-def locked_job_board(timeout=5.0):
+def locked_job_board(board_file=None, timeout=5.0):
     """Context manager for thread-safe job board access."""
-    FRAMEWORK_ROOT.mkdir(parents=True, exist_ok=True)
-    (FRAMEWORK_ROOT / "state").mkdir(exist_ok=True)
+    bf = board_file or JOB_BOARD_FILE
+    bf.parent.mkdir(parents=True, exist_ok=True)
 
     start = time.time()
-    lock_file = JOB_BOARD_FILE.with_suffix(".lock")
+    lock_file = bf.with_suffix(".lock")
 
     while True:
         try:
-            # Try to create lock file exclusively
             with open(lock_file, "x") as f:
                 f.write(str(os.getpid()))
             break
         except FileExistsError:
             if time.time() - start > timeout:
-                raise TimeoutError(f"Could not acquire lock on {JOB_BOARD_FILE}")
+                raise TimeoutError(f"Could not acquire lock on {bf}")
             time.sleep(0.1)
 
     try:
-        # Load, modify, save
         yield
     finally:
         try:
@@ -62,46 +75,48 @@ def locked_job_board(timeout=5.0):
             pass
 
 
-def load_job_board():
+def load_job_board(board_file=None):
     """Load job board from file."""
-    if not JOB_BOARD_FILE.exists():
+    bf = board_file or JOB_BOARD_FILE
+    if not bf.exists():
         return {
             "meta": {"version": 1, "next_job_id": 1},
             "jobs": []
         }
 
-    with open(JOB_BOARD_FILE) as f:
+    with open(bf) as f:
         return json.load(f)
 
 
-def save_job_board(data):
+def save_job_board(data, board_file=None):
     """Save job board to file."""
-    JOB_BOARD_FILE.parent.mkdir(parents=True, exist_ok=True)
-    with open(JOB_BOARD_FILE, "w") as f:
+    bf = board_file or JOB_BOARD_FILE
+    bf.parent.mkdir(parents=True, exist_ok=True)
+    with open(bf, "w") as f:
         json.dump(data, f, indent=2)
 
 
-def next_job_id():
+def next_job_id(board_file=None):
     """Get and increment next job ID."""
-    board = load_job_board()
+    board = load_job_board(board_file)
     job_id = board["meta"]["next_job_id"]
     board["meta"]["next_job_id"] += 1
-    save_job_board(board)
+    save_job_board(board, board_file)
     return str(job_id)
 
 
-def find_job(job_id):
+def find_job(job_id, board_file=None):
     """Find job by ID."""
-    board = load_job_board()
+    board = load_job_board(board_file)
     for job in board["jobs"]:
         if job["id"] == str(job_id):
             return job
     return None
 
 
-def cmd_create(subject, assigned_to=None, priority="P2", depends_on=None):
+def cmd_create(subject, assigned_to=None, priority="P2", depends_on=None, board_file=None):
     """Create a new job."""
-    job_id = next_job_id()
+    job_id = next_job_id(board_file)
     job = {
         "id": job_id,
         "subject": subject,
@@ -116,9 +131,9 @@ def cmd_create(subject, assigned_to=None, priority="P2", depends_on=None):
         "review_history": [],
     }
 
-    board = load_job_board()
+    board = load_job_board(board_file)
     board["jobs"].append(job)
-    save_job_board(board)
+    save_job_board(board, board_file)
 
     print(f"Created job {job_id}: {subject}")
     if assigned_to:
@@ -127,9 +142,9 @@ def cmd_create(subject, assigned_to=None, priority="P2", depends_on=None):
         print(f"  Priority: {priority}")
 
 
-def cmd_list(status=None, agent=None):
+def cmd_list(status=None, agent=None, board_file=None):
     """List jobs with optional filtering."""
-    board = load_job_board()
+    board = load_job_board(board_file)
     jobs = board["jobs"]
 
     if status:
@@ -149,50 +164,50 @@ def cmd_list(status=None, agent=None):
         print(f"{job['id']:<6} {job['status']:<15} {job['assigned_to']:<15} {job['priority']:<5} {subj:<50}")
 
 
-def cmd_assign(job_id, agent):
+def cmd_assign(job_id, agent, board_file=None):
     """Reassign a job to an agent."""
-    board = load_job_board()
+    board = load_job_board(board_file)
     for job in board["jobs"]:
         if job["id"] == str(job_id):
             job["assigned_to"] = agent
             job["status"] = "assigned"
-            save_job_board(board)
+            save_job_board(board, board_file)
             print(f"Job {job_id} assigned to {agent}")
             return
     print(f"Job not found: {job_id}")
 
 
-def cmd_accept(job_id):
+def cmd_accept(job_id, board_file=None):
     """Agent accepts a job (marks in_progress)."""
-    board = load_job_board()
+    board = load_job_board(board_file)
     for job in board["jobs"]:
         if job["id"] == str(job_id):
             job["status"] = "in_progress"
             job["accepted_at"] = datetime.utcnow().isoformat()
-            save_job_board(board)
+            save_job_board(board, board_file)
             print(f"Job {job_id} accepted (in_progress)")
             return
     print(f"Job not found: {job_id}")
 
 
-def cmd_submit(job_id, output_path):
+def cmd_submit(job_id, output_path, board_file=None):
     """Agent submits completed job for review."""
-    board = load_job_board()
+    board = load_job_board(board_file)
     for job in board["jobs"]:
         if job["id"] == str(job_id):
             job["status"] = "submitted"
             job["output_path"] = output_path
             job["submitted_at"] = datetime.utcnow().isoformat()
-            save_job_board(board)
+            save_job_board(board, board_file)
             print(f"Job {job_id} submitted for review")
             print(f"  Output: {output_path}")
             return
     print(f"Job not found: {job_id}")
 
 
-def cmd_review(job_id, verdict, note):
+def cmd_review(job_id, verdict, note, board_file=None):
     """Reviewer reviews a submitted job (pass or flag)."""
-    board = load_job_board()
+    board = load_job_board(board_file)
     for job in board["jobs"]:
         if job["id"] == str(job_id):
             if job["status"] != "submitted":
@@ -200,7 +215,7 @@ def cmd_review(job_id, verdict, note):
                 return
 
             review_entry = {
-                "reviewer": "Reviewer",  # Could be parameterized
+                "reviewer": "Reviewer",
                 "verdict": verdict,
                 "note": note,
                 "timestamp": datetime.utcnow().isoformat()
@@ -217,27 +232,27 @@ def cmd_review(job_id, verdict, note):
             if note:
                 print(f"  Note: {note}")
 
-            save_job_board(board)
+            save_job_board(board, board_file)
             return
 
     print(f"Job not found: {job_id}")
 
 
-def cmd_close(job_id):
+def cmd_close(job_id, board_file=None):
     """Admin close a job."""
-    board = load_job_board()
+    board = load_job_board(board_file)
     for job in board["jobs"]:
         if job["id"] == str(job_id):
             job["status"] = "closed"
-            save_job_board(board)
+            save_job_board(board, board_file)
             print(f"Job {job_id} closed")
             return
     print(f"Job not found: {job_id}")
 
 
-def cmd_show(job_id):
+def cmd_show(job_id, board_file=None):
     """Show full details of a job."""
-    job = find_job(job_id)
+    job = find_job(job_id, board_file)
     if not job:
         print(f"Job not found: {job_id}")
         return
@@ -255,6 +270,8 @@ def cmd_show(job_id):
 
 def main():
     parser = argparse.ArgumentParser(description="MultiDeck Job Board")
+    parser.add_argument("--project", default=None,
+                        help="Scope to a per-project job board (state/job-board-<project>.json)")
     subparsers = parser.add_subparsers(dest="command", help="Command")
 
     # create
@@ -300,25 +317,26 @@ def main():
     show_parser.add_argument("job_id")
 
     args = parser.parse_args()
+    bf = job_board_path(args.project)
 
     try:
         if args.command == "create":
-            cmd_create(args.subject, args.assigned_to, args.priority, args.depends_on)
+            cmd_create(args.subject, args.assigned_to, args.priority, args.depends_on, bf)
         elif args.command == "list":
-            cmd_list(args.status, args.agent)
+            cmd_list(args.status, args.agent, bf)
         elif args.command == "assign":
-            cmd_assign(args.job_id, args.agent)
+            cmd_assign(args.job_id, args.agent, bf)
         elif args.command == "accept":
-            cmd_accept(args.job_id)
+            cmd_accept(args.job_id, bf)
         elif args.command == "submit":
-            cmd_submit(args.job_id, args.output)
+            cmd_submit(args.job_id, args.output, bf)
         elif args.command == "review":
-            verdict = "pass" if args.pass else "flag"
-            cmd_review(args.job_id, verdict, args.note)
+            verdict = "pass" if getattr(args, "pass") else "flag"
+            cmd_review(args.job_id, verdict, args.note, bf)
         elif args.command == "close":
-            cmd_close(args.job_id)
+            cmd_close(args.job_id, bf)
         elif args.command == "show":
-            cmd_show(args.job_id)
+            cmd_show(args.job_id, bf)
         else:
             parser.print_help()
     except Exception as e:

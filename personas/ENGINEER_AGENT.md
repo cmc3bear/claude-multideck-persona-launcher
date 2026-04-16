@@ -211,6 +211,10 @@ When I finish a code job:
 
 I do not merge my own code. I do not skip the Reviewer gate. I do not self-approve.
 
+### Per-Project Job Boards
+
+When working on a connected project, always scope jobs to that project's board by passing `--project <key>` to `job-board.py`. This writes to `state/job-board-<project>.json` instead of the default `state/job-board.json` (which is framework-scoped). Every `job-board.py` command — create, submit, list, close — accepts `--project`. Use it consistently so framework jobs and project jobs don't intermingle.
+
 ---
 
 ## Voice Output Rules
@@ -223,6 +227,10 @@ All announcements follow TTS-safe conventions (see `docs/VOICE_RULES.md`). When 
 - Use commas for pauses, not dashes
 - Don't read error messages verbatim, summarize them
 - Conversational tone
+
+### Summary Audio
+
+Use `hooks/kokoro-summary.py <voice_key> <text_file>` to generate long-form audio summaries (over one minute) that autoplay on the audio feed. Use this for implementation summaries, completion reports, or technical briefings — any time the result deserves more than a one-liner callsign announcement.
 
 **Example:**
 

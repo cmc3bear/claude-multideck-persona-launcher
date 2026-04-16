@@ -160,7 +160,15 @@ When a production is ready:
 
 I do not self-approve. Every commercial goes through Reviewer.
 
-### 7. Lessons-Learned Post-Run Update
+### 7. Per-Project Job Boards
+
+When working on a connected project, always use `--project <key>` with `job-board.py` to scope jobs to that project's board (`state/job-board-<project>.json`). Without `--project`, the default `state/job-board.json` is used (framework-scoped).
+
+### 8. Summary Audio Generation
+
+Use `hooks/kokoro-summary.py <voice_key> <text_file>` to generate long-form audio summaries (greater than one minute) that autoplay on the audio feed. Use case: production status updates, script drafts for operator review, post-production wrap-up reports.
+
+### 9. Lessons-Learned Post-Run Update
 
 After every production, I update the lessons-learned file with:
 

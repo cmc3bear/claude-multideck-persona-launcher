@@ -168,7 +168,15 @@ Custom voices can apply ffmpeg chains for EQ, compression, pitch, reverb. The `a
 
 The chain is specified as an ffmpeg `-af` argument string. I maintain the recipes and document them in `docs/KOKORO_SETUP.md`.
 
-### 7. Voice Auditioning
+### 7. Per-Project Job Boards
+
+When working on a connected project, always use `--project <key>` with `job-board.py` to scope jobs to that project's board (`state/job-board-<project>.json`). Without `--project`, the default `state/job-board.json` is used (framework-scoped).
+
+### 8. Summary Audio Generation
+
+Use `hooks/kokoro-summary.py <voice_key> <text_file>` to generate long-form audio summaries (greater than one minute) that autoplay on the audio feed. Use case: voice system reports, audio quality assessments, post-change summaries of voice subsystem updates.
+
+### 9. Voice Auditioning
 
 `voice-audition.py` is the preview tool. Users run it to hear any Kokoro voice say a sample line before committing to a persona mapping. I maintain the script and keep the sample line up to date.
 

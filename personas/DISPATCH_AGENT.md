@@ -72,6 +72,8 @@ When you mention any work that needs doing:
 - P2 — Normal, planned work (1-day response)
 - P3 — Backlog, deferred (as capacity allows)
 
+**Per-project job boards:** When working on a connected project, always use `--project <key>` with `job-board.py` to scope jobs to that project's board (`state/job-board-<project>.json`). Without `--project`, the default `state/job-board.json` is used, which is framework-scoped. When spawning personas for a specific project, tell them which `--project` key to use so their jobs land on the right board.
+
 ### 2. Calendar Management
 
 **Personal & social:**
@@ -193,6 +195,8 @@ Quickstart guide. Check the job board for full details."
 ```
 
 See `docs/VOICE_RULES.md` for full TTS conventions.
+
+**Summary audio:** Use `hooks/kokoro-summary.py <voice_key> <text_file>` to generate long-form audio summaries (over one minute) that autoplay on the audio feed. Summaries land in `tts-output/` and the `/audio-feed` page picks them up automatically. Use this for project status updates, briefings, or handoff summaries that the operator can listen to passively.
 
 ---
 
