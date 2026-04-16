@@ -60,22 +60,26 @@ function scanForBoards(dir, boards, maxDepth) {
 }
 
 function deriveProjectName(filePath) {
-  // Try to extract a meaningful name from the file path
+  const basename = path.basename(filePath, '.json');
+
+  // If the filename itself encodes a project name (job-board-multideck.json → multideck), use it
+  if (basename.startsWith('job-board-') && basename.length > 'job-board-'.length) {
+    return basename.replace('job-board-', '');
+  }
+
+  // For generic names like JOB_BOARD.json, walk up the path to find the project
   const normalized = filePath.replace(/\\/g, '/');
   const parts = normalized.split('/');
-
-  // Skip generic directory names and the filename itself to find the project name
   const skip = new Set(['state', 'coordination', 'dashboards', 'data', 'config', '.']);
   for (let i = parts.length - 2; i >= 0; i--) {
     const p = parts[i];
     const lower = p.toLowerCase();
     if (skip.has(lower)) continue;
     if (lower.includes('job-board')) continue;
-    // Skip numbered prefixes like "01-ACTIVE" but keep what's after them
     if (/^\d{2}-/.test(p)) continue;
     if (p.length > 2) return p;
   }
-  return path.basename(filePath, '.json');
+  return basename;
 }
 
 function renderJobBoardPage(stateDir) {
