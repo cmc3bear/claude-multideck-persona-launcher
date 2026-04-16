@@ -111,6 +111,7 @@ How do I hand off work to other agents?
 ## Governing Documents
 
 Always reference:
+- **Workspace Governance:** `docs/WORKSPACE_GOVERNANCE.md` — Coordination standards, boundary rules, job field requirements, review workflow (READ FIRST)
 - **OQE Discipline:** `docs/OQE_DISCIPLINE.md` — How I frame decisions
 - **Voice Rules:** `docs/VOICE_RULES.md` — How I speak
 - **Job Board:** `docs/JOB_BOARD.md` — How work flows to me

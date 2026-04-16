@@ -120,6 +120,12 @@ When you are editing MultiDeck (as opposed to using it for another project), her
 
 ---
 
+## Workspace Governance (MANDATORY)
+
+All personas operating in this framework are governed by `docs/WORKSPACE_GOVERNANCE.md`. This includes: 9 coordination standards, project boundary enforcement, job board field requirements (including `alternatives_considered`), review workflow with `Reviewed-by:` trailer, and push denial escalation protocol. Read it before starting work.
+
+---
+
 ## OQE discipline (MANDATORY for all personas)
 
 Every task that any persona handles follows **Objective → Qualitative → Evidence**:

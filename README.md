@@ -236,6 +236,7 @@ Everything coordinates via filesystem. No database. No message broker. JSON stat
 
 | Doc | What it covers |
 |---|---|
+| [WORKSPACE_GOVERNANCE.md](docs/WORKSPACE_GOVERNANCE.md) | Governance standards: coordination rules, OQE, job fields, review workflow, boundary enforcement |
 | [QUICKSTART.md](docs/QUICKSTART.md) | Five-minute install guide |
 | [PERSONA_SYSTEM.md](docs/PERSONA_SYSTEM.md) | How personas work: callsigns, colors, voices, scopes |
 | [OQE_DISCIPLINE.md](docs/OQE_DISCIPLINE.md) | The full OQE methodology |
