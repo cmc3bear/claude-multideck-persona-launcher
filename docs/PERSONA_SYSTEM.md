@@ -83,7 +83,7 @@ The master registry is `personas/personas.json`. Here's the structure:
 ```json
 {
   "meta": {
-    "version": 1,
+    "version": 2,
     "description": "Agent registry for MultiDeck",
     "last_updated": "2026-04-15"
   },
@@ -126,10 +126,10 @@ MultiDeck ships with nine operatives:
 | `engineer` | Engineer | #0088FF | am_eric | code-implementation |
 | `reviewer` | Reviewer | #EF4444 | bm_lewis | quality-gate |
 | `researcher` | Researcher | #A855F7 | bf_emma | investigation |
-| `launcher-engineer` | Launcher-Engineer | #00CCFF | am_michael | launcher-ui |
-| `voice-technician` | Voice-Technician | #22C55E | af_nova | tts-pipeline |
-| `persona-author` | Persona-Author | #F59E0B | af_heart | agent-design |
-| `commercial-producer` | Commercial-Producer | #EC4899 | bm_fable | media-production |
+| `launcher-engineer` | Launcher-Engineer | #14B8A6 | am_michael | project:multideck |
+| `voice-technician` | Voice-Technician | #8B5CF6 | af_nova | project:multideck |
+| `persona-author` | Persona-Author | #D946EF | af_heart | project:multideck |
+| `commercial-producer` | Commercial-Producer | #F43F5E | bm_fable | project:multideck |
 
 ---
 
@@ -214,7 +214,7 @@ This:
 
 4. Verify voice key is registered:
 ```bash
-python scripts/set-voice.py myagent voice_identifier
+python hooks/set-voice.py myagent voice_identifier
 ```
 
 ---
@@ -259,7 +259,7 @@ Load this persona: ${DISPATCH_FRAMEWORK_ROOT}/personas/ARCHITECT_AGENT.md
 When a persona loads, it activates its voice:
 
 ```bash
-python scripts/set-voice.py [callsign] [voice_key]
+python hooks/set-voice.py [callsign] [voice_key]
 ```
 
 This writes to `voice-config-${CLAUDE_CODE_SSE_PORT}.json` — a per-session file that doesn't interfere with other Claude Code tabs.

@@ -54,7 +54,9 @@ dispatch-framework/
 │   ├── ADD_AGENT_GUIDE.md      Walkthrough of dispatch-agent.py add/remove
 │   ├── JOB_BOARD.md            Job board usage and schema
 │   ├── REVIEW_WORKFLOW.md      The Reviewer gate process
-│   └── COMMERCIAL_PRODUCTION.md Commercial/demo video production workflow
+│   ├── COMMERCIAL_PRODUCTION.md Commercial/demo video production workflow
+│   └── screenshots/            Launcher and dashboard screenshots for README
+├── commercials/                Commercial-Producer working directory
 ├── personas/
 │   ├── personas.json           Registry — callsign, color, voice_key, cwd, agent_file per persona
 │   ├── DISPATCH_AGENT.md       Workspace coordinator

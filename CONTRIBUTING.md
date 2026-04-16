@@ -54,7 +54,7 @@ If your agent uses a custom voice configuration, add it to the voice catalog:
 ### Step 4: Register the Voice
 
 ```bash
-python scripts/set-voice.py myagent voice_identifier
+python hooks/set-voice.py myagent voice_identifier
 ```
 
 This writes the voice config to `voice-config-${CLAUDE_CODE_SSE_PORT}.json` (per-session isolation).

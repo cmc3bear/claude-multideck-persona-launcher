@@ -308,7 +308,7 @@ Per-session voice configuration:
 }
 ```
 
-Updated at runtime by `scripts/set-voice.py`.
+Updated at runtime by `hooks/set-voice.py`.
 
 ### tts-config.json
 

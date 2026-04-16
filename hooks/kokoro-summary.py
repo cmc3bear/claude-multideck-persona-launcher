@@ -30,10 +30,10 @@ VOICE_MAP = {
     "engineer":            {"voice": "am_eric",   "lang": "a", "speed": 1.05, "callsign": "Engineer"},
     "reviewer":            {"voice": "bm_lewis",  "lang": "b", "speed": 1.05, "callsign": "Reviewer"},
     "researcher":          {"voice": "bf_emma",   "lang": "b", "speed": 1.05, "callsign": "Researcher"},
-    "launcher-engineer":   {"voice": "am_michael","lang": "a", "speed": 1.05, "callsign": "Launcher Engineer"},
-    "voice-technician":    {"voice": "bf_alice",  "lang": "b", "speed": 1.0,  "callsign": "Voice Technician"},
-    "persona-author":      {"voice": "am_adam",   "lang": "a", "speed": 1.0,  "callsign": "Persona Author"},
-    "commercial-producer": {"voice": "bf_lily",   "lang": "b", "speed": 0.95, "callsign": "Commercial Producer"},
+    "launcher-engineer":   {"voice": "am_michael","lang": "a", "speed": 1.05, "callsign": "Launcher-Engineer"},
+    "voice-technician":    {"voice": "af_nova",   "lang": "a", "speed": 1.05, "callsign": "Voice-Technician"},
+    "persona-author":      {"voice": "af_heart",  "lang": "a", "speed": 1.0,  "callsign": "Persona-Author"},
+    "commercial-producer": {"voice": "bm_fable",  "lang": "b", "speed": 0.95, "callsign": "Commercial-Producer"},
     "default":             {"voice": "am_puck",   "lang": "a", "speed": 1.05, "callsign": ""},
 }
 

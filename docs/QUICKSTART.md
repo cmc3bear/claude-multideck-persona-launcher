@@ -29,7 +29,7 @@ The init script:
 - Creates state directories
 - Installs Node dependencies for the dashboard
 - Sets up Python virtual environment
-- Registers the default agent roster (Dispatch, Architect, Engineer, Reviewer, Researcher)
+- Registers the default agent roster (all 9 operatives from personas.json)
 - Tests Kokoro connectivity
 
 ---
@@ -38,7 +38,7 @@ The init script:
 
 ```bash
 # Assign the Dispatch agent the af_sky voice
-python scripts/set-voice.py dispatch af_sky
+python hooks/set-voice.py dispatch af_sky
 
 # Choose from: af_sky, am_eric, bf_emma, bm_lewis, bm_fable, etc.
 # See docs/KOKORO_SETUP.md for the full catalog

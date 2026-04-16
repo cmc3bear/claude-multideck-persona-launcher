@@ -5,12 +5,25 @@ All notable changes to MultiDeck will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1] - 2026-04-15
+
+### Added
+
+- **Four MultiDeck-specific personas** — Launcher-Engineer, Voice-Technician, Persona-Author, Commercial-Producer added to the default roster (total: 9 operatives)
+- **commercials/ directory** — Working directory for Commercial-Producer persona
+
+### Fixed
+
+- Documentation accuracy: persona colors, scopes, schema version, and file paths corrected across all docs
+
+---
+
 ## [0.1.0] - 2026-04-15
 
 ### Added
 
 - **Persona system** — Framework for defining Claude agents with callsigns, voice keys, working directories, and operational scopes
-- **Default agent roster** — Five core framework agents (Dispatch, Architect, Engineer, Reviewer, Researcher) with complete persona specs
+- **Default agent roster** — Nine framework agents: five core (Dispatch, Architect, Engineer, Reviewer, Researcher) plus four MultiDeck-specific (Launcher-Engineer, Voice-Technician, Persona-Author, Commercial-Producer)
 - **Job board** — JSON-based work queue with status tracking and completion gates
 - **OQE discipline** — Objective → Qualitative → Evidence framework for systematic decision-making
 - **Kokoro voice integration** — Per-session voice isolation, atomic queueing via filesystem mutex, persona callsign announcements

@@ -6,7 +6,7 @@
 **Role:** [Primary role and responsibility]  
 **Scope:** [Domain or area of focus]  
 **Voice:** Kokoro `[voice_key]` ([voice description])  
-**Voice activation:** `python scripts/set-voice.py [callsign_lowercase] [voice_key]`  
+**Voice activation:** `python hooks/set-voice.py [callsign_lowercase] [voice_key]`  
 **Working Directory:** `${DISPATCH_USER_ROOT}/your/path`
 
 ---

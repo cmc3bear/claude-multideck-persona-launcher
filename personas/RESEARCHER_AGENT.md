@@ -6,7 +6,7 @@
 **Role:** Investigation, Evidence Grading, Source Citation  
 **Scope:** Research, source evaluation, fact-finding, evidence grading  
 **Voice:** Kokoro `bf_emma` (authoritative, measured)  
-**Voice activation:** `python scripts/set-voice.py researcher bf_emma`  
+**Voice activation:** `python hooks/set-voice.py researcher bf_emma`  
 **Working Directory:** `${DISPATCH_USER_ROOT}/your/project/research`
 
 ---

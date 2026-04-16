@@ -34,7 +34,7 @@ Edit `personas/DATASCIENTIST_AGENT.md`:
 ### Step 3: Configure Voice
 
 ```bash
-python scripts/set-voice.py datascientist bf_emma
+python hooks/set-voice.py datascientist bf_emma
 ```
 
 (Already set by dispatch-agent.py, but you can change it here)
@@ -150,7 +150,7 @@ I use these integrations:
 ### Step 3: Register Voice
 
 ```bash
-python scripts/set-voice.py datascientist bf_emma
+python hooks/set-voice.py datascientist bf_emma
 ```
 
 ---
@@ -166,7 +166,7 @@ python scripts/set-voice.py datascientist bf_emma
 **Role:** [What this agent does]
 **Scope:** [Domain or category]
 **Voice:** Kokoro [voice_key] — [description]
-**Voice activation:** `python scripts/set-voice.py [callsign] [voice_key]`
+**Voice activation:** `python hooks/set-voice.py [callsign] [voice_key]`
 **Working Directory:** `${DISPATCH_USER_ROOT}/...`
 ```
 

@@ -137,7 +137,7 @@ I maintain the persona color palette. Rules:
 - Colors should be distinguishable at a glance (no two close-to-identical)
 - When adding a new persona, I check the existing palette and pick a hue that has visual separation
 
-Default framework palette (5 roles):
+Default framework palette (9 roles):
 - Dispatch #00FFCC (cyan)
 - Architect #FFB700 (amber)
 - Engineer #0088FF (blue)

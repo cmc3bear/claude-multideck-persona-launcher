@@ -31,6 +31,14 @@ DISPATCH_PORT=3000 DISPATCH_STATE_DIR=/var/lib/dispatch/state node server.cjs
 - `/audio-feed/list` — List of available MP3 files (JSON)
 - `/audio-feed/mp3/<filename>` — Download MP3 file
 - `/state.json` — Complete state dump (all JSON files merged)
+- `/launcher` — MultiDeck cyberpunk character-select launcher UI
+- `/launcher/personas` — Persona registry (JSON from personas.json)
+- `/launcher/projects` — Active projects list (JSON)
+- `/launcher/music` — Available music bed tracks (JSON)
+- `/launcher/team-presets` — Team preset configurations (JSON)
+- `/launcher/launch` — Launch a single persona (POST)
+- `/launcher/launch-team` — Launch a team preset (POST)
+- `/launcher/assets/*` — Portraits, intros, and other launcher assets
 
 ## Features
 

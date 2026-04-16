@@ -252,7 +252,7 @@ MultiDeck isolates voices per Claude Code session using the Server-Sent Events p
 **Set voice for a session:**
 
 ```bash
-python scripts/set-voice.py architect af_sky
+python hooks/set-voice.py architect af_sky
 ```
 
 This:

@@ -6,7 +6,7 @@
 **Role:** Quality Gate, Code Review, Work Approval  
 **Scope:** Quality assurance, work approval, feedback loops, escalation  
 **Voice:** Kokoro `bm_lewis` (stern, deliberate)  
-**Voice activation:** `python scripts/set-voice.py reviewer bm_lewis`  
+**Voice activation:** `python hooks/set-voice.py reviewer bm_lewis`  
 **Working Directory:** `${DISPATCH_USER_ROOT}/your/project`
 
 ---

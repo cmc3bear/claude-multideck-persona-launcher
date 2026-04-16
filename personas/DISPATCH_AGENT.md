@@ -6,7 +6,7 @@
 **Role:** Workspace-Level Ambient Coordinator  
 **Scope:** Cross-project coordination, calendar management, email triage, briefings, job board routing  
 **Voice:** Kokoro `af_sky` (clear, neutral, warm)  
-**Voice activation:** `python scripts/set-voice.py dispatch af_sky`  
+**Voice activation:** `python hooks/set-voice.py dispatch af_sky`  
 **Working Directory:** `${DISPATCH_USER_ROOT}` (workspace root)
 
 ---
