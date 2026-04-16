@@ -85,10 +85,29 @@ pending → assigned → active → review → (approved | flagged) → complete
     "voice_announcement": "Reviewer calling: Quickstart approved and ready for production"
   },
   
+  "alternatives_considered": "Considered a video walkthrough instead of written guide. Rejected: written is searchable, forkable, and lower maintenance. Video can be added later as a supplement.",
+
   "tags": ["documentation", "onboarding", "high-visibility"],
   "dependencies": []
 }
 ```
+
+### Required Fields (from Job 48+)
+
+Starting from Job 48 on the MultiDeck board (2026-04-16), the following fields are **required** on every job:
+
+| Field | When | Description |
+|---|---|---|
+| `subject` | On create | One-line objective |
+| `description` | On create | Full objective with context and scope |
+| `assigned_to` | On create | Which agent owns the work |
+| `priority` | On create | P0-P3 |
+| `posted_by` | On create | Who created the job (agent or Dispatch) |
+| `result` | On close | Evidence of completion — what was done, verified how |
+| `alternatives_considered` | On close | What other approaches were evaluated and why this one was chosen (the "Q" in OQE) |
+| `tags` | On close | Categorization for filtering and analysis |
+
+Jobs created before Job 48 may be missing these fields (backfilled where possible). Jobs from Job 48 onward must have all fields populated before closing.
 
 ---
 

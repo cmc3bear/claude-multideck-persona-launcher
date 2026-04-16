@@ -417,31 +417,33 @@ function renderJobBoardPage(stateDir) {
         '<span class="job-agent">' + escapeHtml(j.assigned_to || '-') + '</span>' +
         '</li>' +
         '<div class="job-detail" id="detail-' + j.id + '">' +
-          // Description / objective
-          (j.description ? '<div class="field"><span class="field-label">DESCRIPTION: </span><span class="field-val">' + escapeHtml(j.description) + '</span></div>' : '') +
-          // Posted by (OQE format)
+          // 1. Posted by
           (j.posted_by ? '<div class="field"><span class="field-label">POSTED BY: </span><span class="field-val">' + escapeHtml(j.posted_by) + '</span></div>' : '') +
-          // Lifecycle timestamps
+          // 2. Lifecycle timestamps
           '<div class="field"><span class="field-label">LIFECYCLE: </span><span class="field-val">' +
             (j.created_at ? 'Created ' + formatDate(j.created_at) : '') +
             (j.accepted_at ? ' &#8594; Accepted ' + formatDate(j.accepted_at) : '') +
             (j.submitted_at ? ' &#8594; Submitted ' + formatDate(j.submitted_at) : '') +
             (j.completed_at ? ' &#8594; Completed ' + formatDate(j.completed_at) : '') +
           '</span></div>' +
-          // Dependencies
-          (j.depends_on ? '<div class="field"><span class="field-label">DEPENDS ON: </span><span class="field-val">JOB-' + j.depends_on + '</span></div>' : '') +
-          // Meeting reference (OQE format)
-          (j.meeting_ref ? '<div class="field"><span class="field-label">MEETING: </span><span class="field-val">' + escapeHtml(j.meeting_ref) + '</span></div>' : '') +
-          // Output path
-          (j.output_path ? '<div class="field"><span class="field-label">OUTPUT: </span><span class="field-val">' + escapeHtml(j.output_path) + '</span></div>' : '') +
-          // Result (OQE format — the OQE evidence/outcome)
+          // 3. Result (OQE evidence/outcome)
           (j.result ? '<div class="field"><span class="field-label">RESULT: </span><span class="field-val">' + escapeHtml(j.result) + '</span></div>' : '') +
-          // Review history (MultiDeck format)
+          // 4. Description (objective)
+          (j.description ? '<div class="field"><span class="field-label">DESCRIPTION: </span><span class="field-val">' + escapeHtml(j.description) + '</span></div>' : '') +
+          // 5. Alternatives considered (OQE qualitative — required from Job 48+)
+          (j.alternatives_considered ? '<div class="field"><span class="field-label">ALTERNATIVES: </span><span class="field-val">' + escapeHtml(j.alternatives_considered) + '</span></div>' : '') +
+          // 6. Dependencies
+          (j.depends_on ? '<div class="field"><span class="field-label">DEPENDS ON: </span><span class="field-val">JOB-' + j.depends_on + '</span></div>' : '') +
+          // 7. Meeting reference
+          (j.meeting_ref ? '<div class="field"><span class="field-label">MEETING: </span><span class="field-val">' + escapeHtml(j.meeting_ref) + '</span></div>' : '') +
+          // 8. Output path
+          (j.output_path ? '<div class="field"><span class="field-label">OUTPUT: </span><span class="field-val">' + escapeHtml(j.output_path) + '</span></div>' : '') +
+          // 9. Review history
           (j.review_history && j.review_history.length > 0 ?
             '<div class="field"><span class="field-label">REVIEWS: </span><span class="field-val">' +
             j.review_history.map(r => r.verdict.toUpperCase() + (r.note ? ': ' + escapeHtml(r.note) : '')).join(' | ') +
             '</span></div>' : '') +
-          // Tags (OQE format)
+          // 10. Tags
           (j.tags && j.tags.length > 0 ? '<div class="field"><span class="field-label">TAGS: </span><span class="field-val">' + j.tags.map(escapeHtml).join(', ') + '</span></div>' : '') +
         '</div>';
     }).join('');
