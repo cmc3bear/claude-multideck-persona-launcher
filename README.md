@@ -52,8 +52,11 @@ https://github.com/cmc3bear/claude-multideck-persona-launcher/raw/main/docs/medi
 ### The operative deck. Select your runner. Stats, scope, voice, danger toggle.
 ![Character Select](docs/screenshots/launcher-select.png)
 
-### Operative detail. Engineer selected. Code implementation, testing, debugging. Deploy when ready.
+### Operative dossier. Researcher selected. Investigation, evidence grading, source citation.
 ![Persona Detail](docs/screenshots/launcher-persona-detail.png)
+
+### Team deploy. Multiple operatives selected, dangerous mode armed, one click launches the squad.
+![Team Mode](docs/screenshots/launcher-team-mode.png)
 
 ### Operations dashboard. Actions, schedule, escalations, state. All JSON-backed, all live.
 ![Dashboard](docs/screenshots/dashboard-main.png)

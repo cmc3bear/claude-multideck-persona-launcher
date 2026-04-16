@@ -252,13 +252,31 @@ def cmd_review(job_id, verdict, note, board_file=None):
 
 
 def cmd_close(job_id, board_file=None):
-    """Admin close a job."""
+    """Close a job with full lifecycle timestamps."""
     board = load_job_board(board_file)
+    now = datetime.utcnow().isoformat()
     for job in board["jobs"]:
         if job["id"] == str(job_id):
             job["status"] = "closed"
+            # Auto-populate lifecycle timestamps if missing
+            if not job.get("accepted_at"):
+                job["accepted_at"] = job.get("created_at", now)
+            if not job.get("submitted_at"):
+                job["submitted_at"] = now
+            if not job.get("completed_at"):
+                job["completed_at"] = now
             save_job_board(board, board_file)
             print(f"Job {job_id} closed")
+            # Warn if OQE fields are missing (required from Job 48+)
+            missing = []
+            if not job.get("description"): missing.append("description")
+            if not job.get("result"): missing.append("result")
+            if not job.get("alternatives_considered"): missing.append("alternatives_considered")
+            if not job.get("tags"): missing.append("tags")
+            if not job.get("posted_by"): missing.append("posted_by")
+            if missing:
+                print(f"  WARNING: Missing required fields: {', '.join(missing)}")
+                print(f"  See docs/WORKSPACE_GOVERNANCE.md — Job Board Field Requirements")
             return
     print(f"Job not found: {job_id}")
 
@@ -279,6 +297,58 @@ def cmd_show(job_id, board_file=None):
                 print(f"     {review['timestamp']}")
         else:
             print(f"{key:<20} {value}")
+
+
+def cmd_validate(board_file=None):
+    """Validate all jobs for required OQE fields. Reports missing fields per job."""
+    board = load_job_board(board_file)
+    jobs = board["jobs"]
+
+    create_fields = ["subject", "description", "assigned_to", "priority", "posted_by"]
+    close_fields = ["result", "alternatives_considered", "tags", "completed_at"]
+
+    total = len(jobs)
+    issues = 0
+    clean = 0
+
+    print(f"\n{'ID':<10} {'Status':<10} {'Missing Fields'}")
+    print("-" * 80)
+
+    for j in jobs:
+        missing = []
+        # Check create-time fields on all jobs
+        for f in create_fields:
+            if not j.get(f):
+                missing.append(f)
+        # Check close-time fields on closed/completed jobs
+        if j.get("status") in ("closed", "completed", "passed", "approved"):
+            for f in close_fields:
+                if not j.get(f):
+                    missing.append(f)
+            # Check lifecycle timestamps
+            if not j.get("accepted_at"):
+                missing.append("accepted_at")
+            if not j.get("submitted_at"):
+                missing.append("submitted_at")
+
+        jid = str(j.get("id", "?"))
+        if not jid.startswith("JOB-"):
+            jid = "JOB-" + jid.zfill(4)
+
+        if missing:
+            issues += 1
+            print(f"{jid:<10} {j.get('status','?'):<10} {', '.join(missing)}")
+        else:
+            clean += 1
+
+    print(f"\n{'='*80}")
+    print(f"TOTAL: {total} jobs | CLEAN: {clean} | ISSUES: {issues}")
+    if issues > 0:
+        print(f"  {issues} job(s) have missing required fields.")
+        print(f"  See docs/WORKSPACE_GOVERNANCE.md — Job Board Field Requirements")
+    else:
+        print(f"  All jobs pass validation.")
+    print()
 
 
 def main():
@@ -329,6 +399,9 @@ def main():
     show_parser = subparsers.add_parser("show")
     show_parser.add_argument("job_id")
 
+    # validate
+    validate_parser = subparsers.add_parser("validate")
+
     args = parser.parse_args()
     bf = job_board_path(args.project)
 
@@ -357,6 +430,8 @@ def main():
             cmd_close(args.job_id, bf)
         elif args.command == "show":
             cmd_show(args.job_id, bf)
+        elif args.command == "validate":
+            cmd_validate(bf)
         else:
             parser.print_help()
     except Exception as e:
