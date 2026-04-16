@@ -104,7 +104,22 @@ Write-Host "  python scripts/dispatch-agent.py list      - List all personas"
 Write-Host "  python scripts/dispatch-agent.py remove    - Remove a persona"
 Write-Host ""
 
-# Step 7: Print next steps
+# Step 7: Install pre-push review gate hook
+Write-Host "Installing pre-push review gate..." -ForegroundColor Cyan
+$frameworkRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+$hookSrc = Join-Path $PSScriptRoot "pre-push-review-gate.sh"
+$hookDir = Join-Path $frameworkRoot ".git" "hooks"
+$hookDst = Join-Path $hookDir "pre-push"
+if (Test-Path (Join-Path $frameworkRoot ".git")) {
+    if (-not (Test-Path $hookDir)) { New-Item -ItemType Directory -Path $hookDir -Force | Out-Null }
+    Copy-Item $hookSrc $hookDst -Force
+    Write-Host "Installed: .git/hooks/pre-push (blocks push without Reviewed-by trailer)" -ForegroundColor Green
+} else {
+    Write-Host "No .git directory found — skipping hook install. Run 'git init' first if needed." -ForegroundColor Yellow
+}
+Write-Host ""
+
+# Step 8: Print next steps
 Write-Host "=== Next Steps ===" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "1. Set environment variable for easy access:"

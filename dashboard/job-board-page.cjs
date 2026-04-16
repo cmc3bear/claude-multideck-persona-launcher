@@ -84,7 +84,9 @@ function deriveProjectName(filePath) {
 
 function renderJobBoardPage(stateDir) {
   const boards = getJobBoards(stateDir);
-  const boardsJson = JSON.stringify(boards);
+  // Strip filesystem paths before serializing to client — defense in depth
+  const clientBoards = boards.map(({ file, ...rest }) => rest);
+  const boardsJson = JSON.stringify(clientBoards);
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -440,7 +442,7 @@ function renderJobBoardPage(stateDir) {
             j.review_history.map(r => r.verdict.toUpperCase() + (r.note ? ': ' + escapeHtml(r.note) : '')).join(' | ') +
             '</span></div>' : '') +
           // Tags (OQE format)
-          (j.tags && j.tags.length > 0 ? '<div class="field"><span class="field-label">TAGS: </span><span class="field-val">' + j.tags.join(', ') + '</span></div>' : '') +
+          (j.tags && j.tags.length > 0 ? '<div class="field"><span class="field-label">TAGS: </span><span class="field-val">' + j.tags.map(escapeHtml).join(', ') + '</span></div>' : '') +
         '</div>';
     }).join('');
   }

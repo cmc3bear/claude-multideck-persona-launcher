@@ -128,6 +128,8 @@ Feedback: "Clear implementation, all criteria met, ready for production."
 Consequences:
 - Job moves to `completed`
 - Agent hears: "Reviewer calling: Job approved and completed"
+- **Commit is amended with `Reviewed-by: Reviewer <reviewer@multideck.local>` trailer**
+- The pre-push hook (`scripts/pre-push-review-gate.sh`) checks for this trailer and blocks any push that doesn't have it
 - Work ships
 
 ### FLAG 🚩
