@@ -183,6 +183,9 @@ def main():
     if custom_cfg:
         wav_path = apply_post_processing(wav_path, custom_cfg, session_id)
 
+    # Save a copy to tts-output/ for the audio feed dashboard
+    save_to_feed(wav_path, callsign)
+
     # Acquire the playback mutex — this is the critical section that serializes audio
     acquire_playback_lock()
     try:
@@ -200,6 +203,51 @@ def main():
             os.remove(text_file)
         except:
             pass
+
+
+def save_to_feed(wav_path, callsign):
+    """Convert WAV to MP3 and save to tts-output/ for the audio feed. Prune files older than 24h."""
+    hooks_dir = os.path.dirname(os.path.abspath(__file__))
+    dispatch_root = os.environ.get('DISPATCH_ROOT', os.path.dirname(hooks_dir))
+    tts_dir = os.environ.get('DISPATCH_TTS_OUTPUT', os.path.join(dispatch_root, 'tts-output'))
+    os.makedirs(tts_dir, exist_ok=True)
+
+    # Generate timestamped filename with callsign
+    tag = callsign.lower().replace(' ', '-') if callsign else 'unknown'
+    ts = time.strftime('%Y%m%d-%H%M%S')
+    mp3_name = f'{ts}-{tag}.mp3'
+    mp3_path = os.path.join(tts_dir, mp3_name)
+
+    try:
+        CREATE_NO_WINDOW = 0x08000000
+        subprocess.run(
+            ['ffmpeg', '-y', '-i', wav_path, '-codec:a', 'libmp3lame', '-b:a', '128k', '-loglevel', 'quiet', mp3_path],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            creationflags=CREATE_NO_WINDOW, timeout=30
+        )
+    except Exception:
+        pass
+
+    # Prune files older than 24 hours
+    prune_feed(tts_dir, max_age_hours=24)
+
+
+def prune_feed(tts_dir, max_age_hours=24):
+    """Delete MP3 files in tts-output/ older than max_age_hours."""
+    cutoff = time.time() - (max_age_hours * 3600)
+    try:
+        for f in os.listdir(tts_dir):
+            if not f.endswith('.mp3'):
+                continue
+            full = os.path.join(tts_dir, f)
+            try:
+                if os.path.getmtime(full) < cutoff:
+                    os.remove(full)
+            except OSError:
+                pass
+    except OSError:
+        pass
+
 
 if __name__ == '__main__':
     main()
