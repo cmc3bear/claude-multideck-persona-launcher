@@ -407,66 +407,147 @@ function renderMainDashboard() {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>MultiDeck Dashboard</title>
+<title>// MULTIDECK OPS //</title>
 <style>
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
-  h1 { color: #0088FF; margin-top: 0; }
-  h2 { color: #333; border-bottom: 2px solid #0088FF; padding-bottom: 8px; }
-  .card { background: white; padding: 20px; margin: 15px 0; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-  .stat { font-size: 24px; font-weight: bold; color: #0088FF; }
-  .stat-label { font-size: 14px; color: #666; margin-top: 5px; }
-  table { width: 100%; border-collapse: collapse; margin: 10px 0; }
-  th { text-align: left; padding: 10px; border-bottom: 2px solid #0088FF; background: #f9f9f9; }
-  td { padding: 10px; border-bottom: 1px solid #eee; }
-  tr:hover { background: #f9f9f9; }
-  .muted { color: #999; font-size: 13px; }
-  .red { color: #d32f2f; }
-  a { color: #0088FF; text-decoration: none; }
-  a:hover { text-decoration: underline; }
-  .nav { margin-bottom: 20px; }
-  .nav a { display: inline-block; padding: 8px 16px; margin-right: 10px; background: #0088FF; color: white; border-radius: 4px; }
-  .nav a:hover { opacity: 0.9; }
+  @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'VT323', monospace;
+    background: #0a0014;
+    color: #c0e0ff;
+    min-height: 100vh;
+    padding: 24px;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: '';
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: repeating-linear-gradient(0deg, rgba(0,255,204,0.03) 0, rgba(0,255,204,0.03) 1px, transparent 1px, transparent 3px);
+    pointer-events: none; z-index: 9999;
+  }
+  h1 {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 20px;
+    color: #00FFCC;
+    text-shadow: 0 0 10px #00FFCC;
+    letter-spacing: 3px;
+    margin-bottom: 20px;
+  }
+  h2 {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 11px;
+    color: #FF00AA;
+    letter-spacing: 2px;
+    text-shadow: 0 0 6px #FF00AA;
+    margin-top: 30px;
+    margin-bottom: 12px;
+  }
+  .card {
+    border: 1px solid #1a2a3a;
+    padding: 16px;
+    margin: 10px 0;
+    background: rgba(10,20,30,0.6);
+  }
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 20px;
+  }
+  .stat {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 22px;
+    color: #00FFCC;
+    text-shadow: 0 0 8px #00FFCC;
+  }
+  .stat.red { color: #FF3366; text-shadow: 0 0 8px #FF3366; }
+  .stat-label {
+    font-size: 14px;
+    color: #607090;
+    margin-top: 6px;
+    letter-spacing: 1px;
+  }
+  table { width: 100%; border-collapse: collapse; margin: 8px 0; }
+  th {
+    text-align: left;
+    padding: 8px 10px;
+    border-bottom: 1px solid #00FFCC;
+    color: #00FFCC;
+    font-size: 13px;
+    letter-spacing: 1px;
+  }
+  td {
+    padding: 8px 10px;
+    border-bottom: 1px solid #1a2a3a;
+    font-size: 18px;
+  }
+  tr:hover { background: rgba(0,255,204,0.05); }
+  .muted { color: #607090; font-size: 16px; }
+  a { color: #00FFCC; text-decoration: none; }
+  a:hover { text-shadow: 0 0 6px #00FFCC; }
+  .nav { margin-bottom: 24px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .nav a {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px;
+    padding: 10px 16px;
+    border: 1px solid #607090;
+    color: #c0e0ff;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+  }
+  .nav a:hover, .nav a.active {
+    border-color: #00FFCC;
+    color: #00FFCC;
+    text-shadow: 0 0 6px #00FFCC;
+    background: rgba(0,255,204,0.08);
+  }
+  footer {
+    margin-top: 40px;
+    padding-top: 12px;
+    border-top: 1px solid #1a2a3a;
+    color: #607090;
+    font-size: 13px;
+  }
 </style>
 </head>
 <body>
-<h1>MultiDeck Dashboard</h1>
+<h1>// MULTIDECK OPS //</h1>
 <div class="nav">
-  <a href="/">Dashboard</a>
-  <a href="/launcher">Launcher</a>
-  <a href="/briefing">Briefing</a>
-  <a href="/audio-feed">Audio Feed</a>
-  <a href="/state.json">State</a>
+  <a href="/" class="active">OPS</a>
+  <a href="/launcher">LAUNCHER</a>
+  <a href="/briefing">BRIEFING</a>
+  <a href="/audio-feed">AUDIO FEED</a>
+  <a href="/state.json">STATE</a>
 </div>
 <div class="card">
-  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 20px;">
-    <div><div class="stat">${actionCount}</div><div class="stat-label">Action Items</div></div>
-    <div><div class="stat">${eventCount}</div><div class="stat-label">Events Today</div></div>
-    <div><div class="stat ${escalations > 0 ? 'red' : ''}">${escalations}</div><div class="stat-label">Escalations</div></div>
+  <div class="stats-grid">
+    <div><div class="stat">${actionCount}</div><div class="stat-label">ACTION ITEMS</div></div>
+    <div><div class="stat">${eventCount}</div><div class="stat-label">EVENTS TODAY</div></div>
+    <div><div class="stat ${escalations > 0 ? 'red' : ''}">${escalations}</div><div class="stat-label">ESCALATIONS</div></div>
   </div>
 </div>
-<h2>Actions</h2>
+<h2>// ACTIONS</h2>
 <div class="card">
   ${state.actions && state.actions.personal && state.actions.personal.length > 0
     ? '<table>' + state.actions.personal.map(a => `<tr><td><strong>${esc(a.what)}</strong></td><td class="muted">${esc(a.due || '-')}</td></tr>`).join('') + '</table>'
     : '<div class="muted">No action items.</div>'
   }
 </div>
-<h2>Today's Schedule</h2>
+<h2>// SCHEDULE</h2>
 <div class="card">
   ${state.calendar && state.calendar.agenda && state.calendar.agenda.length > 0
     ? '<table>' + state.calendar.agenda.map(e => `<tr><td>${esc(e.time)}</td><td><strong>${esc(e.title)}</strong></td><td class="muted">${esc(e.duration_min || '-')} min</td></tr>`).join('') + '</table>'
     : '<div class="muted">No events scheduled.</div>'
   }
 </div>
-<h2>Weather</h2>
+<h2>// WEATHER</h2>
 <div class="card">
   ${state.weather && state.weather.current
     ? `<div>${esc(state.weather.current.temperature_f)}&deg;F &mdash; ${esc(state.weather.current.description)}</div>`
     : '<div class="muted">No weather data available.</div>'
   }
 </div>
-<footer style="margin-top: 40px; color: #999; font-size: 12px; border-top: 1px solid #eee; padding-top: 10px;">
-  <p>MultiDeck Framework &mdash; State directory: ${esc(STATE_DIR)}</p>
+<footer>
+  <p>MultiDeck Framework // State: ${esc(STATE_DIR)}</p>
 </footer>
 </body>
 </html>`;
