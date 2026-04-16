@@ -2,7 +2,7 @@
 
 **A multi-agent orchestration framework for Claude Code that looks like a video game title screen. On purpose.**
 
-Nine AI operatives. Nine voices. One launcher. You pick your team from a character-select screen, hit JACK IN, and real Claude Code sessions spin up in color-coded terminal tabs, each with its own persona, scope, and synthesized voice. A job board tracks the work. A quality gate reviews it. An audio feed plays their reports out loud so you can walk away from the keyboard and just listen.
+Nine AI operatives. Nine voices. One launcher. You pick your team from a character-select screen, hit DEPLOY, and real Claude Code sessions spin up in color-coded terminal tabs, each with its own persona, scope, and synthesized voice. A job board tracks the work. A quality gate reviews it. An audio feed plays their reports out loud so you can walk away from the keyboard and just listen.
 
 It runs entirely local. Zero API cost with a Claude Code CLI membership. Fork it, add your own operatives, your own voices, your own background music. Make it yours.
 
@@ -44,7 +44,7 @@ It runs entirely local. Zero API cost with a Claude Code CLI membership. Fork it
 
 ---
 
-## Jack In
+## Deploy
 
 ### Windows
 

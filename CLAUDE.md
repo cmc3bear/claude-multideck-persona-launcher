@@ -12,7 +12,7 @@ MultiDeck is the public distribution of a persona-driven Claude Code orchestrati
 
 - **Nine personas** — Dispatch (workspace coordinator), Architect (structure + docs), Engineer (code), Reviewer (quality gates), Researcher (investigation), Launcher-Engineer (launcher UI + spawning), Voice-Technician (Kokoro TTS pipeline), Persona-Author (agent design + roster), Commercial-Producer (demo video production). Each persona has its own voice, color, callsign, and OQE discipline. Personas spawn in dedicated terminal windows with distinct tab colors via the launcher system.
 
-- **A cyberpunk character-select launcher** — `dashboard/launcher.html` renders a retro-themed UI where you click an operative card, optionally check dangerous mode, hit "JACK IN", and a new Windows Terminal tab opens with the persona pre-loaded.
+- **A cyberpunk character-select launcher** — `dashboard/launcher.html` renders a retro-themed UI where you click an operative card, optionally check dangerous mode, hit DEPLOY, and a new Windows Terminal tab opens with the persona pre-loaded.
 
 - **A dashboard server** — `dashboard/server.cjs` serves the launcher plus dashboard routes (/, /briefing, /audio-feed, /state.json) and launcher API routes (/launcher/personas, /launcher/projects, /launcher/launch, /launcher/launch-team, /launcher/assets/*).
 

@@ -18,6 +18,6 @@ launcher-assets/
 ## Notes
 
 - Portraits are shown on the operative card in the launcher. Without a portrait, the launcher displays a glyph fallback.
-- Intro clips play when a persona is selected. Deploy clips play when "JACK IN" fires.
+- Intro clips play when a persona is selected. Deploy clips play when DEPLOY fires.
 - Music files in `music/` are auto-discovered by the `/launcher/music` API route and available in the launcher's music player.
 - All assets are served via `/launcher/assets/*` with path traversal guards.
