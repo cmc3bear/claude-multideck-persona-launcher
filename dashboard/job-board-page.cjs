@@ -46,10 +46,10 @@ function scanForBoards(dir, boards, maxDepth) {
         if ((entry.name === 'JOB_BOARD.json' || (entry.name.startsWith('job-board') && entry.name.endsWith('.json')))) {
           try {
             const data = JSON.parse(fs.readFileSync(full, 'utf-8'));
-            // Determine a human-readable key from path or meta
-            const projectName = data.meta?.project || deriveProjectName(full);
+            const meta = data.meta || {};
+            const projectName = meta.project_name || meta.project || deriveProjectName(full);
             const jobs = data.jobs || [];
-            boards.push({ key: projectName, file: full, jobs, meta: data.meta || {} });
+            boards.push({ key: projectName, file: full, jobs, meta });
           } catch (e) { /* skip */ }
         }
       } else if (entry.isDirectory() && !entry.name.startsWith('.') && !entry.name.startsWith('node_modules')) {
@@ -61,13 +61,19 @@ function scanForBoards(dir, boards, maxDepth) {
 
 function deriveProjectName(filePath) {
   // Try to extract a meaningful name from the file path
-  const parts = filePath.replace(/\\/g, '/').split('/');
-  // Look for known project directories
-  for (let i = parts.length - 1; i >= 0; i--) {
-    const p = parts[i].toLowerCase();
-    if (p === 'state' || p === 'coordination' || p === 'dashboards') continue;
-    if (p.includes('job-board') || p === 'JOB_BOARD.json') continue;
-    if (p.length > 2 && !p.match(/^\d+$/)) return p;
+  const normalized = filePath.replace(/\\/g, '/');
+  const parts = normalized.split('/');
+
+  // Skip generic directory names and the filename itself to find the project name
+  const skip = new Set(['state', 'coordination', 'dashboards', 'data', 'config', '.']);
+  for (let i = parts.length - 2; i >= 0; i--) {
+    const p = parts[i];
+    const lower = p.toLowerCase();
+    if (skip.has(lower)) continue;
+    if (lower.includes('job-board')) continue;
+    // Skip numbered prefixes like "01-ACTIVE" but keep what's after them
+    if (/^\d{2}-/.test(p)) continue;
+    if (p.length > 2) return p;
   }
   return path.basename(filePath, '.json');
 }
@@ -206,9 +212,10 @@ function renderJobBoardPage(stateDir) {
     opacity: 0;
   }
   .job-detail.show {
-    max-height: 300px;
+    max-height: 600px;
     padding: 12px 12px 12px 72px;
     opacity: 1;
+    overflow-y: auto;
   }
   .job-detail .field { margin-bottom: 4px; }
   .job-detail .field-label { color: #607090; }
@@ -252,11 +259,24 @@ function renderJobBoardPage(stateDir) {
 
   <div class="filters">
     <span class="filter-label">STATUS:</span>
-    <button class="filter-btn active" data-filter="all" onclick="setFilter('all')">ALL</button>
-    <button class="filter-btn" data-filter="open" onclick="setFilter('open')">OPEN</button>
-    <button class="filter-btn" data-filter="active" onclick="setFilter('active')">ACTIVE</button>
-    <button class="filter-btn" data-filter="flagged" onclick="setFilter('flagged')">FLAGGED</button>
-    <button class="filter-btn" data-filter="closed" onclick="setFilter('closed')">CLOSED</button>
+    <button class="filter-btn active" data-group="status" data-filter="all" onclick="setFilter('status','all')">ALL</button>
+    <button class="filter-btn" data-group="status" data-filter="open" onclick="setFilter('status','open')">OPEN</button>
+    <button class="filter-btn" data-group="status" data-filter="active" onclick="setFilter('status','active')">ACTIVE</button>
+    <button class="filter-btn" data-group="status" data-filter="flagged" onclick="setFilter('status','flagged')">FLAGGED</button>
+    <button class="filter-btn" data-group="status" data-filter="closed" onclick="setFilter('status','closed')">CLOSED</button>
+  </div>
+  <div class="filters">
+    <span class="filter-label">PRIORITY:</span>
+    <button class="filter-btn active" data-group="priority" data-filter="all" onclick="setFilter('priority','all')">ALL</button>
+    <button class="filter-btn" data-group="priority" data-filter="P0" onclick="setFilter('priority','P0')">P0</button>
+    <button class="filter-btn" data-group="priority" data-filter="P1" onclick="setFilter('priority','P1')">P1</button>
+    <button class="filter-btn" data-group="priority" data-filter="P2" onclick="setFilter('priority','P2')">P2</button>
+    <button class="filter-btn" data-group="priority" data-filter="P3" onclick="setFilter('priority','P3')">P3</button>
+  </div>
+  <div class="filters">
+    <span class="filter-label">AGENT:</span>
+    <button class="filter-btn active" data-group="agent" data-filter="all" onclick="setFilter('agent','all')">ALL</button>
+    <div id="agent-filters"></div>
   </div>
 
   <div class="col-header">
@@ -272,7 +292,7 @@ function renderJobBoardPage(stateDir) {
 <script>
   const allBoards = ${boardsJson};
   let currentBoard = allBoards.length > 0 ? allBoards[0].key : null;
-  let currentFilter = 'all';
+  const filters = { status: 'all', priority: 'all', agent: 'all' };
 
   function renderTabs() {
     const el = document.getElementById('board-tabs');
@@ -286,13 +306,27 @@ function renderJobBoardPage(stateDir) {
   function selectBoard(key) {
     currentBoard = key;
     renderTabs();
+    renderAgentFilters();
     renderJobs();
   }
 
-  function setFilter(f) {
-    currentFilter = f;
-    document.querySelectorAll('.filter-btn').forEach(b => b.classList.toggle('active', b.dataset.filter === f));
+  function setFilter(group, value) {
+    filters[group] = value;
+    document.querySelectorAll('.filter-btn[data-group="' + group + '"]').forEach(
+      b => b.classList.toggle('active', b.dataset.filter === value)
+    );
     renderJobs();
+  }
+
+  function renderAgentFilters() {
+    const board = getBoard();
+    const agents = [...new Set(board.jobs.map(j => j.assigned_to).filter(Boolean))].sort();
+    const el = document.getElementById('agent-filters');
+    el.innerHTML = agents.map(a =>
+      '<button class="filter-btn' + (filters.agent === a ? ' active' : '') +
+      '" data-group="agent" data-filter="' + a + '" onclick="setFilter(\\'agent\\',\\'' + a + '\\')">' +
+      a.toUpperCase() + '</button>'
+    ).join('');
   }
 
   function getBoard() {
@@ -318,12 +352,27 @@ function renderJobBoardPage(stateDir) {
   }
 
   function filterJobs(jobs) {
-    if (currentFilter === 'all') return jobs;
-    if (currentFilter === 'open') return jobs.filter(j => j.status === 'open' || j.status === 'assigned');
-    if (currentFilter === 'active') return jobs.filter(j => ['active', 'in_progress', 'submitted', 'pending_review'].includes(j.status));
-    if (currentFilter === 'flagged') return jobs.filter(j => j.status === 'flagged');
-    if (currentFilter === 'closed') return jobs.filter(j => ['closed', 'completed', 'passed', 'approved'].includes(j.status));
-    return jobs;
+    let result = jobs;
+
+    // Status filter
+    if (filters.status !== 'all') {
+      if (filters.status === 'open') result = result.filter(j => j.status === 'open' || j.status === 'assigned' || j.status === 'pending');
+      else if (filters.status === 'active') result = result.filter(j => ['active', 'in_progress', 'submitted', 'pending_review', 'accepted'].includes(j.status));
+      else if (filters.status === 'flagged') result = result.filter(j => j.status === 'flagged' || j.status === 'blocked');
+      else if (filters.status === 'closed') result = result.filter(j => ['closed', 'completed', 'passed', 'approved', 'cancelled'].includes(j.status));
+    }
+
+    // Priority filter
+    if (filters.priority !== 'all') {
+      result = result.filter(j => j.priority === filters.priority);
+    }
+
+    // Agent filter
+    if (filters.agent !== 'all') {
+      result = result.filter(j => j.assigned_to === filters.agent);
+    }
+
+    return result;
   }
 
   function renderJobs() {
@@ -351,7 +400,8 @@ function renderJobBoardPage(stateDir) {
     });
 
     el.innerHTML = sorted.map(j => {
-      const id = 'JOB-' + j.id.toString().padStart(4, '0');
+      const rawId = String(j.id || '');
+      const id = rawId.startsWith('JOB-') ? rawId : 'JOB-' + rawId.padStart(4, '0');
       const statusClass = j.status.replace(/ /g, '_');
       return '<li class="job-item" onclick="toggleDetail(\\'' + j.id + '\\')" data-id="' + j.id + '">' +
         '<span class="job-id">' + id + '</span>' +
@@ -361,15 +411,32 @@ function renderJobBoardPage(stateDir) {
         '<span class="job-agent">' + escapeHtml(j.assigned_to || '-') + '</span>' +
         '</li>' +
         '<div class="job-detail" id="detail-' + j.id + '">' +
-          (j.created_at ? '<div class="field"><span class="field-label">CREATED: </span><span class="field-val">' + j.created_at + '</span></div>' : '') +
-          (j.accepted_at ? '<div class="field"><span class="field-label">ACCEPTED: </span><span class="field-val">' + j.accepted_at + '</span></div>' : '') +
-          (j.submitted_at ? '<div class="field"><span class="field-label">SUBMITTED: </span><span class="field-val">' + j.submitted_at + '</span></div>' : '') +
-          (j.output_path ? '<div class="field"><span class="field-label">OUTPUT: </span><span class="field-val">' + escapeHtml(j.output_path) + '</span></div>' : '') +
+          // Description / objective
+          (j.description ? '<div class="field"><span class="field-label">DESCRIPTION: </span><span class="field-val">' + escapeHtml(j.description) + '</span></div>' : '') +
+          // Posted by (OQE format)
+          (j.posted_by ? '<div class="field"><span class="field-label">POSTED BY: </span><span class="field-val">' + escapeHtml(j.posted_by) + '</span></div>' : '') +
+          // Lifecycle timestamps
+          '<div class="field"><span class="field-label">LIFECYCLE: </span><span class="field-val">' +
+            (j.created_at ? 'Created ' + formatDate(j.created_at) : '') +
+            (j.accepted_at ? ' &#8594; Accepted ' + formatDate(j.accepted_at) : '') +
+            (j.submitted_at ? ' &#8594; Submitted ' + formatDate(j.submitted_at) : '') +
+            (j.completed_at ? ' &#8594; Completed ' + formatDate(j.completed_at) : '') +
+          '</span></div>' +
+          // Dependencies
           (j.depends_on ? '<div class="field"><span class="field-label">DEPENDS ON: </span><span class="field-val">JOB-' + j.depends_on + '</span></div>' : '') +
+          // Meeting reference (OQE format)
+          (j.meeting_ref ? '<div class="field"><span class="field-label">MEETING: </span><span class="field-val">' + escapeHtml(j.meeting_ref) + '</span></div>' : '') +
+          // Output path
+          (j.output_path ? '<div class="field"><span class="field-label">OUTPUT: </span><span class="field-val">' + escapeHtml(j.output_path) + '</span></div>' : '') +
+          // Result (OQE format — the OQE evidence/outcome)
+          (j.result ? '<div class="field"><span class="field-label">RESULT: </span><span class="field-val">' + escapeHtml(j.result) + '</span></div>' : '') +
+          // Review history (MultiDeck format)
           (j.review_history && j.review_history.length > 0 ?
             '<div class="field"><span class="field-label">REVIEWS: </span><span class="field-val">' +
             j.review_history.map(r => r.verdict.toUpperCase() + (r.note ? ': ' + escapeHtml(r.note) : '')).join(' | ') +
             '</span></div>' : '') +
+          // Tags (OQE format)
+          (j.tags && j.tags.length > 0 ? '<div class="field"><span class="field-label">TAGS: </span><span class="field-val">' + j.tags.join(', ') + '</span></div>' : '') +
         '</div>';
     }).join('');
   }
@@ -388,7 +455,21 @@ function renderJobBoardPage(stateDir) {
     return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
+  function formatDate(iso) {
+    if (!iso) return '';
+    try {
+      const d = new Date(iso);
+      if (isNaN(d.getTime())) return iso;
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      const hours = String(d.getHours()).padStart(2, '0');
+      const mins = String(d.getMinutes()).padStart(2, '0');
+      return d.getFullYear() + '-' + month + '-' + day + ' ' + hours + ':' + mins;
+    } catch (e) { return iso; }
+  }
+
   renderTabs();
+  renderAgentFilters();
   renderJobs();
 </script>
 </body>
