@@ -79,10 +79,17 @@ def load_job_board(board_file=None):
     """Load job board from file."""
     bf = board_file or JOB_BOARD_FILE
     if not bf.exists():
-        return {
+        board = {
             "meta": {"version": 1, "next_job_id": 1},
+            "boundary_rule": "AGENTS: This board is scoped to ONE project. Do NOT create, read, or act on jobs from other projects. Cross-project requests go to Dispatch (the coordinator). See docs/JOB_BOARD.md — Project Boundary Enforcement.",
             "jobs": []
         }
+        # Embed the project key if scoped
+        if bf != JOB_BOARD_FILE:
+            stem = bf.stem  # e.g., "job-board-oqe"
+            project_key = stem.replace("job-board-", "")
+            board["meta"]["project"] = project_key
+        return board
 
     with open(bf) as f:
         return json.load(f)
@@ -145,6 +152,12 @@ def cmd_create(subject, assigned_to=None, priority="P2", depends_on=None, board_
 def cmd_list(status=None, agent=None, board_file=None):
     """List jobs with optional filtering."""
     board = load_job_board(board_file)
+    # Remind agents of project boundary on every list
+    project = board.get("meta", {}).get("project")
+    if project:
+        print(f"[{project.upper()} BOARD] You are viewing jobs for the {project} project ONLY.")
+        print(f"[{project.upper()} BOARD] Do not act on work outside this project. Route cross-project requests to Dispatch.")
+        print()
     jobs = board["jobs"]
 
     if status:
@@ -318,6 +331,13 @@ def main():
 
     args = parser.parse_args()
     bf = job_board_path(args.project)
+
+    # Project boundary reminder — printed on every command
+    if args.project:
+        print(f"[SCOPE: {args.project}] This board is restricted to the {args.project} project.")
+        print(f"[SCOPE: {args.project}] Cross-project work must route through the coordinator (Dispatch).")
+        print(f"[SCOPE: {args.project}] Do NOT create jobs for other projects on this board.")
+        print()
 
     try:
         if args.command == "create":
