@@ -1,18 +1,50 @@
-# MultiDeck Framework
+# MultiDeck
 
-Open-source distributed agent orchestration framework built on Claude Code. Persona-driven multithreading with atomic state management, job queuing, and real-time audio synthesis (Kokoro TTS).
+**A multi-agent orchestration framework for Claude Code that looks like a video game title screen. On purpose.**
 
-## Framework Overview
+Five AI operatives. Five voices. One launcher. You pick your team from a character-select screen, hit JACK IN, and real Claude Code sessions spin up in color-coded terminal tabs, each with its own persona, scope, and synthesized voice. A job board tracks the work. A quality gate reviews it. An audio feed plays their reports out loud so you can walk away from the keyboard and just listen.
 
-MultiDeck enables you to:
+It runs entirely local. Zero API cost with a Claude Code CLI membership. Fork it, add your own operatives, your own voices, your own background music. Make it yours.
 
-- **Spin up agent personas** with distinct voices, working directories, scopes, and response styles via `launch-persona.ps1` or `.sh`
-- **Queue work asynchronously** using the job board (state/job-board.json) with OQE discipline (Objective → Qualitative → Evidence)
-- **Synthesize audio artifacts** using Kokoro (af_sky, am_eric, bm_lewis, bf_emma, and 13 other voices)
-- **Monitor workflows** with a real-time dashboard and audio feed player
-- **Scale agents** without API limits — local agents coordinate via filesystem state
+![MultiDeck Boot Sequence](docs/screenshots/launcher-boot.png)
 
-## Quick Start
+---
+
+## Why MultiDeck
+
+- **Character-select for AI agents is a better UX than config files.** The cyberpunk launcher is not decoration. It is the interface. Click an operative, see their stats, deploy them. Intuitive, memorable, and fast.
+
+- **Your agents have voices.** Kokoro TTS gives each operative a distinct synthesized voice. Dispatch sounds different from Engineer sounds different from Researcher. They announce themselves by callsign. You learn who is talking without looking at a screen.
+
+- **You can listen to your agents work from another room.** The audio feed auto-plays every TTS update in a browser tab. Open it on your phone over Tailscale. Go make coffee. Your deck keeps running and you hear it.
+
+- **Work gets tracked and reviewed automatically.** Per-project job boards with priority, assignment, submission, and a Reviewer quality gate. No work closes without passing review. One fix attempt, then escalate. No infinite loops.
+
+---
+
+## Screenshots
+
+### Boot sequence. Scanlines. Music. The vibe is immediate.
+![Boot](docs/screenshots/launcher-boot.png)
+
+### Title screen. Continue your session, start fresh, or launch a full team.
+![Title Menu](docs/screenshots/launcher-title.png)
+
+### The operative deck. Select your runner. Stats, scope, voice, danger toggle.
+![Character Select](docs/screenshots/launcher-select.png)
+
+### Operative detail. Engineer selected. Code implementation, testing, debugging. Deploy when ready.
+![Persona Detail](docs/screenshots/launcher-persona-detail.png)
+
+### Operations dashboard. Actions, schedule, escalations, state. All JSON-backed, all live.
+![Dashboard](docs/screenshots/dashboard-main.png)
+
+### Audio feed. Leave this tab open. Every operative report plays automatically.
+![Audio Feed](docs/screenshots/audio-feed.png)
+
+---
+
+## Jack In
 
 ### Windows
 
@@ -20,267 +52,173 @@ MultiDeck enables you to:
 powershell -ExecutionPolicy Bypass -File scripts/init-dispatch-framework.ps1
 ```
 
-This prompts for your user root directory and sets up the environment.
-
-### Linux/Mac
+### Linux / macOS
 
 ```bash
 bash scripts/init-dispatch-framework.sh
 ```
 
-### Launch a Persona
+The init script sets up your environment, creates runtime directories, and installs the Kokoro TTS venv.
+
+### Launch an operative
 
 ```powershell
+# Windows
 powershell -ExecutionPolicy Bypass -File scripts/launch-persona.ps1 dispatch
-```
 
-Or use the .sh version:
-
-```bash
+# Linux / macOS
 bash scripts/launch-persona.sh dispatch
 ```
 
-This opens a new terminal with the persona activated. Claude Code loads the persona markdown and sets the Kokoro voice.
+A new terminal tab opens with the persona color, the persona markdown loaded into Claude Code, and the Kokoro voice set. You are now talking to that operative.
 
-### Dashboard
+### Start the dashboard
 
 ```bash
 node dashboard/server.cjs
 ```
 
-Visit `http://localhost:3045` to see the real-time dashboard with state, calendar, actions, and audio feed.
+Visit `http://localhost:3045`. The launcher is at `/launcher`. The audio feed is at `/audio-feed`.
 
-## Screenshots
+---
 
-### Launcher Boot Sequence
-![MultiDeck Boot](docs/screenshots/launcher-boot.png)
+## The Deck
 
-### Title Menu
-![Title Menu](docs/screenshots/launcher-title.png)
+MultiDeck ships with five default operatives. Each one has a callsign, a terminal tab color, a Kokoro voice, and a defined scope of work.
 
-### Character Select (Operative Deck)
-![Character Select](docs/screenshots/launcher-select.png)
+| Callsign | Voice | Role |
+|---|---|---|
+| **Dispatch** | af_sky | Workspace coordinator. Routes jobs, runs briefings, manages the board. |
+| **Architect** | bm_daniel | Structure and documentation. System design, dependency maps, standards. |
+| **Engineer** | am_eric | Code implementation, testing, debugging. Writes the code that ships. |
+| **Reviewer** | bm_lewis | Quality gate. Reviews every completed job. One fix loop, then pass or escalate. |
+| **Researcher** | bf_emma | Investigation and source grading. Finds answers, cites evidence, rates confidence. |
 
-### Persona Detail (Engineer Selected)
-![Persona Detail](docs/screenshots/launcher-persona-detail.png)
+Operatives are defined in `personas/personas.json`. Each entry maps a callsign to a color, voice, working directory, and agent markdown file that defines behavior and scope.
 
-### Dashboard
-![Dashboard](docs/screenshots/dashboard-main.png)
-
-### Audio Feed (Auto-Play TTS)
-![Audio Feed](docs/screenshots/audio-feed.png)
-
-## Directory Structure
-
-```
-dispatch-framework/
-├── hooks/
-│   ├── set-voice.py              # Persona voice config (per-session)
-│   ├── kokoro-speak.py            # TTS playback worker
-│   ├── kokoro-generate-mp3.py     # TTS MP3 generator
-│   ├── voice-audition.py          # Voice sample previewer
-│   ├── kokoro-venv/               # Python venv (created by init script)
-│   └── requirements.txt           # Python dependencies
-├── scripts/
-│   ├── launch-persona.ps1         # Windows Terminal launcher
-│   ├── launch-persona.sh          # Linux/Mac terminal launcher
-│   ├── dispatch-agent.py          # Agent registry CLI
-│   ├── job-board.py               # Job creation/assignment/review
-│   ├── reviewer-review.py         # Artifact validation checklist
-│   ├── init-dispatch-framework.ps1  # Windows setup
-│   └── init-dispatch-framework.sh   # Linux/Mac setup
-├── dashboard/
-│   ├── server.cjs                 # Node HTTP server
-│   ├── audio-feed-page.cjs        # Audio feed UI renderer
-│   ├── package.json               # Node metadata
-│   ├── state-templates/           # Template state files (copy to state/ on init)
-│   └── README.md                  # Dashboard docs
-├── personas/                      # Agent markdown files (created by users)
-│   ├── dispatch.md                # Core dispatch persona (default)
-│   ├── personas.json              # Persona registry (callsign, cwd, voice, etc.)
-│   └── archived/                  # Removed personas (timestamped)
-├── state/                         # Real-time state (JSON files)
-│   ├── actions.json               # Personal/goal/family action items
-│   ├── calendar.json              # Events, cron jobs, free blocks
-│   ├── dispatch-log.json          # Dispatch decision log
-│   ├── escalations.json           # High-urgency escalations
-│   ├── followups.json             # Tracked follow-ups
-│   ├── inbox-flags.json           # Flagged messages
-│   ├── job-board.json             # Job queue + review history
-│   ├── morning-pipeline.json      # Briefing stages + metadata
-│   ├── project-summary.json       # Active projects + status
-│   ├── pulse-log.json             # System heartbeat
-│   ├── state-meta.json            # Last-updated timestamps
-│   └── weather.json               # Current weather + forecast
-├── tts-output/                    # Generated MP3 files (auto-cleaned)
-├── briefings/                     # Archived morning briefings (YYYY-MM-DD.md)
-└── README.md                      # This file
-```
-
-## Persona System
-
-Personas are defined in `personas/personas.json`. Each entry includes:
-
-```json
-{
-  "dispatch": {
-    "callsign": "Dispatch",
-    "description": "Central coordination and workflow orchestration",
-    "color_hex": "#00FFCC",
-    "tab_color": "#00CCFF",
-    "voice_key": "dispatch",
-    "scope": "coordination, job board, briefing generation",
-    "cwd": "/path/to/work",
-    "agent_file": "personas/DISPATCH_AGENT.md"
-  }
-}
-```
-
-### Add a New Persona
+### Adding your own operatives
 
 ```bash
 python scripts/dispatch-agent.py add
 ```
 
-This interactively prompts for callsign, display name, color, voice, and creates the persona markdown file.
+Interactive prompts walk you through callsign, display name, color, voice selection, and scope. The script updates the persona registry, generates the agent markdown from a template, creates a launch shortcut, and syncs the voice map. No manual JSON editing required.
 
-### Default Personas (Framework)
+---
 
-The framework includes 5 default personas:
+## Comms
 
-| Callsign | Voice | Scope |
-|----------|-------|-------|
-| dispatch | af_sky | Central coordination |
-| architect | bm_daniel | System design & architecture |
-| engineer | am_eric | Code implementation & debugging |
-| reviewer | bm_lewis | Quality assurance and review gate |
-| researcher | bf_emma | Research & analysis |
+### Kokoro TTS
 
-Users can add custom personas with `dispatch-agent.py add`.
+Every operative speaks through Kokoro, a local neural TTS engine. No cloud API. No per-character billing. Voices run on your machine.
 
-## Kokoro TTS Voices
+The `hooks/kokoro-speak.py` worker handles playback with an atomic mkdir mutex so parallel Claude Code sessions never overlap audio. Each operative prepends its callsign before speaking, so you always know who is talking.
 
-Available English voices:
+Available voices span American and British, male and female. Seventeen voices ship by default. Custom voice tensors (`.pt` files) are supported for anyone who wants to train their own.
 
-**American Male:** am_adam, am_michael, am_fenrir, am_onyx, am_puck, am_eric
-**British Male:** bm_george, bm_fable, bm_daniel, bm_lewis
-**American Female:** af_nicole, af_sky, af_heart
-**British Female:** bf_emma, bf_lily, bf_alice, bf_isabella
+### Audio feed
 
-Each persona can use any voice. Custom voice tensors (.pt files) are supported — see `hooks/kokoro-speak.py` for the CUSTOM_VOICES pattern.
+The dashboard serves an auto-play audio feed at `/audio-feed`. It polls for new TTS MP3s every four seconds and plays them in queue order. Leave the tab open on any device with a browser. Your operatives report in. You listen.
 
-## Job Board
+This is the core of what MultiDeck calls "operator mode." A laptop or phone with the audio feed tab open becomes a passive monitoring station. You hear your deck work without watching it.
 
-The job board is a simple JSON-based queue with file-locked concurrent access.
+### Background music
 
-### Create a Job
+Eleven cyberpunk BGM tracks ship with the launcher. The title screen and character select play ambient music automatically. Toggle with the MUSIC button in the corner.
+
+---
+
+## The Board
+
+The job board is a JSON-backed work queue with file-locked concurrent access.
 
 ```bash
-python scripts/job-board.py create "Implement feature X" --assigned-to engineer --priority P1
-```
+# Create a job and assign it
+python scripts/job-board.py create "Implement auth middleware" --assigned-to engineer --priority P1
 
-### List Jobs
-
-```bash
+# List active jobs
 python scripts/job-board.py list --status in_progress --agent engineer
-```
 
-### Submit for Review
-
-```bash
+# Submit completed work for review
 python scripts/job-board.py submit 1 --output /path/to/artifact.py
+
+# Review: pass or flag for rework
+python scripts/job-board.py review 1 --pass --note "Clean implementation, tests pass"
+python scripts/job-board.py review 1 --flag --note "Missing error handling on line 42"
 ```
 
-### Review & Close
+Every job flows through the Reviewer gate before closing. The Reviewer gets one fix loop. If the issue persists after one rework, it escalates. No infinite revision cycles.
 
-```bash
-python scripts/job-board.py review 1 --pass --note "Looks good, passes all checks"
-```
+Jobs are scoped per-project. Multiple projects can run their own boards without collision.
 
-Or flag for rework:
+---
 
-```bash
-python scripts/job-board.py review 1 --flag --note "Needs docstrings on main functions"
-```
+## OQE Protocol
 
-## Audio Feed
+Every operative follows OQE discipline on every task. Three layers, no exceptions.
 
-The dashboard includes a cyberpunk-themed audio feed player that:
+**Objective** -- one sentence on what the task accomplishes, plus the criteria it will be judged against.
 
-1. Polls `/audio-feed/list` every 4 seconds for new MP3s in `tts-output/`
-2. Auto-plays new files in queue order
-3. Tracks played files per session (sessionStorage)
-4. Supports pause, resume, skip-all controls
+**Qualitative** -- confidence assessment. HIGH, MODERATE, or LOW. What assumptions are being made. What alternatives were considered. Why this approach.
 
-Use `kokoro-generate-mp3.py` to produce MP3s:
+**Evidence** -- what was actually observed. File paths, line numbers, error messages, test results, source URLs. Each piece tagged STRONG (direct observation), MODERATE (inferred), or LIMITED (single-source, unverified).
 
-```bash
-echo "Deploy complete." > /tmp/msg.txt
-python hooks/kokoro-generate-mp3.py /tmp/msg.txt engineer /path/to/tts-output/deploy-complete.mp3
-```
+The Reviewer checks for OQE framing on every job. No OQE, no pass.
 
-Then visit the audio feed page to see it appear and auto-play.
+Full methodology in [docs/OQE_DISCIPLINE.md](docs/OQE_DISCIPLINE.md).
 
-## State Files
+---
 
-All state is stored as JSON in `state/`. Each file is auto-loaded by the dashboard:
+## Build Your Own Deck
 
-- **actions.json** — Action items grouped by category (personal, goals, family, claude_projects)
-- **calendar.json** — Events, cron jobs, free blocks, daily suggestions
-- **dispatch-log.json** — Dispatch decision log with confidence/status tracking
-- **job-board.json** — Job queue with assignment, submission, and review history
-- **morning-pipeline.json** — Morning briefing stages (meta for generation)
-- **project-summary.json** — Active projects with job counts and priority buckets
-- **weather.json** — Current weather and forecast (source: Open-Meteo API)
+MultiDeck is designed to be forked.
 
-Write JSON updates at any time; the dashboard auto-reloads.
+1. **Clone the repo.**
+2. **Run the init script** to set up directories, install Kokoro, and configure your environment.
+3. **Add your own operatives** with `dispatch-agent.py add`. Give them callsigns, voices, scopes, colors.
+4. **Drop portraits** into `dashboard/launcher-assets/` if you want custom character art on the select screen.
+5. **Add BGM tracks** to the launcher assets for your own soundtrack.
+6. **Set environment variables** to point at your projects directory, customize the port, or change the state directory.
 
-## Environment Variables
+Key environment variables:
 
-- `DISPATCH_USER_ROOT` — Base directory for state, personas, briefings (default: `~/dispatch`)
-- `DISPATCH_PERSONAS_JSON` — Path to personas.json (default: `DISPATCH_USER_ROOT/personas/personas.json`)
-- `DISPATCH_PORT` — Dashboard port (default: 3045)
-- `DISPATCH_STATE_DIR` — State directory (default: `./state`)
-- `DISPATCH_TTS_OUTPUT` — TTS output directory (default: `./tts-output`)
+| Variable | Purpose | Default |
+|---|---|---|
+| `DISPATCH_PORT` | Dashboard HTTP port | `3045` |
+| `DISPATCH_ROOT` | Framework root directory | auto-detected |
+| `DISPATCH_STATE_DIR` | Runtime state JSON directory | `./state` |
+| `DISPATCH_TTS_OUTPUT` | Kokoro MP3 output directory | `./tts-output` |
+| `DISPATCH_PROJECTS_DIR` | Projects directory to scan | unset |
+| `DISPATCH_LAUNCHER_ASSETS` | Portraits, intros, music | `./dashboard/launcher-assets` |
+| `DISPATCH_TEAM_PRESETS` | Team preset definitions | `./dashboard/team-presets.json` |
 
-## Sanitization & Distribution
+Everything coordinates via filesystem. No database. No message broker. JSON state files with atomic writes and mkdir-based file locks. Add as many operatives as you want. They will not step on each other.
 
-This framework is sanitized for public distribution:
+---
 
-- No author-specific data (custom personas, voice blends, hardcoded paths)
-- All paths use environment variables
-- Custom voice tensors (CUSTOM_VOICES) remain empty — users add their own
-- No OQE Labs project references — branding is "MultiDeck" + "OQE discipline"
+## Further Reading
 
-## Architecture
+| Doc | What it covers |
+|---|---|
+| [QUICKSTART.md](docs/QUICKSTART.md) | Five-minute install guide |
+| [PERSONA_SYSTEM.md](docs/PERSONA_SYSTEM.md) | How personas work: callsigns, colors, voices, scopes |
+| [OQE_DISCIPLINE.md](docs/OQE_DISCIPLINE.md) | The full OQE methodology |
+| [KOKORO_SETUP.md](docs/KOKORO_SETUP.md) | Kokoro TTS installation and configuration |
+| [VOICE_RULES.md](docs/VOICE_RULES.md) | TTS-safe writing conventions |
+| [DASHBOARD_GUIDE.md](docs/DASHBOARD_GUIDE.md) | Dashboard routes and configuration |
+| [CLAUDE_DISPATCH_INTEGRATION.md](docs/CLAUDE_DISPATCH_INTEGRATION.md) | Voice queueing, callsigns, and audio feed |
+| [JOB_BOARD.md](docs/JOB_BOARD.md) | Job board usage and schema |
+| [REVIEW_WORKFLOW.md](docs/REVIEW_WORKFLOW.md) | The Reviewer gate process |
+| [ADD_AGENT_GUIDE.md](docs/ADD_AGENT_GUIDE.md) | Walkthrough of dispatch-agent.py add/remove |
+| [AGENT_TEAMS_GUIDE.md](docs/AGENT_TEAMS_GUIDE.md) | Claude Code agent teams integration |
+| [COMMERCIAL_PRODUCTION.md](docs/COMMERCIAL_PRODUCTION.md) | Commercial and demo video production workflow |
 
-**Objective → Qualitative → Evidence (OQE) Discipline**
-
-Each agent decision follows OQE structure:
-
-1. **Objective** — What are we trying to achieve?
-2. **Qualitative** — What does success look like? (criteria, evidence types)
-3. **Evidence** — What proof do we have? (data, observations, measurements)
-
-Job board tracks this in dispatch-log.json. Reviews validate that output includes all three layers.
-
-**Atomic State + File Locking**
-
-- State files are JSON; all writes are atomic (write to temp, mv to final)
-- Job board uses mkdir-based file locks to prevent concurrent write races
-- Persona voice configs are per-session (CLAUDE_CODE_SSE_PORT isolation)
-- No shared mutable state; all coordination via filesystem
+---
 
 ## License
 
-MIT
+MIT. See [LICENSE](LICENSE).
 
 ## Contributing
 
-This is the open-source MultiDeck framework. Extensions and custom agents welcome!
-
-## Support
-
-Docs: See `dashboard/README.md`, script --help, and inline docstrings.
-
-For issues, check environment variables and file permissions first.
+Extensions, custom operatives, and new integrations welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
