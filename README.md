@@ -111,7 +111,7 @@ Personas are defined in `personas/personas.json`. Each entry includes:
     "voice_key": "dispatch",
     "scope": "coordination, job board, briefing generation",
     "cwd": "/path/to/work",
-    "agent_file": "personas/dispatch.md"
+    "agent_file": "personas/DISPATCH_AGENT.md"
   }
 }
 ```
@@ -227,7 +227,7 @@ Write JSON updates at any time; the dashboard auto-reloads.
 
 This framework is sanitized for public distribution:
 
-- No Cary-specific data (custom personas, voice blends, hardcoded paths)
+- No author-specific data (custom personas, voice blends, hardcoded paths)
 - All paths use environment variables
 - Custom voice tensors (CUSTOM_VOICES) remain empty — users add their own
 - No OQE Labs project references — branding is "MultiDeck" + "OQE discipline"

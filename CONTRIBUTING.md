@@ -61,56 +61,83 @@ This writes the voice config to `voice-config-${CLAUDE_CODE_SSE_PORT}.json` (per
 
 ## Adding a New Dashboard Route
 
-### Step 1: Create the HTML View
+The dashboard server (`dashboard/server.cjs`) is a raw `http.createServer` handler — there is no Express or framework. Routes are matched by URL string comparison inside the request handler, and responses are built with helper functions.
 
-Add a new file in `dashboard/public/`:
+### Architecture Overview
 
-```html
-<!-- dashboard/public/myrout.html -->
+The server delegates requests to handler functions in priority order:
+
+1. `handleLauncher(req, res, url)` — all `/launcher/*` routes
+2. `handleAudioFeed(req, res, url)` — all `/audio-feed/*` routes
+3. Core route matching — `/`, `/briefing`, `/state.json`
+
+Each handler returns `true` if it handled the request, or `false` to pass through. HTML pages are rendered inline by functions like `renderMainDashboard()` and `renderBriefing()` (or imported renderers like `renderAudioFeedPage()` from `audio-feed-page.cjs`). JSON responses use the `sendJson(res, status, obj)` helper.
+
+### Step 1: Write a Render Function
+
+Create a function in `dashboard/server.cjs` that returns an HTML string:
+
+```javascript
+function renderMyRoute() {
+  const state = loadState();
+  return `<!DOCTYPE html>
 <html>
-  <head>
-    <title>My Route</title>
-    <link rel="stylesheet" href="styles.css">
-  </head>
-  <body>
-    <div id="app"></div>
-    <script src="client.js"></script>
-  </body>
-</html>
+<head><meta charset="UTF-8"><title>My Route</title></head>
+<body>
+  <h1>My Route</h1>
+  <pre>${esc(JSON.stringify(state, null, 2))}</pre>
+</body>
+</html>`;
+}
 ```
+
+Use the `esc()` helper to escape any dynamic content inserted into HTML. Use `loadState()` to read all state JSON files from the state directory.
 
 ### Step 2: Register the Route in server.cjs
 
-Edit `dashboard/server.cjs`:
+Add a URL match inside the `http.createServer` callback, after the existing handler calls:
 
 ```javascript
-app.get("/myroute", (req, res) => {
-  res.sendFile(__dirname + "/public/myroute.html");
-});
-
-app.get("/api/myroute-data", (req, res) => {
-  // Fetch state and return JSON
-  const data = loadStateFile("job-board.json");
-  res.json(data);
-});
+if (url === '/myroute' || url === '/myroute/') {
+  res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+  res.end(renderMyRoute());
+  return;
+}
 ```
 
-### Step 3: Add State Endpoints (if needed)
-
-If your route needs live updates, add a Server-Sent Events endpoint:
+For JSON API endpoints, use the `sendJson` helper:
 
 ```javascript
-app.get("/api/myroute-stream", (req, res) => {
-  res.setHeader("Content-Type", "text/event-stream");
-  res.setHeader("Cache-Control", "no-cache");
-  res.setHeader("Connection", "keep-alive");
-  
-  const watcher = watchStateFile("job-board.json", (data) => {
-    res.write(`data: ${JSON.stringify(data)}\n\n`);
-  });
-  
-  req.on("close", () => watcher.close());
-});
+if (url === '/api/myroute-data') {
+  const state = loadState();
+  sendJson(res, 200, { data: state['job-board'] });
+  return;
+}
+```
+
+### Step 3: Group into a Handler (for complex routes)
+
+If your route has multiple sub-paths (like the launcher or audio feed), extract a handler function that follows the same pattern:
+
+```javascript
+function handleMyRoute(req, res, url) {
+  if (url === '/myroute' || url === '/myroute/') {
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    res.end(renderMyRoute());
+    return true;
+  }
+  if (url === '/myroute/data') {
+    sendJson(res, 200, { items: [] });
+    return true;
+  }
+  return false;
+}
+```
+
+Then wire it into the main request handler alongside the existing calls:
+
+```javascript
+if (handleMyRoute(req, res, url)) return;
 ```
 
 ## Adding a New Hook
@@ -147,22 +174,11 @@ if __name__ == "__main__":
 
 ### Step 2: Register the Hook
 
-Edit `hooks/hook-registry.json` (or equivalent):
-
-```json
-{
-  "job-completed": "hooks/my-hook.py",
-  "job-flagged": "hooks/my-hook.py"
-}
-```
-
-### Step 3: Update the Job Board Watcher
-
-Edit the watcher in `hooks/job-board-change.py` to fire your hook on state transitions.
+Hook registration is not yet automated. To integrate your hook, call it from an existing workflow (e.g., from the job board CLI in `scripts/job-board.py`) or invoke it manually. A formal hook registry is a planned addition.
 
 ## Modifying the State Schema
 
-State files are JSON. Templates are in `state/*.template.json`.
+State files are JSON. Templates are in `dashboard/state-templates/`.
 
 ### Step 1: Update the Template
 
@@ -210,10 +226,10 @@ Edit the job board code to validate against the new schema.
 
 ## Testing Your Changes
 
-- **Unit tests** — Add tests in `tests/` for new hooks and scripts
-- **Integration tests** — Verify that dashboard routes load and state files update
-- **Voice playback** — Test TTS output with `scripts/test-voice.py`
+- **Voice playback** — Preview TTS output with `python hooks/voice-audition.py`
+- **Dashboard routes** — Run `node dashboard/server.cjs` and verify routes load at `http://localhost:3045`
 - **Manual testing** — Create a test job, assign to your new agent, verify completion flow
+- **Automated tests** — A formal test suite is a planned addition
 
 ## Code Standards
 

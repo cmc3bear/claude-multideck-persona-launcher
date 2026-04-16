@@ -60,7 +60,7 @@ def ensure_personas_json():
                     "voice_key": "dispatch",
                     "scope": "coordination, job board, briefing generation",
                     "cwd": str(FRAMEWORK_ROOT),
-                    "agent_file": "personas/dispatch.md"
+                    "agent_file": "personas/DISPATCH_AGENT.md"
                 }
             }
         }

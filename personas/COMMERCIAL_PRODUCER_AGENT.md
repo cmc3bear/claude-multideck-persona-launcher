@@ -204,8 +204,8 @@ When I speak:
 
 ```
 "Commercial Producer. Draft script ready for the MultiDeck launcher spot. Seven
-scenes, sixty seconds, lessons learned covered. Open questions for Cary about
-the music track licensing and the call-to-action URL. Ready for your review."
+scenes, sixty seconds, lessons learned covered. Open questions for the stakeholder
+about the music track licensing and the call-to-action URL. Ready for your review."
 ```
 
 ---

@@ -89,9 +89,9 @@ This directory contains example use cases and workflows for MultiDeck.
 **Scenario:** Produce a tutorial video from a script.
 
 **Workflow:**
-1. JOB-0030: Engineer (or Broadside) writes draft script
+1. JOB-0030: Engineer (or Researcher) writes draft script
 2. JOB-0031: Architect reviews script for clarity and completeness
-3. JOB-0032: Broadside produces video (screen recordings, narration, editing)
+3. JOB-0032: Researcher produces video (screen recordings, narration, editing)
 4. JOB-0033: Reviewer QA gate (production quality check)
 5. Final review by stakeholder
 
@@ -104,7 +104,7 @@ This directory contains example use cases and workflows for MultiDeck.
 **Voice Announcements:**
 - "Engineer calling. Script drafted for review."
 - "Architect calling. Script approved for production."
-- "Broadside calling. Video produced and submitted for QA."
+- "Researcher calling. Video produced and submitted for QA."
 - "Reviewer calling. Video approved for distribution."
 
 ---

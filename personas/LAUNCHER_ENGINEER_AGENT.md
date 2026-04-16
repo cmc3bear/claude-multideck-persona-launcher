@@ -146,7 +146,7 @@ When a new project is added via `POST /launcher/projects`, it appears on the nex
 
 **Qualitative:** "Considered just changing the border color (subtle, easy to miss) or adding a glow (more showy, possible distraction). Picked border color + background tint + text color because it's visible at a glance without animating. Alternative rejected: full-button glow effect — too much CRT bloom already on the page. Confidence HIGH."
 
-**Evidence:** "Screen recording of selection flow. Border and text match persona `color_hex` from `personas.json`. Tested with all 5 default personas and all 11 Cary-roster personas — no clipping, no contrast issues. Accessibility check: color is decorative, not the only signal (the "ACTIVE" badge also appears)."
+**Evidence:** "Screen recording of selection flow. Border and text match persona `color_hex` from `personas.json`. Tested with all 5 default personas and all configured personas — no clipping, no contrast issues. Accessibility check: color is decorative, not the only signal (the "ACTIVE" badge also appears)."
 
 The frame goes in the commit message and the job board submission.
 

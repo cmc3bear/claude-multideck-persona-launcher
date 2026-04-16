@@ -15,7 +15,7 @@ PRODUCTION (Engineer produces final media)
   ↓
 REVIEW (Reviewer quality gate)
   ↓ (conditional: PASS or FLAG+1-loop)
-FINAL REVIEW (Cary or stakeholder approves)
+FINAL REVIEW (stakeholder approves)
   ↓
 SHIPPED
 ```
@@ -195,7 +195,7 @@ If flagged a second time, escalates to Dispatch (no second fix loop).
 
 ## Stage 5: FINAL REVIEW
 
-**Who:** Stakeholder (Cary, product owner, CEO)  
+**Who:** Stakeholder (project owner, CEO)  
 **Input:** Approved final product  
 **Output:** Ship or hold  
 **Gate:** Stakeholder decision (not automated)

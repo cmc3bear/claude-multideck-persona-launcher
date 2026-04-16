@@ -241,11 +241,11 @@ Voice makes handoffs explicit and audible.
 
 ```bash
 # Clone MultiDeck
-git clone https://github.com/multideck/dispatch-framework.git
+git clone https://github.com/cmc3bear/claude-multideck-persona-launcher.git
 cd dispatch-framework
 
 # Initialize
-./scripts/init-multideck.sh
+./scripts/init-dispatch-framework.sh
 
 # Enable Agent Teams and start
 export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=true

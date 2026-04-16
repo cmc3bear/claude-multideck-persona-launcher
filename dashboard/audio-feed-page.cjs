@@ -274,7 +274,7 @@ function renderAudioFeedPage() {
   setInterval(poll, 4000);
 </script>
 </body>
-</html>\`;
+</html>`;
 }
 
 module.exports = { renderAudioFeedPage };

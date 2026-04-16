@@ -85,7 +85,7 @@ $personas = @{
             voice_key = "dispatch"
             scope = "coordination, job board, briefing generation"
             cwd = $userRoot
-            agent_file = "personas/dispatch.md"
+            agent_file = "personas/DISPATCH_AGENT.md"
         }
     }
 }
@@ -116,8 +116,5 @@ Write-Host ""
 Write-Host "3. Start the dashboard server (from framework root):"
 Write-Host "   node dashboard/server.cjs"
 Write-Host "   Then visit: http://localhost:3045"
-Write-Host ""
-Write-Host "4. View the morning briefing:"
-Write-Host "   node scripts/generate-briefing.cjs"
 Write-Host ""
 Write-Host "Setup complete!" -ForegroundColor Green

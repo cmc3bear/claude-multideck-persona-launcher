@@ -1,0 +1,32 @@
+{
+  "name": "claude-multideck-persona-launcher",
+  "version": "0.1.0",
+  "description": "MultiDeck: forkable multi-agent coordination framework for Claude Code with personas, cyberpunk launcher, Kokoro TTS, and OQE-disciplined job board",
+  "main": "dashboard/server.cjs",
+  "scripts": {
+    "start": "node dashboard/server.cjs",
+    "dashboard": "node dashboard/server.cjs",
+    "job:list": "python scripts/job-board.py list",
+    "job:create": "python scripts/job-board.py create",
+    "agent:list": "python scripts/dispatch-agent.py list",
+    "agent:add": "python scripts/dispatch-agent.py add",
+    "review": "python scripts/reviewer-review.py"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cmc3bear/claude-multideck-persona-launcher.git"
+  },
+  "author": "",
+  "license": "MIT",
+  "keywords": [
+    "claude-code",
+    "multi-agent",
+    "personas",
+    "tts",
+    "kokoro",
+    "launcher"
+  ]
+}

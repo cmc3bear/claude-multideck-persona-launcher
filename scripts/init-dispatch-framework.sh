@@ -105,7 +105,7 @@ cat > "$USER_ROOT/personas/personas.json" << EOF
       "voice_key": "dispatch",
       "scope": "coordination, job board, briefing generation",
       "cwd": "$USER_ROOT",
-      "agent_file": "personas/dispatch.md"
+      "agent_file": "personas/DISPATCH_AGENT.md"
     }
   }
 }
@@ -128,8 +128,5 @@ echo ""
 echo "4. Start the dashboard server (from framework root):"
 echo "   node $FRAMEWORK_ROOT/dashboard/server.cjs"
 echo "   Then visit: http://localhost:3045"
-echo ""
-echo "5. View the morning briefing:"
-echo "   node $FRAMEWORK_ROOT/scripts/generate-briefing.cjs"
 echo ""
 echo "Setup complete!"

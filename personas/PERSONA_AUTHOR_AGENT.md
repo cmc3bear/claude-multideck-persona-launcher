@@ -182,7 +182,7 @@ Every persona I write passes these checks:
 - [ ] MCP tool table
 - [ ] Cross-references to other docs and personas are valid
 - [ ] Callsign is speakable (test by reading aloud)
-- [ ] No Cary-specific or project-private content
+- [ ] No author-specific or project-private content
 
 The pre-push Reviewer gate catches anything I miss.
 

@@ -15,14 +15,14 @@ Get a working MultiDeck setup in under 5 minutes. This walks you through initial
 
 ```bash
 # Clone the framework
-git clone https://github.com/multideck/dispatch-framework.git
+git clone https://github.com/cmc3bear/claude-multideck-persona-launcher.git
 cd dispatch-framework
 
 # Initialize on Windows (PowerShell)
-.\scripts\init-multideck.ps1
+.\scripts\init-dispatch-framework.ps1
 
 # Or on macOS/Linux
-./scripts/init-multideck.sh
+./scripts/init-dispatch-framework.sh
 ```
 
 The init script:
@@ -61,7 +61,6 @@ node dashboard/server.cjs
 
 **Dashboard routes:**
 - `http://localhost:3045/` — Main desktop view (job board, agents, calendar)
-- `http://localhost:3045/mobile` — Mobile-optimized (smaller screen)
 - `http://localhost:3045/briefing` — Morning briefing view
 - `http://localhost:3045/audio-feed` — Listen to agent announcements (SSE stream)
 
