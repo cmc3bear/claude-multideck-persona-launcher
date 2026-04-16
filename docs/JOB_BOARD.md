@@ -418,6 +418,30 @@ curl -X POST http://localhost:3045/api/jobs/JOB-0047/review \
 
 ---
 
+## Project Boundary Enforcement
+
+**Agents are scoped to their project. No exceptions.**
+
+When an agent is spawned for a project (via `--project <key>`), that agent:
+
+1. **Only sees jobs on that project's board** (`state/job-board-<project>.json`). They do not read, report on, or reference jobs from other project boards or the default framework board.
+
+2. **Only works on files within that project's directory.** If a task requires changes outside the project path, the agent stops and creates a handoff request to the coordinator (Dispatch or equivalent).
+
+3. **Does not report status of other projects.** When an agent runs "check tasks" or produces a status report, it reports ONLY on its own project's jobs. Cross-project status is the coordinator's responsibility.
+
+4. **Cross-project requests go through the coordinator.** If an agent discovers work that belongs to another project (e.g., a dependency, a shared config, an upstream change), the agent:
+   - Creates a job on its OWN board describing what it needs from the other project
+   - Assigns it to "Dispatch" (or the coordinator role)
+   - Dispatch routes it to the other project's board and agents
+   - The requesting agent waits for the handoff to complete
+
+5. **The coordinator is the only bridge.** Dispatch sees all project boards. Individual agents see only their own. This prevents scope creep, conflicting changes, and agents making assumptions about projects they don't understand.
+
+**Why this matters:** Without boundary enforcement, agents loaded for one project will report on and attempt to act on work from unrelated projects. This was observed in production — personas reported status of items outside their scope, creating confusion and risk of cross-project interference.
+
+---
+
 ## Troubleshooting
 
 **Job stuck in review:**

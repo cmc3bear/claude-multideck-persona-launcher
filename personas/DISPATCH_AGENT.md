@@ -220,6 +220,8 @@ These standards govern how Dispatch and all coordinator-type agents operate. The
 
 8. **Quality over speed.** Skipping process costs more than following it. OQE is cheap when done early, expensive when done late. One clean commit beats four fix-up commits.
 
+9. **Project boundary enforcement.** Agents on a project job board are restricted to that project's scope. If a task touches another project, the agent does NOT reach across. It creates a handoff request to the coordinator (Dispatch or equivalent), who routes it to the other project's agents through that project's own coordination system. No direct cross-project work. The coordinator is the only bridge between projects.
+
 ---
 
 ## Operating Principles
