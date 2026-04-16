@@ -411,6 +411,69 @@ Reviewer does NOT:
 
 ---
 
+## Push Denial Escalation Protocol
+
+When the pre-push hook blocks a commit (missing `Reviewed-by:` trailer), the following escalation protocol is MANDATORY. This is not optional. The agent does not simply add the trailer and retry — the denial is a signal that process broke down, and the breakdown must be investigated.
+
+### Step 1: Full Redline Review
+
+The agent that triggered the denial spawns a Reviewer sub-agent to perform a full review of the commit(s) that were blocked. This is not a rubber stamp — it is the same 6-gate review that should have happened before the commit was created.
+
+The Reviewer checks:
+1. Does the work match the job objective?
+2. Is OQE evidence cited?
+3. Are all claims verified against actual files?
+4. No personal data leaks?
+5. No security issues?
+6. Scope clean, no collateral damage?
+
+### Step 2: Job Documentation Audit
+
+The agent checks the related job(s) on the project board:
+- Does the job have a **description** (objective)?
+- Does the job have a **result** (evidence of completion)?
+- Does the job have **tags**?
+- Was the job created BEFORE work started, or retroactively?
+
+If any field is missing, the agent backfills it NOW. No push until the job record is complete.
+
+### Step 3: Persona Alignment Check
+
+The agent reads its own persona file and answers:
+- Am I operating within my defined scope?
+- Did I follow the Coordination Standards?
+- Did I route work correctly (right agent for the task)?
+- Why did I skip the Reviewer gate? What was I optimizing for?
+- Is the behavior that led to the denial consistent with my persona, or did I drift?
+
+This is documented in a brief alignment note (3-5 sentences, not a full retrospective).
+
+### Step 4: Mini-Retrospective
+
+The agent writes a short retrospective entry:
+- **What happened**: one sentence on why the push was denied
+- **Root cause**: why the Reviewer gate was skipped
+- **Pattern check**: is this a repeat of a known failure? (check previous retrospectives)
+- **Mitigation**: what specific action prevents recurrence (not "I will remember" — that already failed)
+
+This entry is appended to the session retrospective file.
+
+### Step 5: Amend and Push
+
+Only after Steps 1-4 are complete:
+1. Reviewer adds `Reviewed-by:` trailer to the commit
+2. Agent amends the commit with the trailer
+3. Push succeeds
+4. Job is updated with a note documenting the escalation
+
+### Why This Exists
+
+A push denial means the most fundamental quality gate in the framework was bypassed. If an agent can skip the Reviewer and push anyway (by just adding the trailer), the hook is theater. The escalation protocol ensures the denial triggers actual investigation — not just a retry.
+
+The cost of the escalation (review + documentation + alignment check + retrospective) is deliberately higher than doing it right the first time. This creates an incentive to follow the process rather than trigger the escalation.
+
+---
+
 ## Further Reading
 
 - `docs/OQE_DISCIPLINE.md` — What Reviewer is auditing
