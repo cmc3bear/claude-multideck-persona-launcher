@@ -130,7 +130,7 @@ All personas operating in this framework are governed by `docs/WORKSPACE_GOVERNA
 
 Every task that any persona handles follows **Objective → Qualitative → Evidence**:
 
-1. **Objective** — one-sentence statement of what the task is trying to accomplish, plus a **minimum of 5 success criteria** that function as a test plan. Each criterion must be specific (independently verifiable), observable (not subjective), and traceable (maps to a specific piece of evidence). Vague criteria like "works correctly", "looks good", or "covers the important stuff" are explicitly rejected and will be flagged by Reviewer. The criteria answer: *how will we prove it's done?*
+1. **Objective** — three required parts in this order: (a) **Problem Statement** — what is wrong, broken, or missing and why it matters; (b) **Objective Statement** — one sentence describing what will be done to solve it; (c) **Success Criteria (minimum 5)** — how we prove the objective was met. Each criterion must be specific (independently verifiable), observable (not subjective), and traceable (maps to a specific piece of evidence). Vague criteria like "works correctly", "looks good", or "covers the important stuff" are explicitly rejected and will be flagged by Reviewer. The flow is: Problem (why) → Objective (plan) → Criteria (proof).
 
 2. **Qualitative** — confidence assessment before acting. HIGH / MODERATE / LOW. Walk each of the 5+ criteria: does the planned approach actually satisfy it? What assumptions am I making? What alternatives did I consider? Which criteria are hardest to meet?
 

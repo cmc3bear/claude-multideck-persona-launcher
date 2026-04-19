@@ -2,7 +2,7 @@
 
 **OQE** is the core decision-making framework for all work in MultiDeck. It systematizes how tasks are defined, confidence is assessed, and evidence is collected before implementation.
 
-The acronym stands for **Objective → Qualitative → Evidence** — the logical flow of structured decision-making.
+The acronym stands for **Objective → Qualitative → Evidence** — the logical flow of structured decision-making. Within the Objective phase, the full structure is **Problem → Objective → Criteria**: what is wrong, what will be done about it, and how you will prove it's done.
 
 ---
 
@@ -27,7 +27,15 @@ Every task in MultiDeck follows this pattern. No exceptions.
 
 ### What It Is
 
-Define **what** you are trying to accomplish and **how you will prove it's done**. The Objective answers: *what are we doing?* The success criteria answer: *how will we prove it's done?*
+The Objective phase has three required components in this order:
+
+1. **Problem Statement** — What is wrong, broken, or missing? Why does this matter? This is the "why" that motivates the work. Without a clear problem statement, the objective and criteria have no grounding.
+
+2. **Objective Statement** — The plan to solve the problem. One sentence: what specifically will be done to address the problem?
+
+3. **Success Criteria (minimum 5)** — How we prove the objective was met. The criteria support completion of the objective, not the problem statement directly.
+
+The flow is: **Problem (what's wrong) → Objective (plan to fix it) → Criteria (proof it's fixed).**
 
 ### The Minimum 5-Criteria Rule
 
@@ -45,7 +53,8 @@ Write this at the start of every task:
 
 ```
 O-FRAME:
-  Objective: [one sentence describing the goal]
+  Problem: [what is wrong, broken, or missing — and why it matters]
+  Objective: [one sentence: what will be done to solve the problem]
   Success Criteria (minimum 5 — each must be specific, observable, traceable):
     1. [specific, observable condition]
     2. [specific, observable condition]
@@ -76,6 +85,9 @@ If you catch yourself writing criteria like these, stop and rewrite them before 
 
 ```
 O-FRAME:
+  Problem: The authentication module has not been reviewed since the credential storage
+    refactor six weeks ago. There may be unhandled error paths and stale test coverage
+    that leave the login flow vulnerable to silent failures in production.
   Objective: Review the authentication module and approve or flag for fixes
   Success Criteria:
     1. All exported function signatures have JSDoc comments (verified by reading each export)
@@ -95,6 +107,9 @@ O-FRAME:
 
 ```
 O-FRAME:
+  Problem: The team is evaluating [technology X] for [use case Y] but has no structured
+    comparison. Without documented tradeoffs and a cost analysis, the decision risks
+    being driven by familiarity rather than fit.
   Objective: Assess whether [technology X] is suitable for [use case Y]
   Success Criteria:
     1. Pros and cons documented — minimum 3 items each, not overlapping (verified in output doc)
@@ -277,15 +292,15 @@ A task is **not complete** if any criterion has only LIMITED evidence or no evid
 
 | Phase | What You Do |
 |-------|------------|
-| **O** | Objective: Root cause the login failure. 5 criteria: reproducible case defined, root cause identified, fix implemented, test covering the bug added, regression verified in staging. |
-| **Q** | Does the approach satisfy all 5? Walk each: can I reproduce in staging (yes/no)? Do I have log access (yes/no)? | 
+| **O** | Problem: Users cannot log in after the latest deploy — support queue has 12 tickets in 30 minutes. Objective: Root cause the login failure and ship a fix. 5 criteria: reproducible case defined, root cause identified, fix implemented, test covering the bug added, regression verified in staging. |
+| **Q** | Does the approach satisfy all 5? Walk each: can I reproduce in staging (yes/no)? Do I have log access (yes/no)? |
 | **E** | Criterion→Evidence: Error logs (STRONG) for root cause; test run (STRONG) for fix; staging deploy (STRONG) for regression. |
 
 ### Architecture Decision
 
 | Phase | What You Do |
 |-------|------------|
-| **O** | Objective: Choose between monolith and microservices. 5 criteria: scaling requirements documented, team experience assessed, cost analysis complete, migration path defined, decision rationale written. |
+| **O** | Problem: The team cannot agree on monolith vs microservices without structured tradeoffs — the decision has been deferred twice and is now blocking sprint planning. Objective: Choose between monolith and microservices and document the decision. 5 criteria: scaling requirements documented, team experience assessed, cost analysis complete, migration path defined, decision rationale written. |
 | **Q** | Walk each: do I know scaling requirements (MODERATE if documented, LOW if fuzzy)? Have I talked to ops? |
 | **E** | Team experience (MODERATE); benchmarks (STRONG if run, LIMITED if from blogs); cost (MODERATE if estimated, STRONG if vendor quotes). |
 
@@ -293,7 +308,7 @@ A task is **not complete** if any criterion has only LIMITED evidence or no evid
 
 | Phase | What You Do |
 |-------|------------|
-| **O** | Objective: Evaluate tool X for use case Y. 5 criteria: hands-on trial completed, pros/cons with 3+ items each, licensing confirmed from source, 2+ reference implementations reviewed, cost estimate sourced. |
+| **O** | Problem: No structured evaluation of tool X exists — adoption is being debated on gut feel and blog posts rather than hands-on evidence. Objective: Evaluate tool X for use case Y with a documented recommendation. 5 criteria: hands-on trial completed, pros/cons with 3+ items each, licensing confirmed from source, 2+ reference implementations reviewed, cost estimate sourced. |
 | **Q** | Have I tested it? Is my licensing source authoritative? Walk each criterion. |
 | **E** | Hands-on trial (STRONG); user testimonials (MODERATE); licensing from vendor docs (STRONG if direct read, LIMITED if from summary). |
 
@@ -301,7 +316,7 @@ A task is **not complete** if any criterion has only LIMITED evidence or no evid
 
 | Phase | What You Do |
 |-------|------------|
-| **O** | Objective: Schedule deep work block. 5 criteria: block is 4+ hours, no conflicts in calendar, all dependencies confirmed available, work is pre-defined, block is protected from interruptions. |
+| **O** | Problem: Deep work blocks keep getting fragmented by unplanned meetings, reducing throughput on the current sprint. Objective: Schedule a protected 4-hour deep work block for this week. 5 criteria: block is 4+ hours, no conflicts in calendar, all dependencies confirmed available, work is pre-defined, block is protected from interruptions. |
 | **Q** | Did I check the calendar? Did I confirm dependencies? Walk each. |
 | **E** | Calendar free-time check (STRONG); confirmation from dependent agents (STRONG); no meetings within 2 hours (STRONG). |
 

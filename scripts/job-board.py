@@ -4,7 +4,7 @@
 Job creation, assignment, review, and completion tracking for Dispatch agents.
 
 Commands:
-  python job-board.py create <subject> [--assigned-to <agent>] [--priority P0|P1|P2|P3] [--depends-on <job-id>] [--criteria "criterion 1" --criteria "criterion 2" ...]
+  python job-board.py create <subject> [--assigned-to <agent>] [--priority P0|P1|P2|P3] [--depends-on <job-id>] [--problem "what is wrong"] [--criteria "criterion 1" --criteria "criterion 2" ...]
   python job-board.py list [--status <status>] [--agent <agent>]
   python job-board.py assign <job-id> <agent>
   python job-board.py accept <job-id>
@@ -121,12 +121,13 @@ def find_job(job_id, board_file=None):
     return None
 
 
-def cmd_create(subject, assigned_to=None, priority="P2", depends_on=None, criteria=None, board_file=None):
+def cmd_create(subject, assigned_to=None, priority="P2", depends_on=None, criteria=None, problem=None, board_file=None):
     """Create a new job."""
     job_id = next_job_id(board_file)
     job = {
         "id": job_id,
         "subject": subject,
+        "problem": problem or "",
         "assigned_to": assigned_to or "unassigned",
         "priority": priority,
         "status": "open",
@@ -144,6 +145,8 @@ def cmd_create(subject, assigned_to=None, priority="P2", depends_on=None, criter
     save_job_board(board, board_file)
 
     print(f"Created job {job_id}: {subject}")
+    if problem:
+        print(f"  Problem: {problem[:80]}{'...' if len(problem) > 80 else ''}")
     if assigned_to:
         print(f"  Assigned to: {assigned_to}")
     if priority:
@@ -304,6 +307,10 @@ def cmd_show(job_id, board_file=None):
             print(f"{key} ({len(value)}):")
             for i, c in enumerate(value, 1):
                 print(f"  {i}. {c}")
+        elif key == "problem" and value:
+            print(f"{key:<20}")
+            for line in (value[i:i+80] for i in range(0, len(value), 80)):
+                print(f"  {line}")
         else:
             print(f"{key:<20} {value}")
 
@@ -380,6 +387,9 @@ def main():
     create_parser.add_argument("--criteria", action="append", default=None,
                                metavar="CRITERION",
                                help="OQE success criterion (repeat flag for each, minimum 5 required)")
+    create_parser.add_argument("--problem", default=None,
+                               metavar="PROBLEM",
+                               help="OQE problem statement: what is wrong and why it matters")
 
     # list
     list_parser = subparsers.add_parser("list")
@@ -431,7 +441,7 @@ def main():
 
     try:
         if args.command == "create":
-            cmd_create(args.subject, args.assigned_to, args.priority, args.depends_on, args.criteria, bf)
+            cmd_create(args.subject, args.assigned_to, args.priority, args.depends_on, args.criteria, args.problem, bf)
         elif args.command == "list":
             cmd_list(args.status, args.agent, bf)
         elif args.command == "assign":

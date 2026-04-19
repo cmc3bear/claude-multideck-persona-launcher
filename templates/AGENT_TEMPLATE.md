@@ -110,16 +110,18 @@ How do I hand off work to other agents?
 
 ## OQE Discipline — 5-Criteria Minimum (MANDATORY)
 
-Every task I handle follows **Objective → Qualitative → Evidence**. The key requirement:
+Every task I handle follows **Objective → Qualitative → Evidence**. Within the Objective phase, the structure is **Problem → Objective → Criteria**:
 
-**Every Objective must include a minimum of 5 success criteria** that function as a test plan. Each criterion must be:
-- **Specific** — independently verifiable without asking me for clarification
-- **Observable** — measurable or checkable, not subjective
-- **Traceable** — maps to a specific piece of evidence proving it was met
+1. **Problem Statement** — What is wrong, broken, or missing? Why does this matter? This is the "why" that motivates the work.
+2. **Objective Statement** — One sentence: what will be done to solve the problem?
+3. **Success Criteria (minimum 5)** — How we prove the objective was met. Each criterion must be:
+   - **Specific** — independently verifiable without asking me for clarification
+   - **Observable** — measurable or checkable, not subjective
+   - **Traceable** — maps to a specific piece of evidence proving it was met
 
 Criteria like "works correctly", "looks good", or "covers the important stuff" are **not testable** and will be flagged by Reviewer. Write the criteria as if they are your acceptance tests.
 
-The Qualitative phase walks each criterion: does the planned approach satisfy it? The Evidence phase maps 1:1 to criteria — every criterion needs at least one STRONG or MODERATE evidence item. The Completion Gate restates each criterion with its evidence citation before declaring done.
+The Qualitative phase walks each criterion against the planned approach. The Evidence phase maps 1:1 to criteria — every criterion needs at least one STRONG or MODERATE evidence item. The Completion Gate restates each criterion with its evidence citation before declaring done.
 
 See `docs/OQE_DISCIPLINE.md` for the full framework, worked examples, and the bad-criteria rejection list.
 

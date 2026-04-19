@@ -8,6 +8,7 @@
     {
       "id": "1",
       "subject": "Update OQE discipline to require minimum 5 testable criteria per objective",
+      "problem": "The OQE Objective phase lacked a structured problem statement, causing agents to jump to solutions without articulating what was wrong or why it mattered. Without the Problem -> Objective -> Criteria flow, criteria were written without grounding and confidence assessment had no baseline to compare against.",
       "assigned_to": "architect",
       "priority": "P1",
       "status": "closed",
