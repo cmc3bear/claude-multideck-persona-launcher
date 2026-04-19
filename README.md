@@ -26,6 +26,38 @@ It runs entirely local. Zero API cost with a Claude Code CLI membership. Fork it
 
 ---
 
+## What's New
+
+**v0.3.0** — OQE Criteria Enforcement
+- Objectives now require a minimum of 5 testable success criteria functioning as a test plan
+- Criteria must be specific (independently verifiable), observable (not subjective), and traceable to evidence
+- Vague criteria — "works correctly", "looks good", "covers the important stuff" — are explicitly rejected and flagged by Reviewer
+- Job board tracks OQE criteria per job for full traceability; `job-board.py` supports `--criteria` flag
+- Reviewer agent validates criteria count and testability on every completed job (6-gate review)
+- Evidence now maps 1:1 to criteria — every criterion needs STRONG or MODERATE evidence before closing
+- New Completion Gate phase: restate each criterion with evidence citation before declaring done
+
+**v0.2.0** — Workspace Governance + Extended Roster
+- Workspace governance doc with 9 coordination standards and boundary enforcement
+- Push denial escalation protocol (5-step mandatory response)
+- Job board `alternatives_considered` field now required on close
+- Validate command added to job board CLI
+- Hero 60-second commercial spot and GIF previews in README
+- Team mode, distinct persona screenshots
+
+**v0.1.0** — Initial Release
+- 9 default personas: Dispatch, Architect, Engineer, Reviewer, Researcher, Launcher-Engineer, Voice-Technician, Persona-Author, Commercial-Producer
+- Cyberpunk character-select launcher at `/launcher` with portraits, music, danger mode, and team deploy
+- Dashboard server with briefing, state, mobile, and audio feed routes
+- OQE discipline (Objective → Qualitative → Evidence) framework for all work
+- Job board CLI with create / assign / submit / review / close workflow
+- Kokoro TTS with per-session voice isolation, atomic queueing, persona callsigns
+- Audio feed auto-play browser page for operator mode (hands-free agent monitoring)
+- Cross-platform persona launcher (Windows PowerShell + Linux/macOS bash)
+- `dispatch-agent.py add/remove` for dynamic roster management
+
+---
+
 ## Why MultiDeck
 
 - **Character-select for AI agents is a better UX than config files.** The cyberpunk launcher is not decoration. It is the interface. Click an operative, see their stats, deploy them. Intuitive, memorable, and fast.

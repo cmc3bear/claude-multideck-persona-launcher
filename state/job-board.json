@@ -1,0 +1,37 @@
+{
+  "meta": {
+    "version": 1,
+    "next_job_id": 2
+  },
+  "boundary_rule": "AGENTS: This board is scoped to ONE project. Do NOT create, read, or act on jobs from other projects. Cross-project requests go to Dispatch (the coordinator). See docs/JOB_BOARD.md \u2014 Project Boundary Enforcement.",
+  "jobs": [
+    {
+      "id": "1",
+      "subject": "Update OQE discipline to require minimum 5 testable criteria per objective",
+      "assigned_to": "architect",
+      "priority": "P1",
+      "status": "closed",
+      "depends_on": null,
+      "criteria": [
+        "docs/OQE_DISCIPLINE.md updated with minimum 5 criteria requirement, worked example, and bad-criteria rejection language",
+        "CLAUDE.md OQE summary section references the 5-criteria minimum and test-plan framing",
+        "templates/AGENT_TEMPLATE.md OQE section includes the criteria requirement so new personas inherit it",
+        "personas/REVIEWER_AGENT.md updated to explicitly check for 5-criteria minimum on every review, flag vague criteria",
+        "Grep verification confirms '5 success criteria' or 'minimum of 5' appears in all 4 target files",
+        "Job board entry itself demonstrates the criteria pattern with 6 OQE criteria tracked in state/job-board.json"
+      ],
+      "output_path": "docs/OQE_DISCIPLINE.md",
+      "created_at": "2026-04-19T18:41:23.463762",
+      "accepted_at": "2026-04-19T18:41:29.332592",
+      "submitted_at": "2026-04-19T18:42:06.352670",
+      "review_history": [
+        {
+          "reviewer": "Reviewer",
+          "verdict": "pass",
+          "note": "6-gate review PASS: criteria count (6>=5), all criteria specific+observable+traceable, evidence mapped 1:1 via grep verification, Completion Gate present, no Cary markers in artifacts, deliverable matches objective",
+          "timestamp": "2026-04-19T18:43:18.628908"
+        }
+      ]
+    }
+  ]
+}

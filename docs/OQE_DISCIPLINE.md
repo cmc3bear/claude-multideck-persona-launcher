@@ -27,7 +27,17 @@ Every task in MultiDeck follows this pattern. No exceptions.
 
 ### What It Is
 
-Define **what** you are trying to accomplish, **success criteria** (how you'll know it's done), and **scope boundaries** (what's in and out).
+Define **what** you are trying to accomplish and **how you will prove it's done**. The Objective answers: *what are we doing?* The success criteria answer: *how will we prove it's done?*
+
+### The Minimum 5-Criteria Rule
+
+Every Objective **must include a minimum of 5 success criteria** that function as a test plan. Fewer than 5 is not acceptable — it means the work hasn't been defined precisely enough.
+
+Each criterion must be:
+
+- **Specific** — someone else could verify it independently without asking you for clarification
+- **Observable** — measurable or checkable, not subjective ("works correctly" is not observable)
+- **Traceable** — maps to a specific piece of evidence that will prove it was met
 
 ### The O-Frame
 
@@ -36,44 +46,62 @@ Write this at the start of every task:
 ```
 O-FRAME:
   Objective: [one sentence describing the goal]
-  Success Criteria:
-    - [observable condition 1]
-    - [observable condition 2]
-    - [observable condition 3]
+  Success Criteria (minimum 5 — each must be specific, observable, traceable):
+    1. [specific, observable condition]
+    2. [specific, observable condition]
+    3. [specific, observable condition]
+    4. [specific, observable condition]
+    5. [specific, observable condition]
   Scope:
     In:  [what you will do]
     Out: [what you will not do]
   Assumptions: [list of assumptions the task depends on]
 ```
 
-### Example: Code Review
+### Bad Criteria — Explicitly Rejected
+
+These are not testable. Any job submitted with criteria like these will be **flagged by Reviewer**:
+
+| Bad (untestable) | Why it fails | Rewrite it as |
+|---|---|---|
+| "briefing looks good" | Subjective — depends on who's looking | "Briefing covers all 5 sections defined in the job description, each 2–4 sentences" |
+| "covers the important stuff" | Undefined — what's important? | "Briefing mentions all 3 project blockers by name, with a status per blocker" |
+| "works correctly" | No observable check defined | "Command runs without error on Node 20, exits code 0, output contains 'ready'" |
+| "documentation is clear" | Reader-dependent and vague | "Documentation has a worked example for each of the 3 main functions" |
+| "looks professional" | Entirely subjective | "Follows the heading / body / code-block format used in existing docs" |
+
+If you catch yourself writing criteria like these, stop and rewrite them before continuing.
+
+### Example: Code Review (5 criteria)
 
 ```
 O-FRAME:
   Objective: Review the authentication module and approve or flag for fixes
   Success Criteria:
-    - All function signatures documented
-    - No unhandled error paths
-    - Test coverage >80%
-    - Security checklist items verified
+    1. All exported function signatures have JSDoc comments (verified by reading each export)
+    2. No unhandled error paths — every try/catch either re-throws or logs (verified by code scan)
+    3. Test coverage >= 80% for this module (verified by running coverage report)
+    4. All 7 items on the security checklist verified and checked off (verified by walking checklist)
+    5. No direct DB calls outside the repository layer (verified by grep for db.query in auth/)
   Scope:
     In:  Code review, security audit, test coverage check
     Out: Refactoring, performance optimization, design changes
   Assumptions:
-    - Current test suite passes
+    - Current test suite passes before review starts
     - Branch is up to date with main
 ```
 
-### Example: Research Task
+### Example: Research Task (5 criteria)
 
 ```
 O-FRAME:
   Objective: Assess whether [technology X] is suitable for [use case Y]
   Success Criteria:
-    - Pros and cons documented
-    - Feature gap analysis completed
-    - Cost and licensing verified
-    - At least 2 reference implementations evaluated
+    1. Pros and cons documented — minimum 3 items each, not overlapping (verified in output doc)
+    2. Feature gap analysis completed against our 8 required features (verified by matrix)
+    3. Licensing terms confirmed from the vendor's actual license file, not a summary (verified by URL)
+    4. At least 2 reference implementations evaluated — real projects, not toy demos (verified by links)
+    5. Cost estimate includes one-time and recurring components, sourced from vendor pricing page (verified by URL)
   Scope:
     In:  Technical evaluation, cost/licensing review, feasibility
     Out: Procurement, negotiation, deployment planning
@@ -88,7 +116,7 @@ O-FRAME:
 
 ### What It Is
 
-Before you act, assess your **confidence level** given what you know and don't know.
+Before you act, assess your **confidence level** given what you know and don't know. The Qualitative phase now explicitly walks each criterion: *does this approach actually satisfy all 5+ criteria?*
 
 ### Confidence Levels
 
@@ -100,13 +128,18 @@ Before you act, assess your **confidence level** given what you know and don't k
 
 ### How to Assess
 
+**Walk each criterion:**
+- For each of your 5+ criteria: does the planned approach actually satisfy it?
+- Which criteria are hardest to meet? Which are trivial?
+- Are there criteria you can't satisfy with the current approach? That's a blocker, not a gap.
+
 **Bias check:**
 - Am I favoring this approach because it's familiar, or because the evidence supports it?
 - Have I considered alternatives?
 
 **Completeness check:**
-- Do I have evidence for all success criteria?
-- Are there success criteria I haven't investigated yet?
+- Do I have evidence for all success criteria, or am I planning to find it during execution?
+- Are there criteria I haven't investigated yet?
 
 **Source credibility:**
 - Is my evidence from direct observation (STRONG) or inferred (MODERATE/LIMITED)?
@@ -123,27 +156,27 @@ QUALITATIVE ASSESSMENT:
 
 Objective: Approve the new payment module for production
 
-Evidence Collected:
-- STRONG: All unit tests passing (ran locally)
-- STRONG: Security audit complete, no critical issues
-- STRONG: Load testing shows 10x headroom
-- MODERATE: Staging environment similar but not identical to production
-- MODERATE: Database migration tested on copy of production data
-- LIMITED: No customer feedback yet (pre-launch)
+Criteria Walk:
+  Criterion 1 (unit tests pass): STRONG — ran locally, 134 passed, 0 failed
+  Criterion 2 (security audit clean): STRONG — audit complete, no critical issues
+  Criterion 3 (load test shows 10x headroom): STRONG — ran k6 locally, results saved
+  Criterion 4 (staging matches production schema): MODERATE — staging is similar but not identical
+  Criterion 5 (migration tested on prod data copy): MODERATE — tested on 2-week-old snapshot
+  Criterion 6 (rollback procedure documented): NOT YET — gap, must address before proceed
 
 Known Gaps:
-- Real customer load patterns unknown
-- Edge cases with concurrent transactions untested
-- Failure recovery under extreme load untested
+  - Criterion 6 missing — rollback doc doesn't exist yet
+  - Real customer load patterns unknown
+  - Edge cases with concurrent transactions untested
 
 Alternatives Considered:
-- Gradual rollout: Slower, but reduces risk. Requires feature flag.
-- Full launch: Faster, but higher risk.
+  - Gradual rollout: Slower, but reduces risk. Requires feature flag.
+  - Full launch: Faster, but higher risk given gap in criterion 6.
 
-Confidence: MODERATE (0.72)
+Confidence: MODERATE (0.68)
 Rationale: Strong evidence for correctness and performance under normal conditions. 
-Known gaps in extreme failure scenarios and real-world concurrency patterns. 
-Recommend gradual rollout with monitoring.
+Criterion 6 is an open gap — task cannot close until it's addressed.
+Recommend: Document rollback procedure, then re-assess before launch.
 ```
 
 ---
@@ -152,7 +185,7 @@ Recommend gradual rollout with monitoring.
 
 ### What It Is
 
-Collect **specific, cited observations** that inform your decision. Tag each piece of evidence with its strength.
+Collect **specific, cited observations** that prove each criterion was met. Every criterion must have at least one corresponding evidence item. The mapping must be explicit — not implied.
 
 ### Evidence Strength
 
@@ -161,6 +194,12 @@ Collect **specific, cited observations** that inform your decision. Tag each pie
 | **STRONG** | Direct observation from running code, reading files, checking systems | Read the error log, saw the stack trace; ran the test suite, all passed; verified calendar availability directly |
 | **MODERATE** | Inferred from related evidence, documented patterns, secondary sources | Documentation says X; similar modules follow this pattern; error message matches known issue #123 |
 | **LIMITED** | Single source, unverified, or assumption-based | One user reported this; similar project blog post suggests; vendor claims this works |
+
+### The 1:1 Mapping Rule
+
+Every criterion from the Objective must have **at least one STRONG or MODERATE evidence item** proving it was met. A criterion backed only by LIMITED evidence is not closed — it is still open.
+
+When collecting evidence, think: "which criterion does this piece of evidence prove?"
 
 ### How to Collect Evidence
 
@@ -174,24 +213,61 @@ Collect **specific, cited observations** that inform your decision. Tag each pie
 
 **Task:** Verify if the job board is processing jobs correctly
 
-**Evidence:**
-- STRONG: Read job-board.json, found 47 jobs in "pending" state, 3 in "active", 12 in "completed" (direct file read)
-- STRONG: Ran `job-board.py status`, output shows completion rate 0.92 over last 7 days (direct command execution)
-- STRONG: Checked dashboard /api/stats endpoint, all agents reporting heartbeat in last 5 minutes (live API check)
-- MODERATE: Engineer reported "jobs seem slow" in Slack (hearsay, not direct observation)
-- MODERATE: Similar spike in pending jobs occurred 2 weeks ago before a performance fix (pattern matching)
-- LIMITED: Dashboard sometimes feels slow on mobile (subjective perception)
+**Criteria → Evidence mapping:**
+
+```
+Criterion 1 (completion rate >= 90%):
+  STRONG: Ran `job-board.py status` — output shows 0.92 completion rate over last 7 days
+
+Criterion 2 (no jobs stuck > 24h):
+  STRONG: Read job-board.json — oldest pending job timestamp is 3h ago (no stuck jobs)
+
+Criterion 3 (all agents reporting heartbeat):
+  STRONG: Checked /api/stats — all 4 agents reporting heartbeat in last 5 minutes
+
+Criterion 4 (queue depth < 50 pending):
+  STRONG: Read job-board.json — 47 jobs in pending, within threshold
+
+Criterion 5 (dashboard load time < 2s):
+  MODERATE: Checked browser devtools on last open — 1.8s, but not re-tested on slow network
+```
 
 **Gaps:**
 - Insufficient data on root cause of 47 pending jobs (are they stuck or just queued?)
-- No data on which agents are causing slowdowns
-- No timestamp on last job completion
+- Criterion 5 is MODERATE — should be re-tested under realistic network conditions
 
 **Conclusion:**
-- Job board is functioning nominally (92% completion rate is healthy)
-- The 47 pending jobs are likely normal queue behavior, not a failure
-- Engineer's perception of slowness may be network lag or personal timing (needs investigation)
-- Recommend: Add timestamps to pending jobs, sample 5 jobs to understand queue depth
+- Job board is functioning nominally (92% completion rate, no stuck jobs)
+- Queue depth is within acceptable range
+- Performance criterion partially met — flag for further testing
+
+---
+
+## Phase 4: COMPLETION GATE
+
+Before declaring a task complete, walk through this gate explicitly. This is not optional.
+
+```
+COMPLETION GATE:
+
+Criterion 1: [restate criterion]
+  Evidence: [specific cite]
+  Strength: STRONG / MODERATE / LIMITED
+  Status: MET / NOT MET
+
+Criterion 2: [restate criterion]
+  Evidence: [specific cite]
+  Strength: STRONG / MODERATE / LIMITED
+  Status: MET / NOT MET
+
+[... repeat for all criteria ...]
+
+Completion decision:
+  - All criteria MET with STRONG or MODERATE evidence → COMPLETE
+  - Any criterion NOT MET or backed only by LIMITED evidence → NOT COMPLETE (reopen)
+```
+
+A task is **not complete** if any criterion has only LIMITED evidence or no evidence. "I believe this is met" without a cite is a gap, not evidence.
 
 ---
 
@@ -201,33 +277,33 @@ Collect **specific, cited observations** that inform your decision. Tag each pie
 
 | Phase | What You Do |
 |-------|------------|
-| **O** | Objective: Root cause the login failure. Success: Single identified cause + fix verification. |
-| **Q** | Assess: Do I have a reproducible case? Can I run the code locally? MODERATE confidence if I can reproduce in staging, HIGH if I can see the production logs. |
-| **E** | Evidence: Error logs (STRONG), user reports (LIMITED), similar past issues (MODERATE), code review (STRONG). |
+| **O** | Objective: Root cause the login failure. 5 criteria: reproducible case defined, root cause identified, fix implemented, test covering the bug added, regression verified in staging. |
+| **Q** | Does the approach satisfy all 5? Walk each: can I reproduce in staging (yes/no)? Do I have log access (yes/no)? | 
+| **E** | Criterion→Evidence: Error logs (STRONG) for root cause; test run (STRONG) for fix; staging deploy (STRONG) for regression. |
 
 ### Architecture Decision
 
 | Phase | What You Do |
 |-------|------------|
-| **O** | Objective: Choose between monolith and microservices. Success: Decision documented with tradeoffs. |
-| **Q** | Assess: Do I know the scaling requirements? Have I talked to ops? MODERATE if requirements are clear, LOW if they're fuzzy. |
-| **E** | Evidence: Team experience (MODERATE), benchmarks for both approaches (STRONG if run locally, LIMITED if from blogs), cost analysis (MODERATE if estimated, STRONG if vendor quotes). |
+| **O** | Objective: Choose between monolith and microservices. 5 criteria: scaling requirements documented, team experience assessed, cost analysis complete, migration path defined, decision rationale written. |
+| **Q** | Walk each: do I know scaling requirements (MODERATE if documented, LOW if fuzzy)? Have I talked to ops? |
+| **E** | Team experience (MODERATE); benchmarks (STRONG if run, LIMITED if from blogs); cost (MODERATE if estimated, STRONG if vendor quotes). |
 
 ### Research Task
 
 | Phase | What You Do |
 |-------|------------|
-| **O** | Objective: Evaluate tool X for use case Y. Success: Pros/cons list + recommendation. |
-| **Q** | Assess: Have I tested it? Have I talked to users? MODERATE if hands-on, LOW if just reading reviews. |
-| **E** | Evidence: Hands-on trial (STRONG), user testimonials (MODERATE), feature matrix from vendor (LIMITED). |
+| **O** | Objective: Evaluate tool X for use case Y. 5 criteria: hands-on trial completed, pros/cons with 3+ items each, licensing confirmed from source, 2+ reference implementations reviewed, cost estimate sourced. |
+| **Q** | Have I tested it? Is my licensing source authoritative? Walk each criterion. |
+| **E** | Hands-on trial (STRONG); user testimonials (MODERATE); licensing from vendor docs (STRONG if direct read, LIMITED if from summary). |
 
 ### Scheduling Decision
 
 | Phase | What You Do |
 |-------|------------|
-| **O** | Objective: Schedule deep work block. Success: Block is 4+ hours, has no conflicts, is protected. |
-| **Q** | Assess: Did I check the calendar? Did I ask dependencies? HIGH if yes, MODERATE if partial. |
-| **E** | Evidence: Calendar free-time check (STRONG), confirmation from dependent agents (STRONG), no meetings within 2 hours (STRONG). |
+| **O** | Objective: Schedule deep work block. 5 criteria: block is 4+ hours, no conflicts in calendar, all dependencies confirmed available, work is pre-defined, block is protected from interruptions. |
+| **Q** | Did I check the calendar? Did I confirm dependencies? Walk each. |
+| **E** | Calendar free-time check (STRONG); confirmation from dependent agents (STRONG); no meetings within 2 hours (STRONG). |
 
 ---
 
@@ -236,15 +312,20 @@ Collect **specific, cited observations** that inform your decision. Tag each pie
 Before submitting work for review, check:
 
 - [ ] **Objective clear** — Someone reading my O-Frame knows exactly what I tried to accomplish
-- [ ] **Success criteria observable** — Each criterion can be verified without guessing
+- [ ] **Minimum 5 success criteria** — Fewer than 5 is a rejection, not a flag
+- [ ] **Criteria are specific** — Each could be verified independently without asking me
+- [ ] **Criteria are observable** — No "looks good", "works correctly", or "covers the important stuff"
+- [ ] **Criteria are traceable** — Each maps to a specific evidence item
 - [ ] **Scope boundaries explicit** — What I did and didn't do are clear
+- [ ] **Qualitative walked all criteria** — I assessed whether my approach satisfied each one
 - [ ] **Confidence assessed** — I stated HIGH/MODERATE/LOW and explained why
-- [ ] **Evidence cited** — Every major claim references a source (file, test, log, etc.)
+- [ ] **Evidence cited** — Every criterion has a corresponding evidence item
 - [ ] **Evidence strength tagged** — STRONG/MODERATE/LIMITED on each piece
+- [ ] **No criterion closes on LIMITED evidence alone**
 - [ ] **Gaps acknowledged** — If I don't have evidence for something, I said so
+- [ ] **Completion Gate completed** — Criteria restated with evidence and status
 - [ ] **No speculation** — Every conclusion is grounded in evidence
 - [ ] **Alternatives considered** — If applicable, I explored why this solution won
-- [ ] **Reviewable** — Someone else can follow my reasoning and reproduce my findings
 
 ---
 
@@ -252,57 +333,68 @@ Before submitting work for review, check:
 
 **Reviewer** agents use OQE to audit completed jobs:
 
-1. **Does the O-Frame match the job description?** — (Objective check)
-2. **Is the confidence assessment justified?** — (Qualitative check)
-3. **Is all evidence cited and strength-tagged?** — (Evidence check)
-4. **Are there unsubstantiated claims?** — (Gaps check)
-5. **Would I approve this work with the same evidence?** — (Sanity check)
+1. **Does the O-Frame have a minimum of 5 criteria?** — Fewer than 5 is an automatic FLAG
+2. **Are all criteria specific, observable, and traceable?** — Vague criteria are an automatic FLAG regardless of count
+3. **Does the Qualitative walk each criterion?** — (Qualitative check)
+4. **Does every criterion have STRONG or MODERATE evidence?** — LIMITED-only criteria are open, not closed
+5. **Is the Completion Gate present and complete?** — Every criterion restated with evidence and status
+6. **Are there unsubstantiated claims?** — (Gaps check)
 
-If all five pass, **PASS**. If not, **FLAG** with specific feedback (see `docs/REVIEW_WORKFLOW.md`).
+If all six pass: **PASS**. If not, **FLAG** with specific feedback (see `docs/REVIEW_WORKFLOW.md`).
 
 ---
 
 ## Common Mistakes
 
-**Mistake 1: Confusing Objective with Subjective**
+**Mistake 1: Fewer than 5 criteria**
+- Wrong: 2–3 vague bullet points
+- Right: 5+ specific, observable, traceable conditions — think of them as your test plan
+
+**Mistake 2: Vague criteria**
 - Wrong: "The code should be clean"
-- Right: "Reduce cyclomatic complexity below 5 in the auth module (currently 12)"
+- Right: "Cyclomatic complexity < 5 in the auth module (currently 12, confirmed by complexity report)"
 
-**Mistake 2: Skipping Qualitative Assessment**
+**Mistake 3: Criteria without evidence mapping**
+- Wrong: Criterion listed in O-Frame, no corresponding evidence collected
+- Right: Every criterion has at least one STRONG or MODERATE evidence item with a specific cite
+
+**Mistake 4: Skipping the Completion Gate**
+- Wrong: "Done" without walking each criterion
+- Right: Explicit gate — restate criterion, cite evidence, grade strength, declare MET/NOT MET
+
+**Mistake 5: Skipping Qualitative Assessment**
 - Wrong: State confidence only after finishing
-- Right: Assess before you start — it informs what evidence you need to collect
+- Right: Assess before you start — walk each criterion against your approach
 
-**Mistake 3: Assuming Evidence**
+**Mistake 6: Assuming Evidence**
 - Wrong: "The test suite passes" (not verified)
 - Right: "I ran the test suite locally; 247 tests passed, 0 failed" (observed directly)
 
-**Mistake 4: Confusing Strength Tags**
-- STRONG = "I did this" (observed directly)
-- MODERATE = "Documentation says this" (pattern matching, secondary source)
-- LIMITED = "Someone told me this" (hearsay, single source)
-
-**Mistake 5: Ignoring Contradictory Evidence**
-- Wrong: Omit evidence that contradicts your conclusion
-- Right: Acknowledge contradictions and explain why one is stronger
+**Mistake 7: Closing on LIMITED Evidence**
+- Wrong: "User reported it works — criterion met"
+- Right: Limited evidence is a gap, not a close. Get STRONG or MODERATE before declaring done.
 
 ---
 
 ## OQE at Scale
 
 For **small tasks** (1–2 hour jobs):
-- O-Frame: 1–2 minutes
-- Qualitative: Quick assessment (HIGH / MODERATE / LOW)
-- Evidence: Cite 3–5 key observations
+- O-Frame: 5 criteria minimum, 1–2 minutes to write
+- Qualitative: Quick walk of each criterion (HIGH / MODERATE / LOW)
+- Evidence: Cite one item per criterion, strength-tagged
+- Completion Gate: Brief — one line per criterion
 
 For **large projects** (days of work):
-- O-Frame: 15–30 minutes (document in job description)
-- Qualitative: Detailed assessment with risk analysis
-- Evidence: Full bibliography with strength tags
+- O-Frame: 5–10 criteria, documented in job description
+- Qualitative: Detailed assessment with risk analysis per criterion
+- Evidence: Full bibliography with strength tags, one-to-one with criteria
+- Completion Gate: Formal document
 
 For **complex decisions** (architecture, go/no-go calls):
-- O-Frame: Formal document (1–2 pages)
-- Qualitative: Scoring matrix or confidence intervals
+- O-Frame: 5+ formal criteria — treat as an acceptance test suite
+- Qualitative: Scoring matrix or confidence intervals per criterion
 - Evidence: Multiple sources, decision tree, alternatives analysis
+- Completion Gate: Formal sign-off with evidence trails
 
 ---
 

@@ -108,11 +108,28 @@ How do I hand off work to other agents?
 
 ---
 
+## OQE Discipline — 5-Criteria Minimum (MANDATORY)
+
+Every task I handle follows **Objective → Qualitative → Evidence**. The key requirement:
+
+**Every Objective must include a minimum of 5 success criteria** that function as a test plan. Each criterion must be:
+- **Specific** — independently verifiable without asking me for clarification
+- **Observable** — measurable or checkable, not subjective
+- **Traceable** — maps to a specific piece of evidence proving it was met
+
+Criteria like "works correctly", "looks good", or "covers the important stuff" are **not testable** and will be flagged by Reviewer. Write the criteria as if they are your acceptance tests.
+
+The Qualitative phase walks each criterion: does the planned approach satisfy it? The Evidence phase maps 1:1 to criteria — every criterion needs at least one STRONG or MODERATE evidence item. The Completion Gate restates each criterion with its evidence citation before declaring done.
+
+See `docs/OQE_DISCIPLINE.md` for the full framework, worked examples, and the bad-criteria rejection list.
+
+---
+
 ## Governing Documents
 
 Always reference:
 - **Workspace Governance:** `docs/WORKSPACE_GOVERNANCE.md` — Coordination standards, boundary rules, job field requirements, review workflow (READ FIRST)
-- **OQE Discipline:** `docs/OQE_DISCIPLINE.md` — How I frame decisions
+- **OQE Discipline:** `docs/OQE_DISCIPLINE.md` — How I frame decisions (minimum 5 criteria per objective)
 - **Voice Rules:** `docs/VOICE_RULES.md` — How I speak
 - **Job Board:** `docs/JOB_BOARD.md` — How work flows to me
 

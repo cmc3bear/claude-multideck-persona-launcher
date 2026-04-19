@@ -4,7 +4,7 @@
 Job creation, assignment, review, and completion tracking for Dispatch agents.
 
 Commands:
-  python job-board.py create <subject> [--assigned-to <agent>] [--priority P0|P1|P2|P3] [--depends-on <job-id>]
+  python job-board.py create <subject> [--assigned-to <agent>] [--priority P0|P1|P2|P3] [--depends-on <job-id>] [--criteria "criterion 1" --criteria "criterion 2" ...]
   python job-board.py list [--status <status>] [--agent <agent>]
   python job-board.py assign <job-id> <agent>
   python job-board.py accept <job-id>
@@ -121,7 +121,7 @@ def find_job(job_id, board_file=None):
     return None
 
 
-def cmd_create(subject, assigned_to=None, priority="P2", depends_on=None, board_file=None):
+def cmd_create(subject, assigned_to=None, priority="P2", depends_on=None, criteria=None, board_file=None):
     """Create a new job."""
     job_id = next_job_id(board_file)
     job = {
@@ -131,6 +131,7 @@ def cmd_create(subject, assigned_to=None, priority="P2", depends_on=None, board_
         "priority": priority,
         "status": "open",
         "depends_on": depends_on,
+        "criteria": criteria or [],
         "output_path": None,
         "created_at": datetime.utcnow().isoformat(),
         "accepted_at": None,
@@ -147,6 +148,10 @@ def cmd_create(subject, assigned_to=None, priority="P2", depends_on=None, board_
         print(f"  Assigned to: {assigned_to}")
     if priority:
         print(f"  Priority: {priority}")
+    if criteria:
+        print(f"  Criteria ({len(criteria)}):")
+        for i, c in enumerate(criteria, 1):
+            print(f"    {i}. {c}")
 
 
 def cmd_list(status=None, agent=None, board_file=None):
@@ -295,6 +300,10 @@ def cmd_show(job_id, board_file=None):
             for i, review in enumerate(value, 1):
                 print(f"  {i}. {review['verdict'].upper()} — {review.get('note', '(no note)')}")
                 print(f"     {review['timestamp']}")
+        elif key == "criteria" and isinstance(value, list):
+            print(f"{key} ({len(value)}):")
+            for i, c in enumerate(value, 1):
+                print(f"  {i}. {c}")
         else:
             print(f"{key:<20} {value}")
 
@@ -320,6 +329,10 @@ def cmd_validate(board_file=None):
         for f in create_fields:
             if not j.get(f):
                 missing.append(f)
+        # OQE criteria check: minimum 5 required
+        criteria = j.get("criteria", [])
+        if len(criteria) < 5:
+            missing.append(f"criteria (has {len(criteria)}, need 5+)")
         # Check close-time fields on closed/completed jobs
         if j.get("status") in ("closed", "completed", "passed", "approved"):
             for f in close_fields:
@@ -346,6 +359,7 @@ def cmd_validate(board_file=None):
     if issues > 0:
         print(f"  {issues} job(s) have missing required fields.")
         print(f"  See docs/WORKSPACE_GOVERNANCE.md — Job Board Field Requirements")
+        print(f"  OQE criteria minimum: 5 per job (docs/OQE_DISCIPLINE.md)")
     else:
         print(f"  All jobs pass validation.")
     print()
@@ -363,6 +377,9 @@ def main():
     create_parser.add_argument("--assigned-to", default=None)
     create_parser.add_argument("--priority", default="P2", choices=["P0", "P1", "P2", "P3"])
     create_parser.add_argument("--depends-on", default=None)
+    create_parser.add_argument("--criteria", action="append", default=None,
+                               metavar="CRITERION",
+                               help="OQE success criterion (repeat flag for each, minimum 5 required)")
 
     # list
     list_parser = subparsers.add_parser("list")
@@ -414,7 +431,7 @@ def main():
 
     try:
         if args.command == "create":
-            cmd_create(args.subject, args.assigned_to, args.priority, args.depends_on, bf)
+            cmd_create(args.subject, args.assigned_to, args.priority, args.depends_on, args.criteria, bf)
         elif args.command == "list":
             cmd_list(args.status, args.agent, bf)
         elif args.command == "assign":

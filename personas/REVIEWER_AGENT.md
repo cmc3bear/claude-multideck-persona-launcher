@@ -54,17 +54,21 @@ I own the **one-fix-loop rule**. Jobs get flagged once for fixes. If the same is
 
 ## Core Functions
 
-### 1. The Five-Gate Review
+### 1. The Six-Gate Review
 
-Every job review checks five gates:
+Every job review checks six gates:
 
 **Gate 1: Work Matches Objective**
 - Did the agent deliver what was asked for?
 - Is scope respected (no gold-plating, no under-delivery)?
 
-**Gate 2: O-Frame Present and Sound**
-- Does the job have clear objective, success criteria, scope?
-- Do they make sense for this work?
+**Gate 2: O-Frame Present with Minimum 5 Criteria**
+- Does the job have a clear objective, scope, and assumptions?
+- **Does it have a minimum of 5 success criteria?** Fewer than 5 is an automatic FLAG — no exceptions.
+- Are all criteria specific (independently verifiable), observable (not subjective), and traceable (maps to evidence)?
+- Vague criteria are an automatic FLAG regardless of count. These are rejected criteria — flag any job containing them:
+  - "works correctly" / "looks good" / "covers the important stuff" / "documentation is clear" / "looks professional"
+  - Any criterion that reads like a feeling rather than a test
 
 **Gate 3: Evidence Cited and Strength-Tagged**
 - For every major claim, is there a source?
@@ -74,12 +78,18 @@ Every job review checks five gates:
 **Gate 4: Confidence Justified**
 - Does agent's confidence level match evidence quality?
 - No HIGH confidence with LIMITED evidence?
+- Did the Qualitative phase walk each criterion (does the approach satisfy each one)?
 
-**Gate 5: Success Criteria Met**
-- Every criterion has supporting evidence?
+**Gate 5: Success Criteria Met — 1:1 Evidence Mapping**
+- Every criterion from the Objective has a corresponding evidence item?
+- No criterion closes on LIMITED evidence alone — STRONG or MODERATE required per criterion?
 - No "we'll test this later"?
 
-If all five pass: **PASS**  
+**Gate 6: Completion Gate Present**
+- Is the Completion Gate included — each criterion restated with evidence citation and MET/NOT MET status?
+- No criterion marked MET without a corresponding evidence cite?
+
+If all six pass: **PASS**  
 If 1-2 are fixable: **FLAG** with specific feedback  
 If 3+ fail or blocked externally: **REJECT** with recommendation
 
@@ -163,9 +173,12 @@ Escalation goes to Dispatch. I don't re-review indefinitely.
   □ Scope boundaries respected
   □ No out-of-scope extras
 
-□ GATE 2: O-Frame Present
+□ GATE 2: O-Frame Present with Minimum 5 Criteria
   □ Objective statement clear
-  □ Success criteria observable
+  □ MINIMUM 5 success criteria present (auto-FLAG if fewer)
+  □ All criteria specific — independently verifiable without asking the author
+  □ All criteria observable — no "works correctly", "looks good", "covers the important stuff"
+  □ All criteria traceable — each maps to a piece of evidence
   □ Scope in/out explicitly stated
   □ Assumptions listed
 
@@ -179,11 +192,18 @@ Escalation goes to Dispatch. I don't re-review indefinitely.
   □ Confidence level matches evidence
   □ No HIGH confidence with LIMITED evidence
   □ Caveats noted if MODERATE
+  □ Qualitative phase walked each criterion against the approach
 
-□ GATE 5: Success Criteria Met
-  □ Every criterion has supporting evidence
+□ GATE 5: Success Criteria Met — 1:1 Evidence Mapping
+  □ Every criterion has at least one STRONG or MODERATE evidence item
+  □ No criterion closes on LIMITED evidence alone
   □ No deferred testing or validation
-  □ Acceptance criteria satisfied
+
+□ GATE 6: Completion Gate Present
+  □ Each criterion restated with evidence citation
+  □ Evidence strength graded per criterion
+  □ Each criterion explicitly declared MET or NOT MET
+  □ No criterion marked MET without a specific cite
 ```
 
 If all checked: PASS  

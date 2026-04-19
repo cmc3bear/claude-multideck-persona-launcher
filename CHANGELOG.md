@@ -5,6 +5,28 @@ All notable changes to MultiDeck will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-04-19
+
+### Added
+
+- **OQE 5-criteria minimum** — Every Objective must now include a minimum of 5 success criteria functioning as a test plan. Each criterion must be specific (independently verifiable), observable (not subjective), and traceable to a piece of evidence.
+- **Bad-criteria rejection list** — Vague criteria ("works correctly", "looks good", "covers the important stuff", "documentation is clear", "looks professional") are explicitly rejected by name in `docs/OQE_DISCIPLINE.md` with a rewrite guide.
+- **Completion Gate phase** — New mandatory OQE phase: restate each criterion with evidence citation, grade evidence strength, declare MET or NOT MET before closing any task.
+- **1:1 evidence mapping rule** — Every criterion must have at least one STRONG or MODERATE evidence item. No criterion closes on LIMITED evidence alone.
+- **`--criteria` flag for job-board.py** — `create` command now accepts repeated `--criteria "..."` flags to store OQE criteria in the job board entry. Criteria are displayed in `show` output and validated in `validate`.
+- **Criteria count validation** — `job-board.py validate` now checks that all jobs have minimum 5 criteria, reports count deficit alongside other missing fields.
+- **Reviewer 6-gate review** — Reviewer gate expanded from 5 to 6 gates. New checks: criteria count minimum, criteria testability (observable and specific), 1:1 evidence mapping, and Completion Gate presence.
+- **"What's New" section in README** — Version history section near the top of README shows capability additions over time.
+
+### Changed
+
+- `docs/OQE_DISCIPLINE.md` — Objective section rewritten with 5-criteria minimum, test-plan framing, worked examples with 5 criteria, good vs bad criteria table, updated Qualitative (walk each criterion), Evidence (1:1 mapping), and new Completion Gate section. Review checklist expanded. Common mistakes expanded.
+- `CLAUDE.md` — OQE discipline summary updated with 5-criteria minimum, Completion Gate, and evidence mapping rule.
+- `templates/AGENT_TEMPLATE.md` — New OQE section added before Governing Documents with criteria requirements inherited by all new personas.
+- `personas/REVIEWER_AGENT.md` — Five-gate review expanded to six gates with explicit criteria count check, vague-criteria rejection list, 1:1 evidence mapping check, and Completion Gate check. Review checklist updated accordingly.
+
+---
+
 ## [0.1.2] - 2026-04-15
 
 ### Added

@@ -130,13 +130,15 @@ All personas operating in this framework are governed by `docs/WORKSPACE_GOVERNA
 
 Every task that any persona handles follows **Objective → Qualitative → Evidence**:
 
-1. **Objective** — one-sentence statement of what the task is trying to accomplish, plus success criteria the task will be judged against.
+1. **Objective** — one-sentence statement of what the task is trying to accomplish, plus a **minimum of 5 success criteria** that function as a test plan. Each criterion must be specific (independently verifiable), observable (not subjective), and traceable (maps to a specific piece of evidence). Vague criteria like "works correctly", "looks good", or "covers the important stuff" are explicitly rejected and will be flagged by Reviewer. The criteria answer: *how will we prove it's done?*
 
-2. **Qualitative** — confidence assessment before and after. HIGH / MODERATE / LOW. What assumptions am I making? What alternatives did I consider? Why this approach over others?
+2. **Qualitative** — confidence assessment before acting. HIGH / MODERATE / LOW. Walk each of the 5+ criteria: does the planned approach actually satisfy it? What assumptions am I making? What alternatives did I consider? Which criteria are hardest to meet?
 
-3. **Evidence** — what was actually observed. Cite file paths, line numbers, error messages, test results, source URLs. Tag each piece of evidence STRONG (direct observation), MODERATE (inferred), or LIMITED (single-source or unverified).
+3. **Evidence** — what was actually observed, mapped 1:1 to criteria. Every criterion must have at least one STRONG or MODERATE evidence item. Cite file paths, line numbers, error messages, test results, source URLs. Tag each piece STRONG (direct observation), MODERATE (inferred), or LIMITED (single-source or unverified). No criterion closes on LIMITED evidence alone.
 
-Every deliverable must include an OQE frame in its completion report. The Reviewer checks for it on every job.
+4. **Completion Gate** — before declaring done, restate each criterion, cite its evidence, grade the evidence strength, and declare MET or NOT MET. Any criterion without STRONG or MODERATE evidence stays open.
+
+Every deliverable must include an OQE frame in its completion report. The Reviewer checks for it on every job and will FLAG any submission with fewer than 5 criteria or vague/untestable criteria.
 
 Full explanation in `docs/OQE_DISCIPLINE.md`.
 
