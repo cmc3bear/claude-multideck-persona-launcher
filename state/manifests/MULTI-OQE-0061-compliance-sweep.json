@@ -1,0 +1,17 @@
+{
+  "job_id": "MULTI-OQE-0061",
+  "criterion": "§11/§12 compliance backfill on active MULTIDECK jobs",
+  "executed_at": "2026-04-21T00:30:00Z",
+  "executed_by": "Architect",
+  "jobs_patched": [
+    "MULTI-DOCS-0050",
+    "MULTI-PERSONA-0051",
+    "MULTI-GOV-0052"
+  ],
+  "added_fields": [
+    "problem",
+    "criteria (5 cited)",
+    "oqe_version"
+  ],
+  "notes": "MULTI-PERSONA-0051 also marked submitted because its work was already completed in a prior pass and verified post-hoc."
+}

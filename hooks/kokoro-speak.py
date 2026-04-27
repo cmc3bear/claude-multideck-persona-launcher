@@ -1,13 +1,22 @@
 """Kokoro TTS speech worker — reads voice config + text from file, generates audio, plays via ffplay.
 
-Updates v2:
-- Voice announcements: prepends callsign to the text so each persona introduces itself
-- Playback queueing: uses an atomic mkdir lock so multiple Claude sessions don't overlap audio
+Updates v3 (MULTI-FIX-0051):
+- Playback moved to a directory-backed priority queue (kokoro_queue.py).
+- Enqueuers render audio then enqueue and attempt to become the drainer.
+- Only one drainer plays audio at a time; the drainer handles everything waiting.
+- Priority lane: --priority p0 items are never evicted.
+- Spillover: normal items beyond MAX_NORMAL_DEPTH (12) are persisted to spillover/ and replayed.
+- Retry: one retry on ffplay failure before final discard.
+- Stats: counters + depths persisted to stats.json (exposed via /api/kokoro/stats).
 
-MultiDeck framework: sanitized for public distribution. No custom voice tensors by default.
-Users can add their own tensors via the CUSTOM_VOICES pattern in kokoro-speak.py.
+Earlier updates:
+- Voice announcements: prepends callsign to the text so each persona introduces itself.
+- MultiDeck framework: sanitized for public distribution. No custom voice tensors by default.
+- Users can add their own tensors via the CUSTOM_VOICES pattern below.
 """
 import sys, os, json, tempfile, subprocess, time
+
+from kokoro_queue import enqueue as queue_enqueue, drain as queue_drain, play_ffplay
 
 # Custom voice configs with post-processing chains
 # Add your custom voice tensors here. Example:
@@ -20,37 +29,6 @@ import sys, os, json, tempfile, subprocess, time
 #     "reverb_mix": 0.2,
 # }
 CUSTOM_VOICES = {}
-
-# Atomic mutex via mkdir — prevents overlapping audio across parallel Claude sessions
-LOCK_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".kokoro-speak-lock")
-
-def acquire_playback_lock(timeout=600):
-    """Atomic mkdir-based mutex. Returns when lock acquired, raises on timeout."""
-    start = time.time()
-    while True:
-        try:
-            os.mkdir(LOCK_DIR)
-            return
-        except FileExistsError:
-            elapsed = time.time() - start
-            if elapsed > timeout:
-                # Stale lock — force acquire
-                try:
-                    os.rmdir(LOCK_DIR)
-                except OSError:
-                    pass
-                try:
-                    os.mkdir(LOCK_DIR)
-                    return
-                except OSError:
-                    pass
-            time.sleep(0.2)
-
-def release_playback_lock():
-    try:
-        os.rmdir(LOCK_DIR)
-    except OSError:
-        pass
 
 def apply_post_processing(wav_path, custom_cfg, session_id):
     """Apply ffmpeg post-processing chain for custom voices (dry + reverb layer mix)."""
@@ -90,9 +68,34 @@ def apply_post_processing(wav_path, custom_cfg, session_id):
         return final_path
     return wav_path
 
+def _parse_args(argv):
+    """Accept: kokoro-speak.py <text_file> [session_id] [--priority p0|normal]
+
+    --priority is optional; defaults to normal. Order of positional args is unchanged
+    for backwards compatibility with the existing Stop-hook caller.
+    """
+    positional = []
+    priority = 'normal'
+    i = 0
+    while i < len(argv):
+        a = argv[i]
+        if a == '--priority' and i + 1 < len(argv):
+            priority = argv[i + 1]
+            i += 2
+            continue
+        positional.append(a)
+        i += 1
+    if priority not in ('p0', 'normal'):
+        priority = 'normal'
+    text_file = positional[0] if positional else None
+    session_id = positional[1] if len(positional) > 1 else None
+    return text_file, session_id, priority
+
+
 def main():
-    text_file = sys.argv[1]
-    session_id = sys.argv[2] if len(sys.argv) > 2 else None
+    text_file, session_id, priority = _parse_args(sys.argv[1:])
+    if not text_file:
+        return
 
     with open(text_file, 'r', encoding='utf-8') as f:
         text = f.read().strip()
@@ -186,23 +189,40 @@ def main():
     # Save a copy to tts-output/ for the audio feed dashboard
     save_to_feed(wav_path, callsign)
 
-    # Acquire the playback mutex — this is the critical section that serializes audio
-    acquire_playback_lock()
+    # Enqueue for playback. queue_enqueue MOVES the wav into the queue dir;
+    # if enqueue fails we fall back to direct playback to avoid silent drop.
     try:
-        CREATE_NO_WINDOW = 0x08000000
-        subprocess.run(
-            ['ffplay', '-nodisp', '-autoexit', '-loglevel', 'quiet', wav_path],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            creationflags=CREATE_NO_WINDOW
+        queue_enqueue(
+            wav_path,
+            callsign=callsign,
+            priority=priority,
+            session_id=session_id or '',
         )
-    finally:
-        release_playback_lock()
+    except Exception:
+        # Degraded fallback — queue layer unavailable, play directly.
+        CREATE_NO_WINDOW = 0x08000000
         try:
-            os.remove(wav_path)
-            os.remove(text_file)
-        except:
-            pass
+            subprocess.run(
+                ['ffplay', '-nodisp', '-autoexit', '-loglevel', 'quiet', wav_path],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                creationflags=CREATE_NO_WINDOW,
+            )
+        finally:
+            try: os.remove(wav_path)
+            except OSError: pass
+            try: os.remove(text_file)
+            except OSError: pass
+        return
+
+    # Try to become the drainer. If another process holds the lock, they'll play
+    # our item. If we get the lock, we drain everything waiting (ours + any
+    # queued by concurrent sessions).
+    try:
+        queue_drain(play_ffplay)
+    finally:
+        try: os.remove(text_file)
+        except OSError: pass
 
 
 def save_to_feed(wav_path, callsign):

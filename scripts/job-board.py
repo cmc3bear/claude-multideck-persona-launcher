@@ -4,7 +4,7 @@
 Job creation, assignment, review, and completion tracking for Dispatch agents.
 
 Commands:
-  python job-board.py create <subject> [--assigned-to <agent>] [--priority P0|P1|P2|P3] [--depends-on <job-id>] [--problem "what is wrong"] [--criteria "criterion 1" --criteria "criterion 2" ...]
+  python job-board.py create <subject> [--assigned-to <agent>] [--priority P0|P1|P2|P3] [--depends-on <job-id>]
   python job-board.py list [--status <status>] [--agent <agent>]
   python job-board.py assign <job-id> <agent>
   python job-board.py accept <job-id>
@@ -35,6 +35,28 @@ from contextlib import contextmanager
 SCRIPT_DIR = Path(__file__).resolve().parent
 FRAMEWORK_ROOT = SCRIPT_DIR.parent
 JOB_BOARD_FILE = FRAMEWORK_ROOT / "state" / "job-board.json"
+
+# Auto-Redline review queue. Per OQE_DISCIPLINE.md §14 the review gate is auto-triggered
+# on submit; the marker is the hand-off contract between the submitting agent and the
+# (possibly out-of-process) Redline reviewer. See docs/REVIEW_WORKFLOW.md.
+PENDING_REVIEWS_DIR = FRAMEWORK_ROOT / "state" / "pending-reviews"
+REDLINE_PROMPT_TEMPLATE = (
+    FRAMEWORK_ROOT.parent / "dispatch" / "scripts" / "redline-review-prompt.md"
+)
+
+
+def _board_key_from_path(board_file):
+    """Return the board key string used in marker files (e.g. 'multideck' or 'default')."""
+    bf = board_file or JOB_BOARD_FILE
+    if bf == JOB_BOARD_FILE:
+        return "default"
+    stem = bf.stem  # e.g. 'job-board-multideck'
+    return stem.replace("job-board-", "") or "default"
+
+
+def _pending_marker_path(job_id):
+    """Path to the per-job marker file in state/pending-reviews/."""
+    return PENDING_REVIEWS_DIR / f"{job_id}.json"
 
 
 def job_board_path(project=None):
@@ -103,13 +125,57 @@ def save_job_board(data, board_file=None):
         json.dump(data, f, indent=2)
 
 
-def next_job_id(board_file=None):
-    """Get and increment next job ID."""
+# Per OQE 2.0 §13 project_worktype_job_ids: IDs must be PROJECT-WORKTYPE-####.
+# Map state file → PROJECT code (derived from filename stem).
+def _project_code_from_board(board_file):
+    """Return the PROJECT code for a board file, e.g. job-board-multideck.json -> MULTI."""
+    if board_file is None:
+        return "WS"
+    stem = board_file.stem  # e.g. "job-board-multideck" or "job-board"
+    if stem == "job-board":
+        return "WS"
+    key = stem.replace("job-board-", "").lower()
+    # Canonical project code map. Extend here when adding new project boards.
+    code_map = {"multideck": "MULTI", "planex-core": "PLANEX", "oqe-labs": "OQE", "workspace": "WS"}
+    return code_map.get(key, key.upper().replace("-", ""))
+
+
+# Valid WORKTYPE codes per OQE 2.0 §13. Keep this list authoritative — reject unknown worktypes
+# at create time so the taxonomy doesn't drift.
+VALID_WORKTYPES = {
+    "INFRA", "OQE", "DOCS", "PERSONA", "GOV", "UI", "API", "PIPE", "DATA",
+    "TPL", "MCP", "REV", "FIX", "FEAT", "RESEARCH", "AUDIT",
+}
+
+
+def next_job_id(board_file=None, worktype=None):
+    """Get and increment next job ID.
+
+    OQE 2.0 §13: when a worktype is supplied, emit PROJECT-WORKTYPE-#### format.
+    Falls back to bare integer for backward compatibility when no worktype is given
+    (legacy callers; a warning is printed so the caller fixes it).
+    """
     board = load_job_board(board_file)
-    job_id = board["meta"]["next_job_id"]
+    n = board["meta"]["next_job_id"]
     board["meta"]["next_job_id"] += 1
     save_job_board(board, board_file)
-    return str(job_id)
+    if worktype:
+        wt = worktype.upper()
+        if wt not in VALID_WORKTYPES:
+            raise ValueError(
+                f"Unknown worktype '{worktype}'. Valid: {sorted(VALID_WORKTYPES)}. "
+                f"Extend VALID_WORKTYPES in scripts/job-board.py if a new taxonomy is needed."
+            )
+        project_code = _project_code_from_board(board_file or JOB_BOARD_FILE)
+        return f"{project_code}-{wt}-{int(n):04d}"
+    # Legacy path — issue a deprecation warning but still generate a bare int so old callers keep working.
+    print(
+        f"WARN: job-board.py next_job_id called without --worktype. "
+        f"Per OQE 2.0 §13 project_worktype_job_ids, IDs must be PROJECT-WORKTYPE-####. "
+        f"This path is deprecated and will be removed.",
+        file=sys.stderr,
+    )
+    return str(n)
 
 
 def find_job(job_id, board_file=None):
@@ -121,40 +187,139 @@ def find_job(job_id, board_file=None):
     return None
 
 
-def cmd_create(subject, assigned_to=None, priority="P2", depends_on=None, criteria=None, problem=None, board_file=None):
-    """Create a new job."""
-    job_id = next_job_id(board_file)
+# OQE 2.0 §11 — citation regex: criterion must reference a §N anchor OR a file.
+# Kept in sync with dispatch/dashboard/server.cjs validateJobOqe2() so gate behavior matches.
+CITATION_RX = re.compile(r"§\d+|[A-Za-z_-]+\.(md|ts|tsx|js|cjs|mjs|py|json|ps1|bat)(#|\b)")
+
+
+def _load_criteria_from_file(path):
+    """Load criteria from a newline-delimited text file (one per line, blanks ignored).
+
+    JSON arrays are also accepted for callers that prefer structured input.
+    """
+    data = Path(path).read_text(encoding="utf-8")
+    data = data.strip()
+    if data.startswith("["):
+        items = json.loads(data)
+        return [str(x).strip() for x in items if str(x).strip()]
+    return [line.strip() for line in data.splitlines() if line.strip() and not line.strip().startswith("#")]
+
+
+def validate_creation_gate(subject, problem, criteria, oqe_version, worktype):
+    """OQE 2.0 creation gate per OQE_DISCIPLINE.md §14.
+
+    Returns (ok, violations). Each violation carries capability + section + detail so the
+    caller can surface a specific rule name per §11 linkable_citations_only applied to error output.
+    """
+    violations = []
+    if not subject or not subject.strip():
+        violations.append({
+            "capability": "subject_required",
+            "section": "§14",
+            "detail": "subject is empty",
+        })
+    if not problem or not problem.strip():
+        violations.append({
+            "capability": "problem_statement_enforced",
+            "section": "§11",
+            "detail": "problem field is empty or missing — per §11 every job MUST state what is wrong and why it matters",
+        })
+    if not isinstance(criteria, list):
+        criteria = [] if not criteria else [criteria]
+    if len(criteria) < 5:
+        violations.append({
+            "capability": "minimum_5_criteria_enforced",
+            "section": "§11",
+            "detail": f"criteria count {len(criteria)} < 5 — per §11 the creation gate requires a minimum of 5 testable criteria",
+        })
+    uncited = [i for i, c in enumerate(criteria) if not CITATION_RX.search(str(c))]
+    if uncited:
+        violations.append({
+            "capability": "linkable_citations_only",
+            "section": "§11",
+            "detail": f"{len(uncited)} of {len(criteria)} criteria have no §N or file citation — criteria indices: {uncited}",
+        })
+    if not oqe_version:
+        violations.append({
+            "capability": "oqe_version_declaration",
+            "section": "§12",
+            "detail": "oqe_version is missing — per §12 every governed artifact MUST declare its version",
+        })
+    if not worktype:
+        violations.append({
+            "capability": "project_worktype_job_ids",
+            "section": "§13",
+            "detail": "--worktype is required under OQE 2.0 for PROJECT-WORKTYPE-#### IDs",
+        })
+    return (len(violations) == 0, violations)
+
+
+def cmd_create(subject, assigned_to=None, priority="P2", depends_on=None, board_file=None,
+               worktype=None, problem=None, criteria_file=None, oqe_version="2.0",
+               bypass_gate=False):
+    """Create a new job.
+
+    OQE 2.0 §14 creation gate — enforces problem, 5-criteria minimum, §N citations,
+    oqe_version, and PROJECT-WORKTYPE-#### IDs at author time. Rejects with specific
+    capability violations (§11/§12/§13) unless --bypass-gate is set (logged).
+    """
+    criteria = []
+    if criteria_file:
+        try:
+            criteria = _load_criteria_from_file(criteria_file)
+        except Exception as e:
+            print(f"ERROR: could not read --criteria-file {criteria_file}: {e}", file=sys.stderr)
+            sys.exit(2)
+
+    ok, violations = validate_creation_gate(subject, problem, criteria, oqe_version, worktype)
+    if not ok and not bypass_gate:
+        print("OQE 2.0 creation gate FAILED — job NOT created.", file=sys.stderr)
+        print("Per OQE_DISCIPLINE.md §14 the creation gate blocks non-compliant jobs.", file=sys.stderr)
+        for v in violations:
+            print(f"  [{v['section']} {v['capability']}] {v['detail']}", file=sys.stderr)
+        print("", file=sys.stderr)
+        print("Fix the violations above and retry, or pass --bypass-gate to override (logged as non-compliant).", file=sys.stderr)
+        sys.exit(3)
+    if not ok and bypass_gate:
+        print(f"WARN: --bypass-gate set, creating non-compliant job with {len(violations)} violations (logged).", file=sys.stderr)
+
+    job_id = next_job_id(board_file, worktype=worktype)
     job = {
         "id": job_id,
+        "oqe_version": oqe_version or "2.0",  # §12 oqe_version_declaration — set at creation time
         "subject": subject,
-        "problem": problem or "",
+        "problem": problem or "",  # §11 problem_statement_enforced
         "assigned_to": assigned_to or "unassigned",
         "priority": priority,
         "status": "open",
-        "depends_on": depends_on,
-        "criteria": criteria or [],
+        "depends_on": depends_on if isinstance(depends_on, list) else ([depends_on] if depends_on else []),
+        "criteria": criteria,  # §11 minimum_5_criteria_enforced
         "output_path": None,
         "created_at": datetime.utcnow().isoformat(),
         "accepted_at": None,
         "submitted_at": None,
         "review_history": [],
     }
+    if not ok and bypass_gate:
+        job["creation_gate_bypassed"] = {
+            "at": datetime.utcnow().isoformat(),
+            "violations": violations,
+            "note": "Created with --bypass-gate; non-compliant per §14. Must be brought to compliance before review gate.",
+        }
 
     board = load_job_board(board_file)
     board["jobs"].append(job)
     save_job_board(board, board_file)
 
     print(f"Created job {job_id}: {subject}")
-    if problem:
-        print(f"  Problem: {problem[:80]}{'...' if len(problem) > 80 else ''}")
     if assigned_to:
         print(f"  Assigned to: {assigned_to}")
     if priority:
         print(f"  Priority: {priority}")
-    if criteria:
-        print(f"  Criteria ({len(criteria)}):")
-        for i, c in enumerate(criteria, 1):
-            print(f"    {i}. {c}")
+    if ok:
+        print(f"  OQE 2.0 creation gate: PASS ({len(criteria)} criteria, all cited, problem present)")
+    else:
+        print(f"  OQE 2.0 creation gate: BYPASSED — {len(violations)} violations logged on job record")
 
 
 def cmd_list(status=None, agent=None, board_file=None):
@@ -212,16 +377,52 @@ def cmd_accept(job_id, board_file=None):
 
 
 def cmd_submit(job_id, output_path, board_file=None):
-    """Agent submits completed job for review."""
+    """Agent submits completed job for review.
+
+    Per OQE_DISCIPLINE.md §14 / docs/REVIEW_WORKFLOW.md the Redline gate auto-triggers
+    on submit. We write a marker file at state/pending-reviews/<job_id>.json with the
+    populated context the redline-review-prompt.md template needs, so an operator or
+    watcher dispatch agent can spawn the reviewer with the right job data. The marker
+    is removed by cmd_review() on either --pass or --flag.
+    """
     board = load_job_board(board_file)
     for job in board["jobs"]:
         if job["id"] == str(job_id):
             job["status"] = "submitted"
             job["output_path"] = output_path
-            job["submitted_at"] = datetime.utcnow().isoformat()
+            submitted_at = datetime.utcnow().isoformat()
+            job["submitted_at"] = submitted_at
             save_job_board(board, board_file)
+
+            # Write the auto-Redline queue marker. Only happens after the status
+            # transition is persisted, so a missing job ID never produces a marker.
+            criteria_list = job.get("criteria", []) or []
+            marker = {
+                "job_id": job["id"],
+                "board_key": _board_key_from_path(board_file),
+                "oqe_version": job.get("oqe_version", "1.0"),
+                "assigned_to": job.get("assigned_to", "unassigned"),
+                "posted_by": job.get("posted_by", ""),
+                "problem": job.get("problem", ""),
+                "objective": job.get("subject", ""),
+                "criteria_count": len(criteria_list),
+                "criteria_list": criteria_list,
+                "output_path": output_path,
+                "submitted_at": submitted_at,
+                "redline_prompt_template_path": str(REDLINE_PROMPT_TEMPLATE),
+            }
+            PENDING_REVIEWS_DIR.mkdir(parents=True, exist_ok=True)
+            marker_path = _pending_marker_path(job["id"])
+            with open(marker_path, "w") as f:
+                json.dump(marker, f, indent=2)
+
             print(f"Job {job_id} submitted for review")
             print(f"  Output: {output_path}")
+            print()
+            print("Redline review queued.")
+            print(f"  Marker:   state/pending-reviews/{job['id']}.json")
+            print(f"  Template: {REDLINE_PROMPT_TEMPLATE}")
+            print("  Spawn the reviewer with the job context from the marker file.")
             return
     print(f"Job not found: {job_id}")
 
@@ -254,6 +455,15 @@ def cmd_review(job_id, verdict, note, board_file=None):
                 print(f"  Note: {note}")
 
             save_job_board(board, board_file)
+
+            # Drain the auto-Redline marker on both pass and flag — the queue must
+            # reflect what is actually awaiting review. Missing marker is fine
+            # (idempotent), but permission / IO failures must surface so we don't
+            # silently leave a stale marker in the queue.
+            try:
+                os.remove(_pending_marker_path(job["id"]))
+            except FileNotFoundError:
+                pass
             return
 
     print(f"Job not found: {job_id}")
@@ -303,14 +513,6 @@ def cmd_show(job_id, board_file=None):
             for i, review in enumerate(value, 1):
                 print(f"  {i}. {review['verdict'].upper()} — {review.get('note', '(no note)')}")
                 print(f"     {review['timestamp']}")
-        elif key == "criteria" and isinstance(value, list):
-            print(f"{key} ({len(value)}):")
-            for i, c in enumerate(value, 1):
-                print(f"  {i}. {c}")
-        elif key == "problem" and value:
-            print(f"{key:<20}")
-            for line in (value[i:i+80] for i in range(0, len(value), 80)):
-                print(f"  {line}")
         else:
             print(f"{key:<20} {value}")
 
@@ -336,10 +538,6 @@ def cmd_validate(board_file=None):
         for f in create_fields:
             if not j.get(f):
                 missing.append(f)
-        # OQE criteria check: minimum 5 required
-        criteria = j.get("criteria", [])
-        if len(criteria) < 5:
-            missing.append(f"criteria (has {len(criteria)}, need 5+)")
         # Check close-time fields on closed/completed jobs
         if j.get("status") in ("closed", "completed", "passed", "approved"):
             for f in close_fields:
@@ -366,7 +564,6 @@ def cmd_validate(board_file=None):
     if issues > 0:
         print(f"  {issues} job(s) have missing required fields.")
         print(f"  See docs/WORKSPACE_GOVERNANCE.md — Job Board Field Requirements")
-        print(f"  OQE criteria minimum: 5 per job (docs/OQE_DISCIPLINE.md)")
     else:
         print(f"  All jobs pass validation.")
     print()
@@ -384,12 +581,38 @@ def main():
     create_parser.add_argument("--assigned-to", default=None)
     create_parser.add_argument("--priority", default="P2", choices=["P0", "P1", "P2", "P3"])
     create_parser.add_argument("--depends-on", default=None)
-    create_parser.add_argument("--criteria", action="append", default=None,
-                               metavar="CRITERION",
-                               help="OQE success criterion (repeat flag for each, minimum 5 required)")
-    create_parser.add_argument("--problem", default=None,
-                               metavar="PROBLEM",
-                               help="OQE problem statement: what is wrong and why it matters")
+    create_parser.add_argument(
+        "--worktype",
+        default=None,
+        help=(
+            "OQE 2.0 §13: work type code (INFRA, OQE, DOCS, PERSONA, GOV, UI, API, PIPE, DATA, "
+            "TPL, MCP, REV, FIX, FEAT, RESEARCH, AUDIT). When set, the generated ID follows "
+            "PROJECT-WORKTYPE-#### format. Strongly recommended on all new jobs."
+        ),
+    )
+    create_parser.add_argument(
+        "--problem",
+        default=None,
+        help="OQE 2.0 §11: problem statement — what is wrong and why it matters. Required by creation gate.",
+    )
+    create_parser.add_argument(
+        "--criteria-file",
+        default=None,
+        help=(
+            "OQE 2.0 §11: path to a file with testable criteria (one per line, or a JSON array). "
+            "Creation gate requires minimum 5 criteria, each citing a §N anchor or a file path."
+        ),
+    )
+    create_parser.add_argument(
+        "--oqe-version",
+        default="2.0",
+        help="OQE 2.0 §12: version declaration on the job record (default: 2.0).",
+    )
+    create_parser.add_argument(
+        "--bypass-gate",
+        action="store_true",
+        help="Override the creation gate. Job is still created but marked non-compliant; violations are recorded on the job.",
+    )
 
     # list
     list_parser = subparsers.add_parser("list")
@@ -441,7 +664,18 @@ def main():
 
     try:
         if args.command == "create":
-            cmd_create(args.subject, args.assigned_to, args.priority, args.depends_on, args.criteria, args.problem, bf)
+            cmd_create(
+                args.subject,
+                assigned_to=args.assigned_to,
+                priority=args.priority,
+                depends_on=args.depends_on,
+                board_file=bf,
+                worktype=args.worktype,
+                problem=args.problem,
+                criteria_file=args.criteria_file,
+                oqe_version=args.oqe_version,
+                bypass_gate=args.bypass_gate,
+            )
         elif args.command == "list":
             cmd_list(args.status, args.agent, bf)
         elif args.command == "assign":

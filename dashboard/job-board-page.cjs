@@ -8,9 +8,14 @@ const path = require('path');
 function getJobBoards(stateDir) {
   const boards = [];
 
-  // 1. Local state directory — job-board-*.json files
+  // 1. Local state directory — job-board-*.json files.
+  // Reject anything with .bak in the name so backup snapshots don't appear
+  // as phantom boards (e.g., job-board-multideck.bak-*-alternatives.json
+  // would otherwise render the pre-submission state of a job that has since
+  // closed, surfaced as a stale "open" entry on the dashboard).
   try {
-    const files = fs.readdirSync(stateDir).filter(f => f.startsWith('job-board') && f.endsWith('.json'));
+    const files = fs.readdirSync(stateDir)
+      .filter(f => f.startsWith('job-board') && f.endsWith('.json') && !/\.bak[-.]/i.test(f) && !/\.backup[-.]/i.test(f));
     for (const file of files) {
       try {
         const data = JSON.parse(fs.readFileSync(path.join(stateDir, file), 'utf-8'));
@@ -43,7 +48,8 @@ function scanForBoards(dir, boards, maxDepth) {
     for (const entry of entries) {
       const full = path.join(dir, entry.name);
       if (entry.isFile()) {
-        if ((entry.name === 'JOB_BOARD.json' || (entry.name.startsWith('job-board') && entry.name.endsWith('.json')))) {
+        if ((entry.name === 'JOB_BOARD.json' || (entry.name.startsWith('job-board') && entry.name.endsWith('.json')))
+            && !/\.bak[-.]/i.test(entry.name) && !/\.backup[-.]/i.test(entry.name)) {
           try {
             const data = JSON.parse(fs.readFileSync(full, 'utf-8'));
             const meta = data.meta || {};

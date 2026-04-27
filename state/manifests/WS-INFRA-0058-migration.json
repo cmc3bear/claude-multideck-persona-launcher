@@ -1,0 +1,77 @@
+{
+  "job_id": "WS-INFRA-0058",
+  "oqe_version": "2.0",
+  "executed_at": "2026-04-21T07:20:00Z",
+  "executed_by": "Architect",
+  "spec_ref": "OQE_DISCIPLINE.md §13 project_worktype_job_ids",
+  "source_file": "dispatch/state/job-board.json",
+  "mappings": [
+    {
+      "old_id": "MULTI-0054",
+      "new_id": "MULTI-UI-0054",
+      "subject": "Redesign /jobs dashboard — 3 variations",
+      "status": "accepted",
+      "assigned_to": "launcher-engineer"
+    },
+    {
+      "old_id": "MULTI-0052",
+      "new_id": "MULTI-FIX-0052",
+      "subject": "Fix SSE reconnect storm on /api/job-board-stream",
+      "status": "flagged",
+      "assigned_to": "engineer"
+    },
+    {
+      "old_id": "MULTI-0051",
+      "new_id": "MULTI-FIX-0051",
+      "subject": "Kokoro queue drops announcements under heavy load",
+      "status": "accepted",
+      "assigned_to": "voice-technician"
+    },
+    {
+      "old_id": "MULTI-0047",
+      "new_id": "MULTI-FEAT-0047",
+      "subject": "Commercial: 'How Do You Claude' 60s extended cut",
+      "status": "open",
+      "assigned_to": "commercial-producer"
+    },
+    {
+      "old_id": "MULTI-0046",
+      "new_id": "MULTI-UI-0046",
+      "subject": "Refactor launcher.html — split 2750-line monolith",
+      "status": "open",
+      "assigned_to": "launcher-engineer"
+    },
+    {
+      "old_id": "MULTI-0045",
+      "new_id": "MULTI-API-0045",
+      "subject": "Add /api/actions PATCH endpoint",
+      "status": "flagged",
+      "assigned_to": "engineer"
+    },
+    {
+      "old_id": "WS-0044",
+      "new_id": "WS-FEAT-0044",
+      "subject": "Calendar: sync Google Workspace via gcal_read",
+      "status": "flagged",
+      "assigned_to": "dispatch"
+    },
+    {
+      "old_id": "MULTI-0041",
+      "new_id": "MULTI-FEAT-0041",
+      "subject": "Add 'agent on tilt' detector to dispatch-log",
+      "status": "open",
+      "assigned_to": "resonance"
+    },
+    {
+      "old_id": "MULTI-0040",
+      "new_id": "MULTI-PERSONA-0040",
+      "subject": "Persona-Author: draft 'Archivist' persona",
+      "status": "open",
+      "assigned_to": "persona-author"
+    }
+  ],
+  "cross_references_rewritten": "depends_on, overlaps_with (id field), blocks arrays across all jobs via migration map",
+  "dashboard_data_updated": "dispatch/dashboard/job-board/data/jobs.js — 9 ID occurrences rewritten",
+  "backward_compat_shim": "DISPATCH_LOG.json entries referencing old IDs remain intact (historical record per §13 closed-jobs exemption); MEMORY.md not affected (no hard refs to these IDs found in grep). Future grep for legacy IDs should use the union set (old OR new) for a sunset period until all consumers have updated.",
+  "rollback": "Restore dispatch/state/job-board.json.bak-2026-04-21-WS-INFRA-0058 and dispatch/dashboard/job-board/data/jobs.js.bak-2026-04-21-WS-INFRA-0058"
+}

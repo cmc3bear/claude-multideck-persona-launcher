@@ -6,13 +6,77 @@ This document describes the review process, decision criteria, feedback loops, a
 
 ---
 
+## Auto-Redline Review Methodology
+
+As of OQE 2.0, the review gate is triggered **automatically** when a job reaches `submitted` status. Review is no longer a manually initiated step — it runs as a **sub-process of the original job**, not a separate job.
+
+### How Auto-Review Works
+
+1. **Trigger:** When a job's status transitions to `submitted`, a review command is automatically queued via `launch-queue.json`.
+2. **Sub-process spawn:** The Redline review spawns as a sub-process of the submitting job. No separate review job is created — the review is part of the original job's lifecycle.
+3. **Gate 2 checks:** The Redline sub-agent runs all §14 Gate 2 checks from `OQE_DISCIPLINE.md` against the submitted work.
+4. **PASS flow:** Job auto-closes, all dependent jobs unblock, and SSE pushes the status update to connected clients (including mobile devices).
+5. **FLAG flow:** The submitting agent gets one fix loop. After the fix, the Redline sub-agent re-reviews. If it still fails: **FAIL-ESCALATE** to user. No further automated loops.
+6. **Review prompt:** The review prompt template lives at `dispatch/scripts/redline-review-prompt.md`.
+
+### What Didn't Change
+
+The project reviewer (human or senior agent) retains **final determination of validity**. Auto-Redline accelerates the mechanical review process but does not replace judgment authority. The five-gate review criteria, the one-fix-loop rule, and the escalation protocol all remain intact.
+
+---
+
+## Auto-Redline Queue Markers
+
+When `scripts/job-board.py submit <job_id> --output <path>` runs successfully, the CLI writes a queue marker file at `state/pending-reviews/{job_id}.json`. The marker is the hand-off contract between the submitting agent and the (possibly out-of-process) Redline reviewer. Without it, the gate is silently optional — the operator has no idea which jobs are waiting.
+
+### Lifecycle
+
+1. **Created on submit.** `cmd_submit()` writes the marker file *after* the status transition is persisted. If the submit gate rejects (job not found, etc.), no marker is written.
+2. **Consumed by the reviewer.** An operator or watcher dispatch agent reads the marker, populates the Redline prompt template at `dispatch/scripts/redline-review-prompt.md`, and runs the review.
+3. **Removed on review.** `cmd_review()` removes the marker on both `--pass` and `--flag` paths. Missing-marker is not an error (idempotent).
+
+### Marker File Shape
+
+Each marker is a single JSON object. Field list, with the source field on the job record:
+
+| Key | Source | Notes |
+|---|---|---|
+| `job_id` | `job.id` | The PROJECT-WORKTYPE-#### identifier. |
+| `board_key` | derived from `--project` | `multideck`, `oqe-labs`, etc. `default` for unscoped. |
+| `oqe_version` | `job.oqe_version` | OQE version declared on the job (§12). |
+| `assigned_to` | `job.assigned_to` | The producing agent. |
+| `posted_by` | `job.posted_by` | The author (may be empty for legacy jobs). |
+| `problem` | `job.problem` | §11 problem statement. |
+| `objective` | `job.subject` | The subject line, used as the objective in the prompt. |
+| `criteria_count` | `len(job.criteria)` | Number of testable criteria (must be ≥5 under OQE 2.0). |
+| `criteria_list` | `job.criteria` | Array of criterion strings, one per gate. |
+| `output_path` | from `--output` | Path to the deliverable being reviewed. |
+| `submitted_at` | ISO timestamp | UTC, set at submit time. |
+| `redline_prompt_template_path` | absolute path | Where the Redline prompt template lives. |
+
+### Spawning the Reviewer
+
+To run a review by hand:
+
+1. `cat state/pending-reviews/<job_id>.json` to see the populated context.
+2. Open the prompt template at the `redline_prompt_template_path` field.
+3. Substitute the `{{job_id}}`, `{{board_key}}`, `{{problem}}`, `{{objective}}`, `{{criteria_count}}`, `{{criteria_list}}`, etc. placeholders with the marker values.
+4. Hand the resulting prompt to a Redline sub-agent.
+5. Record the verdict via `python scripts/job-board.py --project <board_key> review <job_id> --pass|--flag --note "<text>"` — this drains the marker.
+
+### .gitignore
+
+Markers themselves are ignored (`state/pending-reviews/*.json`); the directory is tracked via `state/pending-reviews/.gitkeep` so a fresh checkout has the queue location ready.
+
+---
+
 ## The Review Process
 
 ### Jobs Flow to Review
 
-When an agent submits a job (transitions from `active` to `review`):
+When an agent submits a job (status transitions to `submitted`):
 
-1. Job appears in Reviewer's queue
+1. Auto-Redline review spawns as a sub-process (see above)
 2. Reviewer reads:
    - Original objective (O-Frame)
    - Agent's submission summary

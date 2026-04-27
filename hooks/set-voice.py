@@ -3,7 +3,13 @@
 Usage: python set-voice.py <persona_callsign>
        python set-voice.py --voice <voice_id> --lang <lang_code> [--speed <speed>]
 
-Reads CLAUDE_CODE_SSE_PORT from env to write session-specific config.
+Writes a per-session voice config keyed by the active Claude Code session UUID. The
+session UUID is discovered by inspecting the most-recently-modified transcript JSONL
+under ~/.claude/projects/<encoded-cwd>/, which the Stop hook also sees in its stdin
+payload — that lets parallel Claude Code sessions in the same CWD each have their
+own voice without overwriting a shared file. Falls back to CLAUDE_CODE_SSE_PORT,
+then a shared file, if discovery fails.
+
 Each persona entry includes a 'callsign' field that the TTS hook prepends to the text
 so each voice introduces itself when speaking.
 
@@ -61,21 +67,63 @@ def main():
             print(f"Available: {', '.join(VOICE_MAP.keys())}")
             sys.exit(1)
 
-    # Determine session-specific config path
-    port = os.environ.get("CLAUDE_CODE_SSE_PORT")
     hooks_dir = os.path.dirname(os.path.abspath(__file__))
+    session_id = _discover_session_id()
+    port = os.environ.get("CLAUDE_CODE_SSE_PORT")
+
+    paths_written = []
+    if session_id:
+        paths_written.append(os.path.join(hooks_dir, f"voice-config-{session_id}.json"))
     if port:
-        config_path = os.path.join(hooks_dir, f"voice-config-{port}.json")
+        paths_written.append(os.path.join(hooks_dir, f"voice-config-{port}.json"))
+    if not paths_written:
+        paths_written.append(os.path.join(hooks_dir, "voice-config.json"))
+
+    for config_path in paths_written:
+        with open(config_path, "w") as f:
+            json.dump(config, f, indent=2)
+            f.write("\n")
+
+    if session_id:
+        label = f" (session {session_id[:8]}…)"
+    elif port:
+        label = f" (port {port})"
     else:
-        config_path = os.path.join(hooks_dir, "voice-config.json")
-
-    with open(config_path, "w") as f:
-        json.dump(config, f, indent=2)
-        f.write("\n")
-
-    label = f" (port {port})" if port else " (shared fallback)"
+        label = " (shared fallback)"
     cs = f" as {config['callsign']}" if config.get('callsign') else ""
     print(f"Voice set: {config['voice']} [{config['lang']}, {config['speed']}x]{cs}{label}")
+
+
+def _discover_session_id():
+    """Find the active Claude Code session UUID by locating the most-recently-modified
+    transcript JSONL in this CWD's project dir. Returns None on any failure.
+    """
+    try:
+        ppid = os.getppid()
+        try:
+            cwd = os.readlink(f"/proc/{ppid}/cwd")
+        except OSError:
+            cwd = os.getcwd()
+        encoded = cwd.replace("/", "-")
+        proj_dir = os.path.expanduser(f"~/.claude/projects/{encoded}")
+        if not os.path.isdir(proj_dir):
+            return None
+        candidates = []
+        for fn in os.listdir(proj_dir):
+            if not fn.endswith(".jsonl"):
+                continue
+            full = os.path.join(proj_dir, fn)
+            try:
+                candidates.append((os.path.getmtime(full), fn[:-6]))
+            except OSError:
+                continue
+        if not candidates:
+            return None
+        candidates.sort(reverse=True)
+        return candidates[0][1]
+    except Exception:
+        return None
+
 
 if __name__ == "__main__":
     main()

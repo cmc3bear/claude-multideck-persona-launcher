@@ -5,27 +5,29 @@ All notable changes to MultiDeck will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.0] - 2026-04-19
-
-### Added
-
-- **OQE 5-criteria minimum** — Every Objective must now include a minimum of 5 success criteria functioning as a test plan. Each criterion must be specific (independently verifiable), observable (not subjective), and traceable to a piece of evidence.
-- **Bad-criteria rejection list** — Vague criteria ("works correctly", "looks good", "covers the important stuff", "documentation is clear", "looks professional") are explicitly rejected by name in `docs/OQE_DISCIPLINE.md` with a rewrite guide.
-- **Completion Gate phase** — New mandatory OQE phase: restate each criterion with evidence citation, grade evidence strength, declare MET or NOT MET before closing any task.
-- **1:1 evidence mapping rule** — Every criterion must have at least one STRONG or MODERATE evidence item. No criterion closes on LIMITED evidence alone.
-- **`--criteria` flag for job-board.py** — `create` command now accepts repeated `--criteria "..."` flags to store OQE criteria in the job board entry. Criteria are displayed in `show` output and validated in `validate`.
-- **Criteria count validation** — `job-board.py validate` now checks that all jobs have minimum 5 criteria, reports count deficit alongside other missing fields.
-- **Reviewer 6-gate review** — Reviewer gate expanded from 5 to 6 gates. New checks: criteria count minimum, criteria testability (observable and specific), 1:1 evidence mapping, and Completion Gate presence.
-- **"What's New" section in README** — Version history section near the top of README shows capability additions over time.
+## [Unreleased]
 
 ### Changed
 
-- `docs/OQE_DISCIPLINE.md` — Objective section rewritten with 5-criteria minimum, test-plan framing, worked examples with 5 criteria, good vs bad criteria table, updated Qualitative (walk each criterion), Evidence (1:1 mapping), and new Completion Gate section. Review checklist expanded. Common mistakes expanded.
-- `CLAUDE.md` — OQE discipline summary updated with 5-criteria minimum, Completion Gate, and evidence mapping rule.
-- `templates/AGENT_TEMPLATE.md` — New OQE section added before Governing Documents with criteria requirements inherited by all new personas.
-- `personas/REVIEWER_AGENT.md` — Five-gate review expanded to six gates with explicit criteria count check, vague-criteria rejection list, 1:1 evidence mapping check, and Completion Gate check. Review checklist updated accordingly.
+- **`DISPATCH_LAUNCHER_TRANSPORT` default is now auto-detected** (MULTI-FEAT-0063). When the env var is unset the dashboard picks `tmux` on hosts where WSL Ubuntu, tmux, and the claude binary are all present, otherwise `wt` on Windows or `sh` on Linux/macOS. Operators with full WSL setups now get the detach/reattach-capable tmux path without opt-in. **Rollback:** set `DISPATCH_LAUNCHER_TRANSPORT=wt` to force the legacy Windows Terminal flow even on a host that could run tmux. The env var override always wins. Builds on the WSL+tmux+claude probe shipped in MULTI-UI-0064.
 
----
+### Added
+
+- **Topology B operator guide** at `docs/TMUX_TOPOLOGY.md` — keybinds, attach/detach workflow, empirical pane-count threshold (N=12 readable on a 240×60 terminal with the standard title format), and troubleshooting (MULTI-FEAT-0065)
+- **`scripts/install-wsl-kokoro-venv.sh`** — reproducible WSL Kokoro venv installer with pinned versions, idempotent, supports `--verify` (drift detection) and `--force` (rebuild). Closes the B-2 audio path portability gap from MULTI-FEAT-0055 (MULTI-OQE-0062)
+- **`scripts/measure-mnt-f-throughput.py`** — TTS-cadence and stress-mode write throughput probe for `/mnt/f` vs an ext4 baseline. R2 risk from MULTI-FEAT-0055 feasibility resolved: 23.87 MB/s sustained, p95 4ms — ~500x headroom over realistic TTS workloads (MULTI-OQE-0062)
+- **`scripts/measure-pane-threshold.sh`** — empirical pane-readability probe for tmux tiled layouts (MULTI-FEAT-0065)
+- **Persistent transport preference** in the launcher UI via `localStorage`. Selection survives reload; help glyph next to the transport row explains tmux availability state on hover/click/focus (MULTI-UI-0064)
+- **`availability_reason` field** on `GET /launcher/transports` distinguishing `available`, `wsl-not-detected`, `wsl-detected-tmux-missing`, `tmux-installed-but-no-claude`, and `platform-not-windows` (MULTI-UI-0064)
+- **ATTACH/DETACH HELP modal** in the launcher, visible only when tmux is the selected transport, with the top keybinds and a pointer to `docs/TMUX_TOPOLOGY.md` (MULTI-FEAT-0065)
+- **`scripts/test-mutex-cross-os.{py,sh}` skew correction** — `--barrier-ts` busy-wait gate eliminates cold-start asymmetry between WSL Linux Python and powershell-spawned Windows Python; 20-round atomicity verified, bias inverted vs the MULTI-FEAT-0055 baseline confirming launch-skew was the original asymmetry source (MULTI-OQE-0062)
+- **`dispatch-agent.py remove`** now kills the matching tmux pane in the shared `multideck` session (when running) and rebalances the tiled layout so other persona PIDs are preserved (MULTI-FEAT-0065)
+
+- **WSL Ubuntu transport precondition** for tmux persona spawning (MULTI-INFRA-0056, unblocks MULTI-FEAT-0055). Claude Code CLI now installs and runs inside WSL Ubuntu, calling Windows-side Kokoro hooks via WSL Interop. No duplicate Kokoro/torch install in WSL — bridges shell out to the existing Windows kokoro-venv. The current `scripts/launch-persona.ps1` (Windows Terminal tab spawning) remains the default transport; the planned `scripts/launch-persona-tmux.sh` will use this WSL install to drive `tmux new-window` for native multiplexed persona lanes.
+- `docs/WSL_SETUP.md` — full install guide covering non-root user creation, native installer, the systemd-binfmt re-enable workaround, the WSL→Windows hook bridge, and end-to-end audio-feed verification
+- `scripts/wsl/wsl-binfmt.service` — one-shot systemd unit that re-registers WSLInterop on boot (Ubuntu disables `systemd-binfmt.service` under `systemd=true`, which silently breaks Windows .exe execution from WSL bash)
+- `scripts/wsl/wsl-stop-hook.sh` and `scripts/wsl/wsl-tool-hook.sh` — bash bridges that forward Claude Code Stop and PostToolUse events to `speak-kokoro.py` / `speak-tool-status.py` running under the Windows kokoro-venv. Sets `DISPATCH_ROOT` so MP3s land in dispatch-framework's `tts-output/` (not the legacy `dispatch/` default). Forwards `CLAUDE_CODE_SSE_PORT` through `WSLENV` so per-session voice-config isolation works across the boundary.
+- `scripts/wsl/wsl-claude-settings.json` — template `~/.claude/settings.json` that wires the bridges into Claude Code
 
 ## [0.1.2] - 2026-04-15
 

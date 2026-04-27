@@ -1,6 +1,15 @@
+<!--
+oqe_version: 2.0
+spec_source: state/oqe-version.json
+governs: Workspace-wide coordination standards; cites OQE_DISCIPLINE.md §11-§14 as the discipline substrate
+last_updated_by: Dispatch alignment pass 2026-04-20
+-->
+
 # Workspace Governance Standards
 
 **Canonical location:** `docs/WORKSPACE_GOVERNANCE.md` (this file)
+
+> **OQE 2.0 compliance**: Every job posted under these standards must carry `problem`, `oqe_version`, `depends_on`, and a minimum of 5 criteria with §N / file citations (per OQE_DISCIPLINE.md §11-§14). Legacy PROJECT-#### IDs are being migrated to PROJECT-WORKTYPE-#### by WS-INFRA-0012 / MULTI-INFRA-0014 / PLANEX-INFRA-0016.
 **Applies to:** All projects using this MultiDeck framework
 **Enforced by:** Dispatch (workspace coordinator)
 **Effective date:** 2026-04-16

@@ -2,7 +2,7 @@
 REM MultiDeck Dashboard launcher — sets env vars and starts the server.
 REM Edit these paths to match your workspace layout.
 
-set DISPATCH_PROJECTS_DIR=D:\Dev\01-ACTIVE
+set DISPATCH_PROJECTS_DIR=F:\01-ACTIVE
 set DISPATCH_WORKSPACE_ROOT=D:\Dev
 set DISPATCH_PORT=3045
 

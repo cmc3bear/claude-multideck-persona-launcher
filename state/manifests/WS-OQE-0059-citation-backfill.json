@@ -1,0 +1,20 @@
+{
+  "job_id": "WS-OQE-0059",
+  "criterion": "§11 linkable_citations_only — backfill active WORKSPACE jobs",
+  "executed_at": "2026-04-21T01:15:00Z",
+  "executed_by": "Architect",
+  "jobs_touched": [
+    "WS-INFRA-0058",
+    "MULTI-0054",
+    "MULTI-0052",
+    "MULTI-0051",
+    "MULTI-0047",
+    "MULTI-0046",
+    "MULTI-0045",
+    "WS-0044",
+    "MULTI-0041",
+    "MULTI-0040"
+  ],
+  "note": "Heuristic classifier appended one §N citation to each previously-uncited criterion. Owning agents may refine to more specific §N anchors.",
+  "regex_used": "/§\\d+|[A-Za-z_-]+\\.(md|ts|tsx|js|cjs|mjs|py|json|ps1|bat)(#|\\b)/"
+}

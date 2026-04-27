@@ -1,0 +1,197 @@
+{
+  "manifest_id": "WS-GOV-0066",
+  "manifest_kind": "oqe-2.0-upgrade",
+  "executed_by": "Architect",
+  "executed_at": "2026-04-26T18:50:00Z",
+  "spec_source": "F:/03-INFRASTRUCTURE/dispatch-framework/docs/OQE_DISCIPLINE.md §11 §12 §13",
+  "validator": "F:/03-INFRASTRUCTURE/dispatch/dashboard/server.cjs validateJobOqe2",
+  "summary": "Upgraded 13 legacy jobs across two dispatch-framework boards to OQE 2.0 compliance. Renamed 5 bare numeric IDs to PROJECT-WORKTYPE-#### format. Declared meta.oqe_version 2.0 on both boards.",
+  "boards_modified": [
+    {
+      "path": "F:/03-INFRASTRUCTURE/dispatch-framework/state/job-board.json",
+      "backup": "F:/03-INFRASTRUCTURE/dispatch-framework/state/job-board.json.bak-2026-04-26-WS-GOV-0066",
+      "meta_oqe_version_before": null,
+      "meta_oqe_version_after": "2.0",
+      "project_code_added": "DFR",
+      "jobs_upgraded": 5
+    },
+    {
+      "path": "F:/03-INFRASTRUCTURE/dispatch-framework/coordination/JOB_BOARD.json",
+      "backup": "F:/03-INFRASTRUCTURE/dispatch-framework/coordination/JOB_BOARD.json.bak-2026-04-26-WS-GOV-0066",
+      "meta_oqe_version_before": null,
+      "meta_oqe_version_after": "2.0",
+      "project_code_added": "DFR",
+      "jobs_upgraded": 8
+    }
+  ],
+  "id_renames": [
+    {
+      "old_id": "2",
+      "new_id": "DFR-UI-0002",
+      "subject": "Redesign Morning Briefing visual product and update PDF generation pipeline to new standard",
+      "worktype_rationale": "UI is the dominant deliverable (visual product + renderer); UI is registered in dispatch-framework/scripts/job-board.py VALID_WORKTYPES; DESIGN appears in §13 docs but not in the runtime VALID_WORKTYPES so UI was chosen for gate alignment",
+      "legacy_id_field_added": true,
+      "cross_references_updated": []
+    },
+    {
+      "old_id": "3",
+      "new_id": "DFR-UI-0003",
+      "subject": "Redesign Dashboard composite views and update server renderers to new standard",
+      "worktype_rationale": "UI",
+      "legacy_id_field_added": true,
+      "cross_references_updated": []
+    },
+    {
+      "old_id": "4",
+      "new_id": "DFR-UI-0004",
+      "subject": "Redesign Intelligence Brief visual format and update Relay pipeline to new standard",
+      "worktype_rationale": "UI",
+      "legacy_id_field_added": true,
+      "cross_references_updated": []
+    },
+    {
+      "old_id": "5",
+      "new_id": "DFR-UI-0005",
+      "subject": "Design Grocery Reorder visual dashboard and build rendering pipeline",
+      "worktype_rationale": "UI",
+      "legacy_id_field_added": true,
+      "cross_references_updated": []
+    },
+    {
+      "old_id": "6",
+      "new_id": "DFR-UI-0006",
+      "subject": "Design Solar Performance composite dashboard and build data pipeline",
+      "worktype_rationale": "UI",
+      "legacy_id_field_added": true,
+      "cross_references_updated": []
+    }
+  ],
+  "cross_reference_audit": {
+    "scope": "Workspace-wide grep for active references to the 5 renamed bare-numeric IDs and the 8 JOB-#### IDs in scope",
+    "result": "No active live references found outside the source boards. The few matches in venv/idna and SVG markers were unrelated single-character noise. DISPATCH_LOG.json historical references preserved per §13 closed-jobs exemption.",
+    "command_pattern": "grep -rn --include=*.json --include=*.cjs --include=*.js --include=*.py --include=*.md -E 'patterns' dispatch/ dispatch-framework/"
+  },
+  "non_renamed_legacy_ids": {
+    "scope": "JOB-0014, JOB-0016, JOB-0017, JOB-0018, JOB-0019, JOB-0020, JOB-0021, JOB-0022 — left as JOB-#### format",
+    "rationale": "WS-GOV-0066 criterion 4 explicitly enumerates only ('2','3','4','5','6') as renames in scope. JOB-#### legacy format is a validator WARNING per dispatch/dashboard/server.cjs validateJobOqe2 (line 1941 LEGACY_ID test produces warnings array, not violations). Criterion 7 requires 0 violations; warnings are acceptable. A separate future job can take up the JOB-#### → DFR-WORKTYPE-#### migration if desired."
+  },
+  "field_changes_per_job": [
+    {
+      "id": "DFR-UI-0002",
+      "added": ["legacy_id", "oqe_version", "alternatives_considered", "depends_on (empty array)"],
+      "criteria_count_before": 5,
+      "criteria_count_after": 6,
+      "criteria_citations": "All 6 criteria cite OQE_DISCIPLINE.md §11/§13/§14 with file-and-section references",
+      "removed": ["oqe_2_upgrade_required", "oqe_upgrade_blockers", "oqe_flagged_at"]
+    },
+    {
+      "id": "DFR-UI-0003",
+      "added": ["legacy_id", "oqe_version", "alternatives_considered", "depends_on (empty array)"],
+      "criteria_count_before": 5,
+      "criteria_count_after": 6,
+      "criteria_citations": "All 6 criteria cite OQE_DISCIPLINE.md sections plus dispatch/dashboard/server.cjs and dispatch-framework/dashboard/design-bundle/dashboard-2.0/",
+      "removed": ["oqe_2_upgrade_required", "oqe_upgrade_blockers", "oqe_flagged_at"]
+    },
+    {
+      "id": "DFR-UI-0004",
+      "added": ["legacy_id", "oqe_version", "alternatives_considered", "depends_on (empty array)"],
+      "criteria_count_before": 5,
+      "criteria_count_after": 6,
+      "criteria_citations": "All 6 criteria cite OQE_DISCIPLINE.md sections plus scripts/relay-intel-scan.py and dispatch-framework/docs/INTEL_BRIEF_DESIGN.md",
+      "removed": ["oqe_2_upgrade_required", "oqe_upgrade_blockers", "oqe_flagged_at"]
+    },
+    {
+      "id": "DFR-UI-0005",
+      "added": ["legacy_id", "oqe_version", "alternatives_considered", "depends_on (empty array)"],
+      "criteria_count_before": 5,
+      "criteria_count_after": 6,
+      "criteria_citations": "All 6 criteria cite OQE_DISCIPLINE.md sections plus dispatch/state/grocery-profile.json and scripts/test-grocery-predictions.py",
+      "removed": ["oqe_2_upgrade_required", "oqe_upgrade_blockers", "oqe_flagged_at"]
+    },
+    {
+      "id": "DFR-UI-0006",
+      "added": ["legacy_id", "oqe_version", "alternatives_considered", "depends_on (empty array)"],
+      "criteria_count_before": 5,
+      "criteria_count_after": 6,
+      "criteria_citations": "All 6 criteria cite OQE_DISCIPLINE.md sections plus scripts/ingest-solar.py and dispatch/state/solar-pipeline-test.json",
+      "removed": ["oqe_2_upgrade_required", "oqe_upgrade_blockers", "oqe_flagged_at"]
+    },
+    {
+      "id": "JOB-0014",
+      "added": ["oqe_version", "problem", "alternatives_considered", "criteria (was missing)"],
+      "criteria_count_before": 0,
+      "criteria_count_after": 6,
+      "criteria_citations": "All 6 criteria cite OQE_DISCIPLINE.md §11/§14 plus dispatch/scripts/launch-persona.ps1 and dispatch/personas/personas.json",
+      "removed": ["oqe_2_upgrade_required", "oqe_upgrade_blockers", "oqe_flagged_at"]
+    },
+    {
+      "id": "JOB-0016",
+      "added": ["oqe_version", "problem", "alternatives_considered", "criteria (was missing)"],
+      "criteria_count_before": 0,
+      "criteria_count_after": 7,
+      "criteria_citations": "All 7 criteria cite OQE_DISCIPLINE.md §11/§14 plus dispatch/hooks/set-voice.py, kokoro-speak.py, server.cjs, launcher.html, personas.json",
+      "removed": ["oqe_2_upgrade_required", "oqe_upgrade_blockers", "oqe_flagged_at"]
+    },
+    {
+      "id": "JOB-0017",
+      "added": ["oqe_version", "problem", "alternatives_considered", "criteria (was missing)"],
+      "criteria_count_before": 0,
+      "criteria_count_after": 6,
+      "criteria_citations": "All 6 criteria cite OQE_DISCIPLINE.md §11/§13/§14 plus audio-feed-page.cjs, set-voice.py, theme.css, server.cjs",
+      "removed": ["oqe_2_upgrade_required", "oqe_upgrade_blockers", "oqe_flagged_at"]
+    },
+    {
+      "id": "JOB-0018",
+      "added": ["oqe_version", "problem", "alternatives_considered", "criteria (was missing)"],
+      "criteria_count_before": 0,
+      "criteria_count_after": 6,
+      "criteria_citations": "All 6 criteria cite OQE_DISCIPLINE.md §11/§13/§14 plus dispatch-framework/docs/PUBLIC_RELEASE_NOTES.md and SANITIZATION_CHECKLIST.md",
+      "removed": ["oqe_2_upgrade_required", "oqe_upgrade_blockers", "oqe_flagged_at"]
+    },
+    {
+      "id": "JOB-0019",
+      "added": ["oqe_version", "problem", "alternatives_considered", "criteria (was missing)"],
+      "criteria_count_before": 0,
+      "criteria_count_after": 6,
+      "criteria_citations": "All 6 criteria cite OQE_DISCIPLINE.md §11/§13/§14 plus personas.json, launcher.html, server.cjs, SCREENSHOT_MANIFEST.md",
+      "removed": ["oqe_2_upgrade_required", "oqe_upgrade_blockers", "oqe_flagged_at"]
+    },
+    {
+      "id": "JOB-0020",
+      "added": ["oqe_version", "problem", "alternatives_considered", "criteria (was missing)"],
+      "criteria_count_before": 0,
+      "criteria_count_after": 6,
+      "criteria_citations": "All 6 criteria cite OQE_DISCIPLINE.md §11/§13/§14 plus dispatch/scripts/generate-portraits.py and dispatch-framework/docs/PORTRAIT_SCHEMA.md",
+      "removed": ["oqe_2_upgrade_required", "oqe_upgrade_blockers", "oqe_flagged_at"]
+    },
+    {
+      "id": "JOB-0021",
+      "added": ["oqe_version", "problem", "alternatives_considered", "criteria (was missing)"],
+      "criteria_count_before": 0,
+      "criteria_count_after": 6,
+      "criteria_citations": "All 6 criteria cite OQE_DISCIPLINE.md §11/§13/§14 plus dispatch/scripts/generate-intros.py and dispatch-framework/docs/INTRO_SCHEMA.md",
+      "removed": ["oqe_2_upgrade_required", "oqe_upgrade_blockers", "oqe_flagged_at"]
+    },
+    {
+      "id": "JOB-0022",
+      "added": ["oqe_version", "problem", "alternatives_considered", "criteria (was missing)"],
+      "criteria_count_before": 0,
+      "criteria_count_after": 7,
+      "criteria_citations": "All 7 criteria cite OQE_DISCIPLINE.md §11/§13/§14 plus personas.json, set-voice.py, launch-persona.ps1, final-gate-review-2026-04-26.md",
+      "removed": ["oqe_2_upgrade_required", "oqe_upgrade_blockers", "oqe_flagged_at"]
+    }
+  ],
+  "validator_run": {
+    "executed": "node validateJobOqe2 inline against both files",
+    "scope": "5 DFR-UI-* jobs and 8 JOB-* jobs",
+    "violations": 0,
+    "warnings": 8,
+    "warnings_detail": "Each of the 8 JOB-#### IDs produces one project_worktype_job_ids §13 warning per validator design. Per the validator code (server.cjs line 1940-1943), legacy ID format is a WARNING not a VIOLATION. Criterion 7 of WS-GOV-0066 specifies zero violations; warnings are out of scope.",
+    "standing_scan": {
+      "tool": "F:/03-INFRASTRUCTURE/dispatch-framework/scripts/oqe-standing-scan.py",
+      "result_for_state_board": "active=5 nc=0 STRICT",
+      "note": "The standing scan does not currently scan dispatch-framework/coordination/JOB_BOARD.json (DEFAULT_ROOTS gap). Direct validateJobOqe2 invocation confirmed zero violations on all 8 coordination-board jobs in scope."
+    }
+  },
+  "rollback": "Restore both .bak-2026-04-26-WS-GOV-0066 files in place to revert."
+}

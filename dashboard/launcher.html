@@ -943,6 +943,17 @@
 
   .overlay.show { display: flex; }
 
+  .overlay-splash {
+    width: min(60vw, 720px);
+    height: auto;
+    image-rendering: pixelated;
+    border: 2px solid var(--neon-cyan);
+    box-shadow: 0 0 28px rgba(0, 255, 204, 0.4);
+    background: #0a0a14;
+    display: none;
+  }
+  .overlay-splash.show { display: block; }
+
   .overlay-text {
     font-family: 'Press Start 2P', monospace;
     font-size: 28px;
@@ -1430,7 +1441,7 @@
     <div class="form-box">
       <label class="form-label">PROJECT NAME</label>
       <input class="form-input" type="text" id="new-project-name" placeholder="my-new-project" autocomplete="off">
-      <div class="form-help">// created at D:\Dev\01-ACTIVE\&lt;name&gt; · letters, digits, dashes only</div>
+      <div class="form-help">// created at F:\01-ACTIVE\&lt;name&gt; · letters, digits, dashes only</div>
       <div class="form-actions">
         <button class="form-btn" id="new-project-create">[ CREATE ]</button>
         <button class="form-btn cancel" data-back="title-screen">[ CANCEL ]</button>
@@ -1502,6 +1513,39 @@
             <span class="box"></span>
             <span>// TEAM MODE //</span>
           </label>
+          <div class="transport-row" id="transport-row" style="margin: 8px 0; font: 12px 'JetBrains Mono', monospace; letter-spacing: 1px; color: #00FFCC; opacity: 0.85; position: relative;">
+            <span style="color:#888; margin-right:8px;">// TRANSPORT //</span>
+            <label style="margin-right:10px; cursor:pointer;">
+              <input type="radio" name="transport" value="wt" id="transport-wt" checked>
+              <span>WT</span>
+            </label>
+            <label style="cursor:pointer; margin-right: 8px;">
+              <input type="radio" name="transport" value="tmux" id="transport-tmux">
+              <span>TMUX (WSL)</span>
+            </label>
+            <span id="transport-help-glyph" tabindex="0" role="button" aria-label="transport options help"
+                  style="display:inline-block; cursor:help; color:#00FFCC; border:1px solid #00FFCC; border-radius:50%; width:14px; height:14px; line-height:12px; text-align:center; font-size:10px; user-select:none;">?</span>
+            <span id="tmux-attach-link" style="display:none; margin-left:12px; font-size:10px; color:#9FE; opacity:0.85;">
+              <span style="color:#666; margin-right:4px;">·</span>
+              <a id="tmux-attach-anchor" href="#" tabindex="0"
+                 style="color:#00FFCC; text-decoration:none; border-bottom:1px dotted #00FFCC; cursor:pointer;">ATTACH/DETACH HELP</a>
+            </span>
+            <div id="transport-help-tip" role="tooltip"
+                 style="display:none; position:absolute; left:0; top:100%; margin-top:4px; padding:8px 10px; background:#001815; border:1px solid #00FFCC; color:#9FE; font:11px 'JetBrains Mono', monospace; line-height:1.4; max-width:340px; z-index:10; box-shadow:0 0 12px rgba(0,255,204,0.25);"></div>
+            <div id="tmux-attach-modal" role="dialog" aria-labelledby="tmux-attach-modal-title"
+                 style="display:none; position:absolute; left:0; top:100%; margin-top:4px; padding:12px 14px; background:#001815; border:1px solid #00FFCC; color:#9FE; font:11px 'JetBrains Mono', monospace; line-height:1.5; max-width:420px; z-index:11; box-shadow:0 0 14px rgba(0,255,204,0.3);">
+              <div id="tmux-attach-modal-title" style="color:#00FFCC; margin-bottom:6px; font-weight:bold; letter-spacing:1px;">// TMUX ATTACH / DETACH //</div>
+              <div style="margin-bottom:6px;">SESSION: <span style="color:#9FE;">multideck</span></div>
+              <div style="margin-bottom:4px;">DETACH: <span style="color:#FFD;">prefix d</span> (default Ctrl b then d)</div>
+              <div style="margin-bottom:4px;">REATTACH: <span style="color:#FFD;">tmux attach -t multideck</span></div>
+              <div style="margin-bottom:4px;">SWITCH PANES: <span style="color:#FFD;">prefix arrow</span></div>
+              <div style="margin-bottom:6px;">ZOOM PANE: <span style="color:#FFD;">prefix z</span> (toggle)</div>
+              <div style="color:#888; font-size:10px;">Full guide: docs/TMUX_TOPOLOGY.md</div>
+              <div style="text-align:right; margin-top:6px;">
+                <a href="#" id="tmux-attach-modal-close" style="color:#00FFCC; text-decoration:none; border-bottom:1px dotted #00FFCC;">close</a>
+              </div>
+            </div>
+          </div>
           <input type="text" class="prompt-input" id="initial-prompt" placeholder="initial prompt (optional)" autocomplete="off">
         </div>
         <button class="launch-btn" id="launch-btn" disabled>[ DEPLOY ]</button>
@@ -1535,6 +1579,7 @@
 
   <!-- ============ LAUNCHING OVERLAY ============ -->
   <div class="overlay" id="overlay">
+    <img class="overlay-splash" id="overlay-splash" alt="" />
     <div class="overlay-text" id="overlay-text">DEPLOYING...</div>
     <div class="overlay-sub" id="overlay-sub">establishing uplink</div>
     <div class="overlay-bar"><div class="overlay-bar-fill" id="overlay-bar-fill"></div></div>
@@ -1615,19 +1660,148 @@ const DEFAULT_TRACK_FILE = 'Neon Conveyor Dreams.mp3';
   }
 })();
 
+// ============ TRANSPORT (wt vs tmux) ============
+const TRANSPORT_PREF_KEY = 'dispatch.transport.preference';
+
+// Maps server availability_reason → operator-facing one-sentence explanation.
+// Surfaced via the help glyph next to the transport row (MULTI-UI-0064).
+const TRANSPORT_REASON_COPY = {
+  'available':                     'tmux runs personas as tiled panes inside one shared multideck session, so you can detach with prefix-d and reattach from another shell.',
+  'wsl-not-detected':              'tmux requires WSL Ubuntu, which is not detected on this host. Install WSL2 + Ubuntu to enable the tmux transport.',
+  'wsl-detected-tmux-missing':     'WSL Ubuntu is up but tmux is not installed inside it. Run "sudo apt install tmux" in the WSL shell to enable this transport.',
+  'tmux-installed-but-no-claude':  'WSL Ubuntu and tmux are present but the claude binary is not on PATH inside WSL. Install Claude Code in WSL (see docs/WSL_SETUP.md).',
+  'platform-not-windows':          'tmux transport is currently Windows-only; native Linux/macOS use the sh transport.',
+};
+
+function applyTransportUI(tx) {
+  const row = document.getElementById('transport-row');
+  if (!row) return;
+  const available = (tx && Array.isArray(tx.available)) ? tx.available : ['wt'];
+  const serverDefault = (tx && tx.default) || 'wt';
+  const reason = (tx && tx.availability_reason) || (available.includes('tmux') ? 'available' : 'wsl-not-detected');
+
+  // Row is always shown so non-WSL operators see the help glyph and can learn
+  // why tmux is hidden. Radios for unavailable transports are disabled rather
+  // than removed.
+  row.style.display = '';
+
+  // Persistent preference (criterion 1): localStorage > server default.
+  // Fall back to server default if stored value is invalid or unavailable.
+  let stored = null;
+  try { stored = window.localStorage.getItem(TRANSPORT_PREF_KEY); } catch (e) { /* localStorage may be blocked */ }
+  let chosen = serverDefault;
+  if (stored && available.includes(stored)) chosen = stored;
+
+  ['wt', 'tmux'].forEach((t) => {
+    const radio = document.getElementById('transport-' + t);
+    if (!radio) return;
+    radio.disabled = !available.includes(t);
+    radio.checked = (t === chosen);
+    const lbl = radio.closest('label');
+    if (lbl) lbl.style.opacity = radio.disabled ? '0.35' : '1';
+  });
+
+  // Save selection on change.
+  ['wt', 'tmux'].forEach((t) => {
+    const radio = document.getElementById('transport-' + t);
+    if (!radio || radio.dataset.persistBound === '1') return;
+    radio.dataset.persistBound = '1';
+    radio.addEventListener('change', () => {
+      try {
+        if (radio.checked && !radio.disabled) {
+          window.localStorage.setItem(TRANSPORT_PREF_KEY, t);
+        }
+      } catch (e) { /* ignore */ }
+      refreshDeployTooltip();
+    });
+  });
+
+  // Help glyph + tooltip wiring (criterion 3): visible even when only one
+  // transport is on the list, so non-WSL operators get the explanation.
+  const glyph = document.getElementById('transport-help-glyph');
+  const tip = document.getElementById('transport-help-tip');
+  if (glyph && tip) {
+    const copy = TRANSPORT_REASON_COPY[reason] || TRANSPORT_REASON_COPY['available'];
+    tip.textContent = copy;
+    if (glyph.dataset.helpBound !== '1') {
+      glyph.dataset.helpBound = '1';
+      const show = () => { tip.style.display = 'block'; };
+      const hide = () => { tip.style.display = 'none'; };
+      const toggle = () => { tip.style.display = (tip.style.display === 'block') ? 'none' : 'block'; };
+      glyph.addEventListener('mouseenter', show);
+      glyph.addEventListener('mouseleave', hide);
+      glyph.addEventListener('focus', show);
+      glyph.addEventListener('blur', hide);
+      glyph.addEventListener('click', toggle);
+      glyph.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
+        if (e.key === 'Escape') hide();
+      });
+    }
+  }
+
+  refreshDeployTooltip();
+}
+
+// Update DEPLOY button tooltip so operators selecting tmux know panes spawn
+// into the shared multideck session vs separate windows (criterion 4).
+// Also toggles the ATTACH/DETACH HELP affordance which only makes sense when
+// the operator is on the tmux transport (MULTI-FEAT-0065 criterion 5).
+function refreshDeployTooltip() {
+  const btn = document.getElementById('launch-btn');
+  if (!btn) return;
+  const t = selectedTransport();
+  if (t === 'tmux') {
+    btn.title = 'DEPLOY · tmux: spawns into the shared multideck session (tiled panes, one window). prefix-d to detach.';
+  } else if (t === 'wt') {
+    btn.title = 'DEPLOY · wt: opens a new Windows Terminal tab.';
+  } else {
+    btn.title = 'DEPLOY';
+  }
+  const link = document.getElementById('tmux-attach-link');
+  if (link) link.style.display = (t === 'tmux') ? 'inline' : 'none';
+}
+
+// Wire up the ATTACH/DETACH HELP link → inline modal with key keybinds
+// (MULTI-FEAT-0065 criterion 5). Modal points at docs/TMUX_TOPOLOGY.md for
+// the full guide; inline content covers detach/reattach/zoom/switch.
+(function bindTmuxAttachModal() {
+  document.addEventListener('DOMContentLoaded', () => {
+    const anchor = document.getElementById('tmux-attach-anchor');
+    const modal = document.getElementById('tmux-attach-modal');
+    const closeBtn = document.getElementById('tmux-attach-modal-close');
+    if (!anchor || !modal) return;
+    const open = (e) => { if (e) e.preventDefault(); modal.style.display = 'block'; };
+    const close = (e) => { if (e) e.preventDefault(); modal.style.display = 'none'; };
+    anchor.addEventListener('click', open);
+    anchor.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') open(e); });
+    if (closeBtn) closeBtn.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+  });
+})();
+
+function selectedTransport() {
+  const checked = document.querySelector('input[name="transport"]:checked');
+  if (checked && !checked.disabled) return checked.value;
+  return (state.transports && state.transports.default) || 'wt';
+}
+
 // ============ FETCH DATA ============
 async function loadData() {
   try {
-    const [pr, pj, mu, tp] = await Promise.all([
+    const [pr, pj, mu, tp, tx] = await Promise.all([
       fetch('/launcher/personas').then(r => r.json()),
       fetch('/launcher/projects').then(r => r.json()),
       fetch('/launcher/music').then(r => r.json()),
       fetch('/launcher/team-presets').then(r => r.json()),
+      fetch('/launcher/transports').then(r => r.json()).catch(() => ({ available: ['wt'], default: 'wt' })),
     ]);
     state.personas = pr.personas || {};
     state.projects = pj.projects || [];
     state.tracks = mu.tracks || [];
     state.teamPresets = tp.presets || [];
+    state.transports = tx;
+    applyTransportUI(tx);
     renderProjectGrid();
     renderMusicGrid();
     renderTeamPresetsGrid();
@@ -2294,6 +2468,10 @@ async function launchSelected() {
   fill.style.animation = 'none';
   void fill.offsetWidth;
   fill.style.animation = 'load-bar 1.6s ease-out forwards';
+  // Cache-bust the splash GIF so the animation restarts cleanly each deploy.
+  const splash = document.getElementById('overlay-splash');
+  splash.src = '/launcher/assets/loading/deploy-default.gif?t=' + Date.now();
+  splash.classList.add('show');
   overlay.classList.add('show');
   console.log('[DEPLOY] overlay shown, posting to /launcher/launch');
 
@@ -2309,6 +2487,7 @@ async function launchSelected() {
         project: state.currentProject ? state.currentProject.id : null,
         dangerous,
         prompt,
+        transport: selectedTransport(),
       }),
     });
     console.log('[DEPLOY] response status', r.status);
@@ -2355,6 +2534,10 @@ async function launchTeam() {
   fill.style.animation = 'none';
   void fill.offsetWidth;
   fill.style.animation = 'load-bar 2.4s ease-out forwards';
+  // Cache-bust so the deploy animation restarts each time.
+  const splash = document.getElementById('overlay-splash');
+  splash.src = '/launcher/assets/loading/deploy-default.gif?t=' + Date.now();
+  splash.classList.add('show');
   overlay.classList.add('show');
 
   // Queue all team members' short deploy stubs back-to-back
@@ -2369,6 +2552,7 @@ async function launchTeam() {
         project: state.currentProject ? state.currentProject.id : null,
         dangerous,
         prompt,
+        transport: selectedTransport(),
       }),
     });
     const data = await r.json();

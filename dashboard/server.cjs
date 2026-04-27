@@ -20,7 +20,99 @@ const ACTIVE_PROJECTS_DIR = process.env.DISPATCH_PROJECTS_DIR || '';
 const WORKSPACE_ROOT = process.env.DISPATCH_WORKSPACE_ROOT || DISPATCH_ROOT;
 const LAUNCH_SCRIPT_PS1 = path.join(DISPATCH_ROOT, 'scripts', 'launch-persona.ps1');
 const LAUNCH_SCRIPT_SH = path.join(DISPATCH_ROOT, 'scripts', 'launch-persona.sh');
+const LAUNCH_SCRIPT_TMUX = path.join(DISPATCH_ROOT, 'scripts', 'launch-persona-tmux.sh');
+const KOKORO_QUEUE_STATS = path.join(DISPATCH_ROOT, 'hooks', '.kokoro-queue', 'stats.json');
+const KOKORO_QUEUE_ROOT = path.join(DISPATCH_ROOT, 'hooks', '.kokoro-queue');
 const IS_WINDOWS = process.platform === 'win32';
+
+// Transport selection — wt (Windows Terminal) or tmux (WSL Ubuntu).
+//
+// Default resolution (MULTI-FEAT-0063, operator decision 2026-04-26):
+//   1. If DISPATCH_LAUNCHER_TRANSPORT is set, that wins (explicit operator override).
+//   2. Otherwise, auto-detect: tmux when WSL+tmux+claude all present (i.e.
+//      WSL_AVAILABILITY_REASON === 'available'), else wt on Windows, else sh.
+//
+// Auto-detect honours R3 from MULTI-FEAT-0055 feasibility — operators without
+// WSL keep the wt path with no broken-default surprise. The env var remains
+// the rollback knob: set DISPATCH_LAUNCHER_TRANSPORT=wt to force the legacy
+// path even on a host that could run tmux.
+//
+// DEFAULT_TRANSPORT is assigned after the WSL probe runs (see below) so that
+// auto-detect can read WSL_AVAILABILITY_REASON. Until then it is undefined.
+const ENV_TRANSPORT = (process.env.DISPATCH_LAUNCHER_TRANSPORT || '').toLowerCase();
+let DEFAULT_TRANSPORT;
+
+// Detect WSL Ubuntu, tmux, and claude availability at server boot. The tmux
+// transport requires all three; the dashboard surfaces the specific failure
+// mode via availability_reason on GET /launcher/transports so the UI can
+// explain why the toggle is hidden (MULTI-UI-0064).
+//
+// availability_reason values:
+//   'available'                       — all checks pass; tmux is selectable
+//   'wsl-not-detected'                — wsl.exe -d Ubuntu probe failed
+//   'wsl-detected-tmux-missing'       — WSL up but `command -v tmux` returns nothing
+//   'tmux-installed-but-no-claude'    — WSL+tmux up but `command -v claude` returns nothing
+//   'platform-not-windows'            — not running on Windows; tmux path is Windows-only
+let WSL_AVAILABLE = false;
+let WSL_AVAILABILITY_REASON = IS_WINDOWS ? 'wsl-not-detected' : 'platform-not-windows';
+if (IS_WINDOWS) {
+  try {
+    const { execFileSync } = require('child_process');
+    // Single probe: confirms WSL Ubuntu is up AND captures whether tmux + claude
+    // are on PATH. Login shell (bash -lc) so user PATH from .profile is loaded —
+    // claude is typically installed under ~/.local/bin which only resolves under
+    // a login shell.
+    // 10s — first wsl invocation after a reboot can cold-start the VM
+    const out = execFileSync(
+      'wsl.exe',
+      ['-d', 'Ubuntu', '--', 'bash', '-lc', 'command -v tmux; command -v claude'],
+      { encoding: 'utf8', timeout: 10000 }
+    ).split('\n').map(s => s.trim()).filter(Boolean);
+    const tmuxOk = out.some(s => s.endsWith('/tmux') || s === 'tmux');
+    const claudeOk = out.some(s => s.endsWith('/claude') || s === 'claude');
+    if (!tmuxOk) {
+      WSL_AVAILABILITY_REASON = 'wsl-detected-tmux-missing';
+    } else if (!claudeOk) {
+      WSL_AVAILABILITY_REASON = 'tmux-installed-but-no-claude';
+    } else {
+      WSL_AVAILABLE = true;
+      WSL_AVAILABILITY_REASON = 'available';
+    }
+    if (!WSL_AVAILABLE) {
+      console.warn(`[launcher] WSL up but tmux transport unavailable: ${WSL_AVAILABILITY_REASON}`);
+    }
+  } catch (e) {
+    WSL_AVAILABLE = false;
+    WSL_AVAILABILITY_REASON = 'wsl-not-detected';
+    console.warn('[launcher] WSL Ubuntu probe failed; tmux transport disabled:', e.message);
+  }
+}
+
+// Resolve DEFAULT_TRANSPORT now that the WSL probe is done (MULTI-FEAT-0063).
+if (ENV_TRANSPORT) {
+  DEFAULT_TRANSPORT = ENV_TRANSPORT;
+} else if (IS_WINDOWS) {
+  DEFAULT_TRANSPORT = WSL_AVAILABLE ? 'tmux' : 'wt';
+} else {
+  DEFAULT_TRANSPORT = 'sh';
+}
+console.log(`[launcher] DEFAULT_TRANSPORT=${DEFAULT_TRANSPORT}`
+  + (ENV_TRANSPORT ? ' (env override)' : ` (auto-detected; reason=${WSL_AVAILABILITY_REASON})`));
+
+// Convert F:\path or F:/path → /mnt/f/path for WSL invocations
+function toWslPath(p) {
+  const m = String(p).match(/^([A-Za-z]):[\\/](.*)$/);
+  if (!m) return p;
+  return `/mnt/${m[1].toLowerCase()}/${m[2].replace(/\\/g, '/')}`;
+}
+
+function transportAvailable(xport) {
+  const x = String(xport || '').toLowerCase();
+  if (x === 'wt') return IS_WINDOWS;
+  if (x === 'tmux') return IS_WINDOWS && WSL_AVAILABLE;
+  if (x === 'sh') return !IS_WINDOWS;
+  return false;
+}
 
 const ASSET_MIME = {
   '.png': 'image/png',
@@ -60,6 +152,38 @@ function loadState() {
     }
   }
   return state;
+}
+
+function readKokoroStats() {
+  // Live depths come from the filesystem so a stale stats.json can't lie
+  // about what's queued right now. Counters come from stats.json.
+  const empty = {
+    queue_depth: { p0: 0, normal: 0, spillover: 0 },
+    counters: { enqueued: 0, played: 0, spilled: 0, retried: 0, dropped: 0, p0_dropped: 0 },
+    last_updated: null,
+  };
+  let stats = empty;
+  try {
+    const raw = JSON.parse(fs.readFileSync(KOKORO_QUEUE_STATS, 'utf8'));
+    stats = {
+      queue_depth: empty.queue_depth,
+      counters: { ...empty.counters, ...(raw.counters || {}) },
+      last_updated: raw.last_updated || null,
+    };
+  } catch {
+    // stats.json absent or unreadable — return zeros for counters.
+  }
+  for (const lane of ['p0', 'normal', 'spillover']) {
+    try {
+      stats.queue_depth[lane] = fs
+        .readdirSync(path.join(KOKORO_QUEUE_ROOT, lane))
+        .filter((f) => f.endsWith('.wav'))
+        .length;
+    } catch {
+      stats.queue_depth[lane] = 0;
+    }
+  }
+  return stats;
 }
 
 function esc(s) {
@@ -135,20 +259,87 @@ function listProjects() {
 // ============================================================
 // Persona spawning (cross-platform)
 // ============================================================
-function spawnPersona(personaKey, initialPrompt) {
+// Probe whether the multideck tmux session already exists in WSL Ubuntu.
+// Used to decide whether a launch needs to open a viewer wt window or just
+// slot into the existing session silently.
+function tmuxSessionExists(name) {
+  if (!IS_WINDOWS || !WSL_AVAILABLE) return false;
+  try {
+    const { execFileSync } = require('child_process');
+    execFileSync('wsl.exe', ['-d', 'Ubuntu', '--', 'tmux', 'has-session', '-t', String(name)], {
+      stdio: 'ignore', timeout: 3000,
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function spawnPersona(personaKey, initialPrompt, transport, options) {
+  const xport = String(transport || DEFAULT_TRANSPORT).toLowerCase();
+  const opts = options || {};
+
   if (IS_WINDOWS) {
-    // Route through `cmd /c start` so the powershell child survives long enough
-    // to call Start-Process wt and open a new Windows Terminal tab.
+    if (xport === 'tmux') {
+      if (!WSL_AVAILABLE) {
+        throw new Error('tmux transport requires WSL Ubuntu; not detected at server boot');
+      }
+      const wslRepo = toWslPath(DISPATCH_ROOT);
+      const tmuxScript = `${wslRepo}/scripts/launch-persona-tmux.sh`;
+      const escapedPrompt = String(initialPrompt || '').replace(/'/g, "'\\''");
+      const promptArg = initialPrompt ? ` '${escapedPrompt}'` : '';
+      // Decide whether this spawn opens a viewer wt window or just splits into
+      // the existing multideck session silently. Pack-into-existing happens
+      // when (a) the caller asked for it via opts.openViewer === false, or
+      // (b) the session already exists and the caller didn't override.
+      const sessionUp = opts.sessionExists !== undefined
+        ? opts.sessionExists
+        : tmuxSessionExists('multideck');
+      const explicitNoViewer = opts.openViewer === false;
+      const wantViewer = !explicitNoViewer && (opts.openViewer === true || !sessionUp);
+
+      if (wantViewer) {
+        // Open a wt window whose attached tmux client visually hosts the session
+        const bashCmd = `'${tmuxScript}' '${personaKey}'${promptArg}`;
+        const args = [
+          '/c', 'start', '""',
+          'wt.exe', '-w', 'new',
+          'new-tab',
+          '--title', `MULTIDECK [${personaKey}]`,
+          'wsl.exe', '-d', 'Ubuntu', '--',
+          'bash', '-lc', bashCmd,
+        ];
+        const child = spawn('cmd.exe', args, { detached: true, stdio: 'ignore', windowsHide: true });
+        child.unref();
+      } else {
+        // Slot into the existing multideck session — no wt window. The script
+        // splits a new pane in the running session; the operator's existing
+        // attached viewer (if any) sees it appear automatically.
+        const bashCmd = `'${tmuxScript}' '${personaKey}'${promptArg} --no-attach`;
+        const args = [
+          'wsl.exe', '-d', 'Ubuntu', '--',
+          'bash', '-lc', bashCmd,
+        ];
+        const child = spawn('cmd.exe', ['/c', ...args], {
+          detached: true, stdio: 'ignore', windowsHide: true,
+        });
+        child.unref();
+      }
+      return;
+    }
+    // wt transport (default) — pass -Transport explicitly so the ps1 takes the wt branch
     const args = [
       '/c', 'start', '""', '/b',
       'powershell', '-NoProfile', '-ExecutionPolicy', 'Bypass',
       '-File', LAUNCH_SCRIPT_PS1, personaKey,
     ];
     if (initialPrompt) args.push(initialPrompt);
+    args.push('-Transport', 'wt');
     const child = spawn('cmd.exe', args, { detached: true, stdio: 'ignore', windowsHide: true });
     child.unref();
   } else {
-    // Linux / macOS — use the shell launcher
+    // Linux / macOS — sh transport remains the only option for now;
+    // tmux transport on native Linux is out of scope for MULTI-FEAT-0055.
     const args = [LAUNCH_SCRIPT_SH, personaKey];
     if (initialPrompt) args.push(initialPrompt);
     const child = spawn('/bin/sh', args, { detached: true, stdio: 'ignore' });
@@ -202,6 +393,31 @@ function handleLauncher(req, res, url) {
         'Cache-Control': 'public, max-age=86400',
       });
       fs.createReadStream(filePath).pipe(res);
+    });
+    return true;
+  }
+
+  if (url === '/launcher/transports' && method === 'GET') {
+    const available = [];
+    if (IS_WINDOWS) {
+      available.push('wt');
+      if (WSL_AVAILABLE) available.push('tmux');
+    } else {
+      available.push('sh');
+    }
+    let resolvedDefault = DEFAULT_TRANSPORT;
+    if (!available.includes(resolvedDefault)) {
+      resolvedDefault = available[0] || 'wt';
+    }
+    sendJson(res, 200, {
+      available,
+      default: resolvedDefault,
+      wsl_detected: WSL_AVAILABLE,
+      // availability_reason explains why tmux is or isn't on the available list,
+      // so the UI can render a help glyph with a specific message even when only
+      // one transport is shown (MULTI-UI-0064 criterion 2).
+      availability_reason: WSL_AVAILABILITY_REASON,
+      env_default: DEFAULT_TRANSPORT,
     });
     return true;
   }
@@ -297,9 +513,27 @@ function handleLauncher(req, res, url) {
         return sendJson(res, 404, { error: 'unknown persona', persona: personaKey });
       }
       const initialPrompt = typeof body.prompt === 'string' ? body.prompt : '';
+      const transport = String(body.transport || DEFAULT_TRANSPORT).toLowerCase();
+      if (!transportAvailable(transport)) {
+        return sendJson(res, 400, {
+          error: 'transport not available',
+          transport,
+          wsl_detected: WSL_AVAILABLE,
+        });
+      }
       try {
-        spawnPersona(personaKey, initialPrompt);
-        sendJson(res, 200, { ok: true, persona: personaKey, callsign: registry.personas[personaKey].callsign });
+        // For tmux: open a viewer window only if the session doesn't yet
+        // exist. If the operator already has a wt window attached to
+        // multideck, this single launch slots in silently.
+        const sessionExists = (transport === 'tmux') ? tmuxSessionExists('multideck') : false;
+        spawnPersona(personaKey, initialPrompt, transport, { sessionExists });
+        sendJson(res, 200, {
+          ok: true,
+          persona: personaKey,
+          callsign: registry.personas[personaKey].callsign,
+          transport,
+          packed_into_existing_session: transport === 'tmux' && sessionExists,
+        });
       } catch (e) {
         sendJson(res, 500, { error: 'spawn failed', detail: e.message });
       }
@@ -324,15 +558,40 @@ function handleLauncher(req, res, url) {
       if (unknown.length) return sendJson(res, 404, { error: 'unknown personas', unknown });
 
       const initialPrompt = typeof body.prompt === 'string' ? body.prompt : '';
+      const transport = String(body.transport || DEFAULT_TRANSPORT).toLowerCase();
+      if (!transportAvailable(transport)) {
+        return sendJson(res, 400, {
+          error: 'transport not available',
+          transport,
+          wsl_detected: WSL_AVAILABLE,
+        });
+      }
+      // tmux topology B packs the whole team into one multideck session.
+      // Open a viewer wt window only for the first member, and only if the
+      // session doesn't already exist. All other members slot in silently
+      // as new tiled panes. wt transport keeps the per-member tab behavior.
+      const sessionExistsAtLaunch = (transport === 'tmux') ? tmuxSessionExists('multideck') : false;
       const deployed = [];
       keys.forEach((k, i) => {
         setTimeout(() => {
-          try { spawnPersona(k, initialPrompt); }
-          catch (e) { console.error('team spawn failed for', k, e.message); }
+          try {
+            const opts = (transport === 'tmux')
+              ? { openViewer: i === 0 && !sessionExistsAtLaunch }
+              : undefined;
+            spawnPersona(k, initialPrompt, transport, opts);
+          } catch (e) {
+            console.error('team spawn failed for', k, e.message);
+          }
         }, i * 700);
         deployed.push({ persona: k, callsign: registry.personas[k].callsign });
       });
-      sendJson(res, 200, { ok: true, deployed, stagger_ms: 700 });
+      sendJson(res, 200, {
+        ok: true,
+        deployed,
+        transport,
+        stagger_ms: 700,
+        viewer_opened: transport === 'tmux' ? !sessionExistsAtLaunch : null,
+      });
     }).catch((e) => sendJson(res, 400, { error: 'bad body', detail: e.message }));
     return true;
   }
@@ -612,9 +871,13 @@ const server = http.createServer((req, res) => {
     res.end(renderJobBoardPage(STATE_DIR));
     return;
   }
+  if (url === '/api/kokoro/stats') {
+    sendJson(res, 200, readKokoroStats());
+    return;
+  }
 
   res.writeHead(404, { 'Content-Type': 'text/plain' });
-  res.end('Not Found. Try / or /launcher or /audio-feed or /briefing or /jobs or /state.json');
+  res.end('Not Found. Try / or /launcher or /audio-feed or /briefing or /jobs or /state.json or /api/kokoro/stats');
 });
 
 server.listen(PORT, '0.0.0.0', () => {
@@ -625,6 +888,7 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log(`  /audio-feed              Auto-play Kokoro TTS feed`);
   console.log(`  /jobs                    Visual job board dashboard`);
   console.log(`  /state.json              Raw state data`);
+  console.log(`  /api/kokoro/stats        Kokoro queue depth + drop counters`);
   console.log(``);
   console.log(`  State directory: ${STATE_DIR}`);
   console.log(`  Personas registry: ${PERSONAS_PATH}`);

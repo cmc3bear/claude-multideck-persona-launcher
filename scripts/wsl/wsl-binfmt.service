@@ -1,0 +1,13 @@
+[Unit]
+Description=Register WSL Interop binfmt for Windows .exe execution
+After=local-fs.target
+DefaultDependencies=no
+ConditionPathExists=/init
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c "test -e /proc/sys/fs/binfmt_misc/WSLInterop || echo ':WSLInterop:M::MZ::/init:PF' > /proc/sys/fs/binfmt_misc/register"
+RemainAfterExit=true
+
+[Install]
+WantedBy=multi-user.target

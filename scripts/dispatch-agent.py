@@ -267,7 +267,68 @@ def cmd_remove():
     # Remove launch shortcut
     remove_launch_shortcut(key)
 
+    # Kill matching tmux pane in the shared multideck session if running.
+    # Other personas keep their PIDs; the tiled layout rebalances around the
+    # gap (MULTI-FEAT-0065 criterion 3).
+    callsign = personas["personas"].get(key, {}).get("callsign") or key
+    kill_tmux_pane_if_running(key, callsign)
+
     print(f"Agent '{key}' removed.")
+
+
+def kill_tmux_pane_if_running(persona_key, callsign):
+    """Best-effort tmux pane kill for the removed persona.
+
+    Looks up the multideck session (or whatever DISPATCH_TMUX_SESSION names),
+    matches a pane whose title contains the callsign, kills it, then runs
+    select-layout tiled so the remaining panes rebalance. No-ops cleanly when:
+      - tmux is not installed
+      - the multideck session doesn't exist
+      - no pane title matches
+
+    Runs through `wsl -d Ubuntu` on Windows so it works whether dispatch-agent.py
+    runs from PowerShell or from an interactive WSL shell.
+    """
+    import shutil
+    import subprocess as sp
+
+    session = os.environ.get("DISPATCH_TMUX_SESSION", "multideck")
+
+    def _tmux(args):
+        # Prefer native tmux when running inside WSL/Linux; fall back to wsl.exe
+        # interop when the script runs on Windows.
+        if shutil.which("tmux"):
+            return sp.run(["tmux", *args], capture_output=True, text=True, timeout=5)
+        if sys.platform.startswith("win"):
+            return sp.run(["wsl.exe", "-d", "Ubuntu", "--", "tmux", *args],
+                          capture_output=True, text=True, timeout=10)
+        return None
+
+    has = _tmux(["has-session", "-t", session])
+    if has is None or has.returncode != 0:
+        return  # tmux not available or session not running — silent no-op
+
+    listing = _tmux(["list-panes", "-t", session, "-F", "#{pane_id}\t#{pane_title}"])
+    if listing is None or listing.returncode != 0:
+        return
+
+    target_pane = None
+    for line in (listing.stdout or "").splitlines():
+        parts = line.split("\t", 1)
+        if len(parts) == 2 and callsign in parts[1]:
+            target_pane = parts[0]
+            break
+
+    if not target_pane:
+        log(f"No tmux pane found for '{callsign}' in session '{session}'")
+        return
+
+    killed = _tmux(["kill-pane", "-t", target_pane])
+    if killed and killed.returncode == 0:
+        log(f"Killed tmux pane {target_pane} ({callsign}) in session '{session}'")
+        # Re-tile remaining panes. Best-effort — if select-layout fails (e.g.
+        # the kill closed the last pane and ended the session), that's fine.
+        _tmux(["select-layout", "-t", session, "tiled"])
 
 
 def cmd_list():

@@ -1,0 +1,35 @@
+{
+  "job_id": "MULTI-INFRA-0060",
+  "oqe_version": "2.0",
+  "executed_at": "2026-04-20T23:50:00Z",
+  "executed_by": "Architect",
+  "spec_ref": "OQE_DISCIPLINE.md §13 project_worktype_job_ids",
+  "source_file": "dispatch-framework/state/job-board-multideck.json",
+  "closed_jobs_preserved_count": 51,
+  "active_jobs_migrated_count": 3,
+  "mappings": [
+    {
+      "old_id": "50",
+      "new_id": "MULTI-DOCS-0050",
+      "subject": "Update MultiDeck COORDINATION.md to reference WORKSPACE_GOVERNANCE.md",
+      "status": "open",
+      "assigned_to": "architect"
+    },
+    {
+      "old_id": "51",
+      "new_id": "MULTI-PERSONA-0051",
+      "subject": "Update all MultiDeck persona files to reference workspace governance on startup",
+      "status": "open",
+      "assigned_to": "persona-author"
+    },
+    {
+      "old_id": "52",
+      "new_id": "MULTI-GOV-0052",
+      "subject": "Acknowledge workspace governance standards — all MultiDeck agents read and confirm",
+      "status": "open",
+      "assigned_to": "dispatch"
+    }
+  ],
+  "cross_references_updated": "depends_on arrays rewritten via same migration map",
+  "rollback": "Restore dispatch-framework/state/job-board-multideck.json.bak-2026-04-20-MULTI-INFRA-0060"
+}

@@ -286,6 +286,7 @@ Everything coordinates via filesystem. No database. No message broker. JSON stat
 | [PERSONA_SYSTEM.md](docs/PERSONA_SYSTEM.md) | How personas work: callsigns, colors, voices, scopes |
 | [OQE_DISCIPLINE.md](docs/OQE_DISCIPLINE.md) | The full OQE methodology |
 | [KOKORO_SETUP.md](docs/KOKORO_SETUP.md) | Kokoro TTS installation and configuration |
+| [WSL_SETUP.md](docs/WSL_SETUP.md) | Install Claude Code in WSL Ubuntu as a tmux persona transport |
 | [VOICE_RULES.md](docs/VOICE_RULES.md) | TTS-safe writing conventions |
 | [DASHBOARD_GUIDE.md](docs/DASHBOARD_GUIDE.md) | Dashboard routes and configuration |
 | [CLAUDE_DISPATCH_INTEGRATION.md](docs/CLAUDE_DISPATCH_INTEGRATION.md) | Voice queueing, callsigns, and audio feed |

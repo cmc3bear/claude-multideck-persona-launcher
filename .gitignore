@@ -17,11 +17,17 @@ state/*.json
 state/*.md
 !state/*.template.json
 
+# Auto-Redline review queue markers — track the directory (.gitkeep) but ignore
+# the per-job marker files that come and go on submit/review.
+state/pending-reviews/*.json
+!state/pending-reviews/.gitkeep
+
 # Generated content
 briefings/*.md
 tts-output/*.mp3
 tts-output/*.wav
 .kokoro-speak-lock/
+.kokoro-queue/
 voice-config-*.json
 
 # OS files

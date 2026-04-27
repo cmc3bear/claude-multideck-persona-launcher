@@ -1,6 +1,25 @@
+<!--
+oqe_version: 2.0
+spec_source: state/oqe-version.json
+governs: Project-level Claude Code context for MultiDeck; OQE 2.0 mandatory fields below
+last_updated_by: Dispatch alignment pass 2026-04-20
+-->
+
 # MultiDeck — Claude Code Project Context
 
 This is the MultiDeck framework — a forkable multi-agent coordination system built on top of Claude Code. Personas, a cyberpunk launcher, a dashboard, Kokoro TTS integration, and OQE-disciplined job board workflows.
+
+## OQE 2.0 Mandatory Requirements
+
+Every job created under MultiDeck must satisfy (per `docs/OQE_DISCIPLINE.md` §11-§14):
+
+- **problem** — problem statement explaining what is wrong and why it matters (§11)
+- **criteria** — minimum 5 testable criteria, each citing a specific `§N` section of OQE_DISCIPLINE.md or a file path (§11 `linkable_citations_only`)
+- **oqe_version** — declare `"2.0"` on the job record (§12)
+- **depends_on** — explicit array (never null) listing upstream jobs (§11 `dependency_tracking`)
+- **ID format** — `PROJECT-WORKTYPE-####` (§13 `project_worktype_job_ids`) — legacy `PROJECT-####` being migrated
+
+Generic references like "per OQE standards" are rejected at the creation gate (§11 `linkable_citations_only`). See `state/oqe-version.json` for the full capability matrix.
 
 When a Claude Code session opens this directory, this file provides the project-level context that every persona inherits.
 
@@ -24,7 +43,7 @@ MultiDeck is the public distribution of a persona-driven Claude Code orchestrati
 
 - **A job board system** — `scripts/job-board.py` is a CLI for creating jobs, assigning to agents, submitting for review, running the Reviewer gate, and closing with dependency tracking. Supports per-project scoping via `--project <key>` so each connected project gets its own `state/job-board-<project>.json`.
 
-- **A reviewer process capability** — `scripts/reviewer-review.py` runs a sanitization and quality check on any job artifact. The review gate fires on every completed job with a one-loop fix window before escalation.
+- **A reviewer process capability** — `scripts/reviewer-review.py` runs a sanitization and quality check on any job artifact. The review gate fires **automatically** when a job reaches `submitted` status — the Redline review spawns as a sub-process of the original job, with a one-loop fix window before FAIL-ESCALATE. Review prompt template at `dispatch/scripts/redline-review-prompt.md`.
 
 - **CLI tooling for adding/removing agents** — `scripts/dispatch-agent.py add` and `remove` manage the persona roster with interactive prompts, updates to `personas.json`, auto-generates launch shortcuts, and keeps `set-voice.py` VOICE_MAP in sync.
 
@@ -130,15 +149,13 @@ All personas operating in this framework are governed by `docs/WORKSPACE_GOVERNA
 
 Every task that any persona handles follows **Objective → Qualitative → Evidence**:
 
-1. **Objective** — three required parts in this order: (a) **Problem Statement** — what is wrong, broken, or missing and why it matters; (b) **Objective Statement** — one sentence describing what will be done to solve it; (c) **Success Criteria (minimum 5)** — how we prove the objective was met. Each criterion must be specific (independently verifiable), observable (not subjective), and traceable (maps to a specific piece of evidence). Vague criteria like "works correctly", "looks good", or "covers the important stuff" are explicitly rejected and will be flagged by Reviewer. The flow is: Problem (why) → Objective (plan) → Criteria (proof).
+1. **Objective** — one-sentence statement of what the task is trying to accomplish, plus success criteria the task will be judged against.
 
-2. **Qualitative** — confidence assessment before acting. HIGH / MODERATE / LOW. Walk each of the 5+ criteria: does the planned approach actually satisfy it? What assumptions am I making? What alternatives did I consider? Which criteria are hardest to meet?
+2. **Qualitative** — confidence assessment before and after. HIGH / MODERATE / LOW. What assumptions am I making? What alternatives did I consider? Why this approach over others?
 
-3. **Evidence** — what was actually observed, mapped 1:1 to criteria. Every criterion must have at least one STRONG or MODERATE evidence item. Cite file paths, line numbers, error messages, test results, source URLs. Tag each piece STRONG (direct observation), MODERATE (inferred), or LIMITED (single-source or unverified). No criterion closes on LIMITED evidence alone.
+3. **Evidence** — what was actually observed. Cite file paths, line numbers, error messages, test results, source URLs. Tag each piece of evidence STRONG (direct observation), MODERATE (inferred), or LIMITED (single-source or unverified).
 
-4. **Completion Gate** — before declaring done, restate each criterion, cite its evidence, grade the evidence strength, and declare MET or NOT MET. Any criterion without STRONG or MODERATE evidence stays open.
-
-Every deliverable must include an OQE frame in its completion report. The Reviewer checks for it on every job and will FLAG any submission with fewer than 5 criteria or vague/untestable criteria.
+Every deliverable must include an OQE frame in its completion report. The Reviewer checks for it on every job.
 
 Full explanation in `docs/OQE_DISCIPLINE.md`.
 
@@ -170,7 +187,7 @@ When personas complete work on the MultiDeck project, they **auto-advance** with
 - Ambiguity that best judgment cannot resolve
 - A prior assumption proven wrong such that the work needs redirecting
 
-Otherwise the job flows through the Reviewer gate and closes. The Reviewer gate is one-loop-max — one fix attempt, then either PASS or FAIL-ESCALATE.
+Otherwise the job flows through the Reviewer gate and closes. The Reviewer gate is **auto-triggered** — when a job reaches `submitted` status, a Redline review spawns automatically as a sub-process of the original job (no separate review job is created). The review is one-loop-max: PASS auto-closes the job and unblocks dependents, or one fix attempt then FAIL-ESCALATE to user. The project reviewer retains final determination of validity.
 
 See `docs/JOB_BOARD.md` and `docs/REVIEW_WORKFLOW.md` for full protocol.
 
@@ -191,6 +208,10 @@ MultiDeck reads configuration from environment variables to avoid hardcoded path
 | `DISPATCH_TEAM_PRESETS` | Team preset JSON | `$DISPATCH_ROOT/dashboard/team-presets.json` |
 | `DISPATCH_PROJECTS_DIR` | Active projects directory to scan | (unset = no project scan) |
 | `DISPATCH_WORKSPACE_ROOT` | Workspace root for "WORKSPACE ROOT" target node | `$DISPATCH_ROOT` |
+| `DISPATCH_LAUNCHER_TRANSPORT` | Explicit override for the persona spawn transport: `wt` (Windows Terminal) or `tmux` (WSL Ubuntu). When **unset**, the dashboard auto-detects: tmux when WSL+tmux+claude are all present, otherwise wt (Windows) or sh (Linux/macOS). Per-launch override via launcher UI radio, `transport` field in `POST /launcher/launch`, or `-Transport` param on `launch-persona.ps1`. To force the legacy default on a host that could run tmux, set `DISPATCH_LAUNCHER_TRANSPORT=wt`. | auto-detect (was `wt` pre-MULTI-FEAT-0063) |
+| `DISPATCH_KOKORO_VENV` | WSL Linux Kokoro venv path (tmux transport only). Install via `scripts/install-wsl-kokoro-venv.sh`; run with `--verify` to check pinned versions, `--force` to rebuild. | `~/.dispatch-kokoro-venv` |
+| `DISPATCH_TMUX_SESSION` | tmux session name for shared persona panes (topology B: one session, tiled panes) | `multideck` |
+| `DISPATCH_CLAUDE_BIN` | Override claude binary in `launch-persona-tmux.sh` (`echo` for dry runs) | `claude` |
 | `CLAUDE_CODE_SSE_PORT` | Set by Claude Code, used by hooks for per-session voice config | (set automatically) |
 
 Set these before launching the dashboard, or accept the defaults.
@@ -240,7 +261,8 @@ The `scripts/reviewer-review.py` script automates most of these checks. Run it b
 - Persona behavior change? `personas/<NAME>_AGENT.md`
 - Doc question? Start with `README.md`, drill into `docs/`
 - Job board issue? `scripts/job-board.py` + `docs/JOB_BOARD.md`
-- Review gate issue? `scripts/reviewer-review.py` + `docs/REVIEW_WORKFLOW.md`
+- Review gate issue? `scripts/reviewer-review.py` + `docs/REVIEW_WORKFLOW.md` (auto-triggered on submit)
+- Review prompt template? `dispatch/scripts/redline-review-prompt.md`
 
 ---
 

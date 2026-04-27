@@ -1,20 +1,31 @@
 # =====================================================
 #  MultiDeck Persona Launcher
-#  Opens a new Windows Terminal tab for a persona with:
-#    - Correct working directory
-#    - Persona-themed tab color
-#    - Terminal title set to callsign
+#  Opens a new Windows Terminal tab (default) or routes to a tmux pane in
+#  WSL Ubuntu, depending on -Transport.
+#
+#  wt transport (default):
+#    - Persona-themed tab color, callsign as title
 #    - Claude Code launched with --dangerously-skip-permissions
-#      (project dirs are self-contained and high-velocity;
-#      permission prompts would grind workflow to a halt)
-#    - Activation prompt that loads persona + sets Kokoro
-#      voice via set-voice.py (per-session, never touches
-#      the shared voice-config.json)
+#    - Activation prompt loads persona + sets Kokoro voice via set-voice.py
+#    - Per-session voice config keyed by CLAUDE_CODE_SSE_PORT
+#
+#  tmux transport (opt-in):
+#    - Spawns into the shared 'multideck' tmux session in WSL Ubuntu
+#    - Topology B: one session, one window, tiled panes (one persona per pane)
+#    - Per-pane title with embedded color escape; content fg tint
+#    - Closing the wt window does NOT kill the tmux session — `wsl tmux attach
+#      -t multideck` reattaches from anywhere
+#    - Requires WSL Ubuntu with tmux 3.4+ and Linux Kokoro venv at
+#      $DISPATCH_KOKORO_VENV (default ~/.dispatch-kokoro-venv); see
+#      state/feasibility-MULTI-FEAT-0055-tmux-transport.md
 #
 #  Usage:
 #    powershell -ExecutionPolicy Bypass -File launch-persona.ps1 dispatch
 #    powershell -ExecutionPolicy Bypass -File launch-persona.ps1 engineer
 #    powershell -ExecutionPolicy Bypass -File launch-persona.ps1 dispatch "quick sanity check"
+#    powershell -ExecutionPolicy Bypass -File launch-persona.ps1 -Transport tmux launcher-engineer
+#
+#  Default transport: wt. Override globally with $env:DISPATCH_LAUNCHER_TRANSPORT.
 # =====================================================
 
 param(
@@ -22,10 +33,23 @@ param(
     [string]$PersonaKey,
 
     [Parameter(Position = 1)]
-    [string]$InitialPrompt = ""
+    [string]$InitialPrompt = "",
+
+    [ValidateSet("wt", "tmux")]
+    [string]$Transport = ""
 )
 
 $ErrorActionPreference = "Stop"
+
+# Resolve transport: explicit -Transport beats env var beats default 'wt'
+if (-not $Transport) {
+    $Transport = if ($env:DISPATCH_LAUNCHER_TRANSPORT) { $env:DISPATCH_LAUNCHER_TRANSPORT } else { "wt" }
+}
+$Transport = $Transport.ToLower()
+if ($Transport -ne "wt" -and $Transport -ne "tmux") {
+    Write-Error "Invalid transport: $Transport (expected wt or tmux)"
+    exit 2
+}
 
 # Read personas.json from configurable path or default
 $personasPath = $env:DISPATCH_PERSONAS_JSON
@@ -52,6 +76,47 @@ $callsign = $p.callsign
 $color = $p.tab_color
 $cwd = $p.cwd
 $voiceKey = $p.voice_key
+
+# ----------------------------------------------------------------------
+# tmux transport — delegate to launch-persona-tmux.sh inside WSL Ubuntu.
+# Wrapped in a wt window so the operator gets a visible attached session.
+# ----------------------------------------------------------------------
+if ($Transport -eq "tmux") {
+    $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+    # Convert F:\03-INFRASTRUCTURE\... → /mnt/f/03-INFRASTRUCTURE/...
+    $wslRepoRoot = $repoRoot -replace '\\', '/'
+    if ($wslRepoRoot -match '^([A-Za-z]):/(.*)$') {
+        $wslRepoRoot = "/mnt/$($Matches[1].ToLower())/$($Matches[2])"
+    }
+    $tmuxScript = "$wslRepoRoot/scripts/launch-persona-tmux.sh"
+
+    # Single-quote each arg for bash. The tmux script handles topology;
+    # default is auto-attach so the wt window holds the live session.
+    $bashCmd = "'$tmuxScript' '$key'"
+    if ($InitialPrompt) {
+        $escapedPrompt = $InitialPrompt -replace "'", "'\''"
+        $bashCmd = "$bashCmd '$escapedPrompt'"
+    }
+
+    Write-Host "Launching $callsign via tmux transport (WSL)..." -ForegroundColor Cyan
+    Write-Host "  Script: $tmuxScript" -ForegroundColor Gray
+    Write-Host "  Session: multideck (auto-attach)" -ForegroundColor Gray
+
+    $wtArgs = @(
+        "-w", "new",
+        "new-tab",
+        "--title", "MULTIDECK [$callsign]",
+        "--tabColor", "#000000",
+        "wsl.exe", "-d", "Ubuntu", "--",
+        "bash", "-lc", $bashCmd
+    )
+    Start-Process wt -ArgumentList $wtArgs
+    exit 0
+}
+
+# ----------------------------------------------------------------------
+# wt transport — original Windows Terminal flow continues below.
+# ----------------------------------------------------------------------
 
 # Map persona color_hex to a Claude Code /color name (cyan/blue/green/yellow/orange/red/pink/purple)
 $colorNameMap = @{
