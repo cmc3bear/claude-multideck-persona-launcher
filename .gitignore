@@ -93,3 +93,28 @@ personas/RESONANCE_AGENT.md
 
 # Local coordination state (project-specific, not distributable)
 coordination/
+
+# Claude Code local project settings
+.claude/
+
+# Scratch / working directories
+scrap/
+
+# Binary archives
+Multideck.zip
+
+# State: dated backups and backup subdirectory
+state/*.bak-*
+state/backups/
+
+# State: per-job acceptance criteria (operator working files)
+state/criteria-*.txt
+
+# State: draft lesson JS files
+state/LESSON-*.js
+
+# Script backups
+scripts/*.bak-*
+
+# Stale root-level dashboard copy
+/Job\ Board\ Dashboard.html

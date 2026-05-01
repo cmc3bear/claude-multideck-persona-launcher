@@ -1,0 +1,233 @@
+{
+  "job_id": "MULTI-FEAT-0067",
+  "subject": "Incorporate Job Board Dashboard from claude.design — view modules + Reviewer Log surface",
+  "executor": "launcher-engineer",
+  "completed_at": "2026-04-27T08:32:00Z",
+  "oqe_version": "2.0",
+  "source_artifact": "/mnt/f/Multideck.zip (claude.design export 2026-04-27, 24 entries, 769 KB)",
+  "doc_authority": "docs/REVIEWER_LOG.md (v2.0.0)",
+
+  "predecessor_doc_work": {
+    "summary": "The canonical OQE/Reviewer-Log documents that this job's criteria cite (REVIEWER_LOG.md §2/§4/§7 and OQE_DISCIPLINE.md §15/§16) were landed by Dispatch in the same unpushed commit (23b594d) immediately before this job was posted and worked. Without that fold, criterion citations would be unresolvable and §11 linkable_citations_only would fail.",
+    "actions": [
+      {
+        "file": "docs/REVIEWER_LOG.md",
+        "change": "vendored verbatim from /tmp/multideck-zip-review/docs/REVIEWER_LOG.md (claude.design export 2026-04-27); declared as the one-page canonical source of truth per its §1, §9, §10",
+        "purpose": "Establishes the linkable spec for criteria 5 (lesson schema §2), 6 (matcher §4), and 7 (Pattern Detector §7) of MULTI-FEAT-0067"
+      },
+      {
+        "file": "docs/OQE_DISCIPLINE.md",
+        "change": "appended §15 'The Six Tenets (canonical short form)' with T1–T6 table mapped to existing §2/§3/§4/§11/§12; appended §16 'Reviewer Log & Lesson Capture Protocol' summarizing the lesson loop and cross-referencing REVIEWER_LOG.md as canonical; added REVIEWER_LOG.md to Further Reading",
+        "purpose": "Folds the six-tenet short form and lesson-capture loop into the deep OQE reference so the unified canonical doc has one consistent narrative; preserves REVIEWER_LOG.md as the one-page front-door per its own §9 adoption requirement"
+      }
+    ],
+    "commit": "23b594d (amended) — pre-push reviewer gate currently blocking; not yet on origin/main",
+    "why_this_note_exists": "User flagged that the manifest should explicitly attribute the predecessor doc landings so the Reviewer can verify the criterion citations resolve, and so this job's evidence chain is auditable end-to-end."
+  },
+
+  "o_frame": "Incorporate the claude.design Job Board Dashboard (multi-view: board, radar, cluster, reviewer-log/lessons, pattern-detector, meeting-room) into dispatch-framework/dashboard so the OQE 2.0 self-improvement loop has a live UI. Wire the new dashboard to /jobs, vendor scripts/styles/data, expose a /state.json bundle that data/live.js consumes (job-boards + lessons + briefing keys), preserve the localStorage mdk-data-mode toggle, and enforce that LIVE mode never silently substitutes claude.design sample data on fetch failure. Implement lesson-schema validation per REVIEWER_LOG.md §2, the deterministic top-5 matcher per §4, and the read-only Pattern Detector view per §7.",
+
+  "files_added": [
+    "dashboard/job-board-dashboard.html",
+    "dashboard/scripts/views.js",
+    "dashboard/scripts/lessons.js",
+    "dashboard/scripts/meeting.js",
+    "dashboard/scripts/patterns.js",
+    "dashboard/scripts/shell.js",
+    "dashboard/scripts/app.js",
+    "dashboard/scripts/lessons-validate.js",
+    "dashboard/styles/lessons.css",
+    "dashboard/styles/live.css",
+    "dashboard/styles/meeting.css",
+    "dashboard/styles/patterns.css",
+    "dashboard/styles/shell.css",
+    "dashboard/styles/variations.css",
+    "dashboard/data/jobs.js",
+    "dashboard/data/lessons.js",
+    "dashboard/data/live.js",
+    "dashboard/state-templates/lessons.json.template",
+    "state/lessons.json",
+    "state/manifests/MULTI-FEAT-0067-integration.json"
+  ],
+  "files_modified": [
+    "dashboard/server.cjs (added discoverJobBoards/loadLessons/buildLiveStateBundle helpers; replaced /state.json with bundle; replaced /jobs route with new HTML; added /jobs-classic for legacy WS-0011 page; added /scripts/* /styles/* /data/* static asset routes; added DASHBOARD_* path constants; updated 404 + boot log)",
+    "dashboard/data/live.js (extended normalizer to read state.lessons; replaced silent mock-fallback in fetch error path with applyEmptyLive + console.warn; preserved mdk-data-mode toggle; updated MOCK_PERSONAS reference path)",
+    "dashboard/data/lessons.js (added window.MOCK_LESSONS alias; added window.debugMatcher console helper exposing all score components)",
+    "dashboard/scripts/lessons.js (validateLesson() now delegates to window.validateLessonSchema with inline rules as fallback)",
+    "dashboard/job-board-dashboard.html (rewrote asset hrefs to absolute /styles /scripts /data; added explicit script tag for /scripts/lessons-validate.js; added integration commentary)",
+    "state/job-board-multideck.json (status: open -> in_progress -> submitted, accepted_at, submitted_at, output_path)"
+  ],
+  "files_deliberately_not_vendored": [
+    "data/jobs.js sample seed payload INTO live mode — sample JOBS/PROJECTS/PERSONAS still ship in mock mode for dev (criterion 4) but live mode reads exclusively from /state.json (validated: live JOBS pulls 67 entries from state/job-board-multideck.json, not the 23 sample fixtures)",
+    "data/lessons.js sample seed lessons INTO state/lessons.json — production lesson file ships empty per ignored_from_artifact",
+    "Resonance persona — present in dashboard/data/jobs.js MOCK_PERSONAS (sample-only) but NOT registered in personas/personas.json (live registry unchanged)",
+    "scrap/ design screenshots from /tmp/multideck-zip-review/scrap/",
+    "uploads/ whiteboard drawings from /tmp/multideck-zip-review/uploads/",
+    "docs/ from the zip — docs/REVIEWER_LOG.md was vendored by Dispatch in the unpushed sync commit 23b594d (see predecessor_doc_work above), not by this job"
+  ],
+
+  "criteria": [
+    {
+      "n": 1,
+      "verdict": "MET",
+      "summary": "Job Board Dashboard.html renamed to dashboard/job-board-dashboard.html (hyphenated, no spaces) and reachable via GET /jobs.",
+      "evidence": [
+        "file: dashboard/job-board-dashboard.html (rewrote asset hrefs to absolute paths)",
+        "server.cjs: new /jobs handler reads JOB_BOARD_DASHBOARD_HTML and serves it (lines around the if (url === '/jobs' || url === '/jobs/') block)",
+        "curl: GET http://localhost:3046/jobs returned 200 OK, Content-Type text/html, 2653 bytes, body begins with '<!DOCTYPE html>' and contains the title '// MULTIDECK · JOB BOARD //'",
+        "legacy /jobs (WS-0011 server-rendered page) preserved at /jobs-classic so prior bookmarks do not 404 (curl /jobs-classic returned 200 OK, 674,972 bytes)"
+      ],
+      "alternatives_considered": "Mounting the new dashboard at /board or /dashboard while leaving /jobs alone — rejected because dashboard/launcher.html line 1624 and the new shell.js shortcut bar both link to /jobs as the canonical job-board entry point; leaving the legacy renderer there would have shipped the old UI behind every link in the launcher."
+    },
+    {
+      "n": 2,
+      "verdict": "MET",
+      "summary": "View modules and stylesheets vendored into dashboard/scripts and dashboard/styles. All five view modes render-routed via scripts/app.js renderView().",
+      "evidence": [
+        "dashboard/scripts/{views,lessons,meeting,patterns,shell,app}.js — six files, sizes 13,543–29,729 B",
+        "dashboard/styles/{lessons,live,meeting,patterns,shell,variations}.css — six files, sizes 7,550–22,552 B",
+        "scripts/app.js renderView() switches on App.activeVariation across 'board' | 'radar' | 'cluster' | 'reviewer-log' | 'pattern-detector' | 'meeting-room'",
+        "scripts/shell.js renderRail() emits VIEW nav entries for all six modes",
+        "all assets fetch HTTP 200 from the new /scripts/, /styles/, /data/ static routes (PowerShell smoke test, see test_results)"
+      ]
+    },
+    {
+      "n": 3,
+      "verdict": "MET",
+      "summary": "data/live.js wired to /state.json. localStorage 'mdk-data-mode' toggle (mock | live) preserved; setMode() persists to localStorage and starts/stops polling.",
+      "evidence": [
+        "server.cjs buildLiveStateBundle() returns { 'job-boards': discoverJobBoards(), lessons: loadLessons(), ...loadState(), meta_live }",
+        "curl GET /state.json returned 200 OK, application/json, 175,646 bytes; keys: ['actions','dispatch-log','calendar','escalations','followups','project-summary','inbox-flags','state-meta','morning-pipeline','pulse-log','weather','job-board','job-boards','lessons','meta_live']",
+        "/state.json job-boards keys: ['multideck','planex-core','workspace']; multideck has 67 jobs",
+        "data/live.js DEFAULTS.mode = localStorage.getItem('mdk-data-mode') || 'mock'; setMode(mode) calls localStorage.setItem('mdk-data-mode', mode) (file lines ~22, ~250)",
+        "data/live.js normalizeStateBundle now also extracts state.lessons into out.lessons; applyLive replaces window.LESSONS + window.LESSONS_BY_ID + window.LESSONS_BY_JOB"
+      ]
+    },
+    {
+      "n": 4,
+      "verdict": "MET",
+      "summary": "Sample data files ship for mock mode only. Live mode reads from /state.json; on fetch failure live mode does NOT silently fall back to MOCK_JOBS — it renders empty live state and logs a warning. Mock substitution requires explicit operator action via setMode('mock').",
+      "evidence": [
+        "data/live.js fetchOnce() catch branch: console.warn('[live] /state.json fetch failed:', e.message, '— remaining in live mode; explicit operator action required to swap to mock')",
+        "data/live.js applyEmptyLive() replaces JOBS/PROJECTS/LESSONS with empty arrays and sets status='error' (no MOCK substitution)",
+        "data/lessons.js exports window.MOCK_LESSONS so applyMock() can restore them when the operator explicitly chooses mock",
+        "/state.json multideck board returned 67 production jobs (not the 23 sample fixtures from data/jobs.js) — proves live path bypasses mock data",
+        "state/lessons.json ships as empty {lessons: []} per ignored_from_artifact (file size 565 B, lessons: [])"
+      ]
+    },
+    {
+      "n": 5,
+      "verdict": "MET",
+      "summary": "Lesson schema validator implemented per REVIEWER_LOG.md §2 in dashboard/scripts/lessons-validate.js. Editor in scripts/lessons.js delegates to window.validateLessonSchema().",
+      "evidence": [
+        "dashboard/scripts/lessons-validate.js exports window.validateLessonSchema(d) returning string[] of errors",
+        "Rules implemented: ≥1 tenet_broken with how ≥10 chars, ≥3 mitigations each ≥15 chars (≥1 sentence), root_cause and applies_to ≥20 chars + abstraction tripwires (rejects 'this bug', 'this ticket', 'this specific job/fix/change'), applies_to_tags ≥1, matches_worktypes is array, job_id matches /^[A-Z]+-[A-Z]+-\\d{4}$/",
+        "scripts/lessons.js validateLesson() now: 'if (typeof window.validateLessonSchema === \"function\") return window.validateLessonSchema(d);' — single source of truth",
+        "node test: clean LESSON-0001 → 0 errors; degenerate test lesson → 13 distinct errors covering every §2 rule (job_id format, what_happened length, phase, gate, confidence, oqe_path, alternatives, tenets_broken, root_cause+abstraction, applies_to+abstraction, applies_to_tags, matches_worktypes, mitigations count)"
+      ]
+    },
+    {
+      "n": 6,
+      "verdict": "MET",
+      "summary": "Deterministic matcher in dashboard/data/lessons.js implements the §4 scoring formula. Top-5 surfaces on each open job's drawer via renderPriorLessonsPanel(). Score components inspectable via window.debugMatcher(jobId).",
+      "evidence": [
+        "data/lessons.js matchLessonsToJob(job, opts) — Score = tag_overlap × 3 + transitive × 1 + worktype × 2 + universal × 0.5 + same_project × 0.5; ranked desc, sliced to opts.limit (default 5)",
+        "scripts/lessons.js renderPriorLessonsPanel() called by scripts/app.js openDrawer(): const matches = window.matchLessonsToJob(job, { minScore: 1, limit: 5 })",
+        "debug helper: window.debugMatcher(jobId) loops every lesson with minScore=0 includeAllStatuses=true and console.groups the score breakdown — proves all components inspectable",
+        "node test on JOBS[0] (MULTIDECK-GOV-0056): 5 matches returned, top is LESSON-0003 score=3.50 why=tag-overlap(+3)+same-project(+0.5); LESSON-0005 score=1.00 why=universal(+0.5)+same-project(+0.5) — every match exposes its weight components",
+        "matcher is read-only: no lesson mutation in matchLessonsToJob (verified by inspection — only reads lesson.applies_to_tags, lesson.matches_worktypes, lesson.status; no assignment to any l.*)"
+      ]
+    },
+    {
+      "n": 7,
+      "verdict": "MET",
+      "summary": "Pattern Detector view in dashboard/scripts/patterns.js renders all five §7 panels read-only: tenet-break trends, phase-of-detection distribution, worktype × tenet heatmap, top applies-to tags, open-job coverage with unprotected jobs flagged.",
+      "evidence": [
+        "scripts/patterns.js renderPatternDetectorView(root) builds 5 panels — verified by inspection: tenetCounts (line ~25), phase distribution (loops over PHASES), worktype × tenet matrix (line ~30 onwards), tag frequency, open-job coverage with red flag for matches.length===0",
+        "matcher invoked read-only: line 49 'const matches = window.matchLessonsToJob ? window.matchLessonsToJob(j, { minScore: 1, limit: 99 }) : []' — no writes back to lessons or jobs",
+        "rail entry in scripts/shell.js renderRail() includes 'pattern-detector' nav item and seg button so the view is reachable",
+        "scripts/app.js renderView() routes App.activeVariation === 'pattern-detector' → renderPatternDetectorView(root)"
+      ]
+    }
+  ],
+
+  "test_results": {
+    "server_start": {
+      "command": "WSLENV=DISPATCH_PORT DISPATCH_PORT=3046 node dashboard/server.cjs",
+      "result": "PASS — boot log shows '/jobs Visual job board dashboard (multi-view, lessons, patterns)', '/jobs-classic Legacy server-rendered job board (WS-0011)', '/state.json Live state bundle (job-boards + lessons + briefing)'; listening on 0.0.0.0:3046"
+    },
+    "endpoint_smoke": {
+      "method": "PowerShell Invoke-WebRequest from Windows side (WSL2 cannot reach Windows-bound localhost without mirrored mode)",
+      "results": {
+        "/jobs": "200 OK 2653B (HTML, contains '// MULTIDECK · JOB BOARD //')",
+        "/jobs-classic": "200 OK 674,972B (HTML)",
+        "/state.json": "200 OK 175,646B (JSON, keys include job-boards, lessons, meta_live)",
+        "/styles/shell.css": "200 OK 15,700B",
+        "/styles/lessons.css": "200 OK 22,552B",
+        "/styles/patterns.css": "200 OK 8,525B",
+        "/styles/variations.css": "200 OK 19,702B",
+        "/styles/live.css": "200 OK 8,245B",
+        "/styles/meeting.css": "200 OK 7,550B",
+        "/scripts/lessons.js": "200 OK 29,729B",
+        "/scripts/lessons-validate.js": "200 OK 6,996B",
+        "/scripts/views.js": "200 OK 28,932B",
+        "/scripts/patterns.js": "200 OK 11,443B",
+        "/scripts/meeting.js": "200 OK 19,997B",
+        "/scripts/shell.js": "200 OK 13,543B",
+        "/scripts/app.js": "200 OK 13,854B",
+        "/data/jobs.js": "200 OK 14,799B",
+        "/data/lessons.js": "200 OK 22,089B",
+        "/data/live.js": "200 OK 11,007B"
+      }
+    },
+    "validator_unit_test": {
+      "method": "node script loading dashboard/data/jobs.js + lessons.js + scripts/lessons-validate.js into a synthetic window",
+      "clean_lesson_LESSON-0001_errors": 0,
+      "broken_lesson_errors": 13,
+      "broken_lesson_error_categories": [
+        "job_id format", "what_happened length", "noted_at_phase enum",
+        "noted_at_gate enum", "confidence_at_decision enum", "oqe_path bool",
+        "alternatives_considered length", "tenets_broken count", "root_cause length+abstraction",
+        "applies_to length+abstraction", "applies_to_tags count", "matches_worktypes type",
+        "mitigations count"
+      ]
+    },
+    "matcher_unit_test": {
+      "method": "node script — matchLessonsToJob(JOBS[0], {minScore:0, limit:5})",
+      "job": "MULTIDECK-GOV-0056",
+      "top_5": [
+        "LESSON-0003 score=3.50 (tag-overlap+3, same-project+0.5)",
+        "LESSON-0004 score=1.50 (transitive-tags+1, same-project+0.5)",
+        "LESSON-0005 score=1.00 (universal+0.5, same-project+0.5)",
+        "LESSON-0001 score=0.50 (same-project+0.5)",
+        "LESSON-0002 score=0.50 (same-project+0.5)"
+      ],
+      "deterministic": "Yes — same input fixtures produce same ranked output across runs (no Date.now() or random calls in scoring path)",
+      "debug_helper_typeof": "function"
+    },
+    "syntax_check": "node -c on all 12 vendored .js files + dashboard/server.cjs — ALL OK"
+  },
+
+  "deferred_or_known_limitations": [
+    {
+      "topic": "Lesson editor save → state/lessons.json round-trip",
+      "status": "Not in scope for this job",
+      "note": "Editor in scripts/lessons.js currently mutates window.LESSONS in-memory only. Persisting saves back to state/lessons.json requires a POST /api/lessons endpoint and reviewer ratification flow per REVIEWER_LOG.md §5. The validation gate (criterion 5) and the read-only matcher path are the in-scope wiring for MULTI-FEAT-0067; persistence is the natural follow-up."
+    },
+    {
+      "topic": "WSL→Windows localhost reachability",
+      "status": "Environmental, not a code issue",
+      "note": "Tests were run via Windows PowerShell because the operator's WSL2 instance is not in mirrored networking mode. The Node server itself listens on 0.0.0.0 and is reachable from any Windows or LAN client."
+    },
+    {
+      "topic": "Mock data quality for development",
+      "status": "By design",
+      "note": "data/jobs.js and data/lessons.js still contain the claude.design sample fixtures so MOCK mode renders a meaningful dashboard out of the box. ignored_from_artifact only forbids the SAMPLE seeds in LIVE mode (criterion 4); in mock mode they remain useful."
+    }
+  ],
+
+  "route_changes": {
+    "added": ["/jobs-classic", "/scripts/*", "/styles/*", "/data/*"],
+    "behavior_changed": ["/jobs (was: WS-0011 server-rendered page; now: claude.design SPA)", "/state.json (was: legacy loadState only; now: extended bundle with job-boards + lessons + meta_live + legacy keys preserved)"]
+  }
+}

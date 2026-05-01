@@ -1,0 +1,317 @@
+/* Live-data UI: data source pill in topbar + tweaks endpoint input */
+
+.datasrc {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 4px 4px 10px;
+  margin-right: 14px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  background: rgba(10, 14, 22, 0.4);
+  cursor: pointer;
+  user-select: none;
+  transition: border-color 0.15s, background 0.15s;
+  position: relative;
+}
+.datasrc:hover { border-color: var(--accent); background: rgba(10, 14, 22, 0.7); }
+
+.datasrc .ds-dot {
+  font-size: 12px;
+  width: 14px; height: 14px;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.datasrc .ds-l { color: var(--ink); font-weight: 600; }
+.datasrc .ds-sub {
+  color: var(--ink-mute);
+  font-size: 9.5px;
+  letter-spacing: 0.10em;
+  border-left: 1px solid var(--line);
+  padding-left: 8px;
+  margin-left: 2px;
+}
+.datasrc .ds-refresh {
+  border: none;
+  background: transparent;
+  color: var(--ink-mute);
+  font-size: 14px;
+  width: 22px; height: 22px;
+  margin-left: 2px;
+  cursor: pointer;
+  border-left: 1px solid var(--line);
+  font-family: var(--mono);
+  transition: color 0.12s, transform 0.4s ease;
+}
+.datasrc .ds-refresh:hover { color: var(--accent); transform: rotate(90deg); }
+
+/* Status colors */
+.datasrc.pass  { border-color: rgba(0, 255, 153, 0.45); }
+.datasrc.pass  .ds-dot { color: #00FF99; text-shadow: 0 0 6px #00FF99; }
+.datasrc.pass  .ds-l   { color: #00FF99; }
+
+.datasrc.amber { border-color: rgba(255, 183, 0, 0.55); }
+.datasrc.amber .ds-dot { color: #FFB700; text-shadow: 0 0 6px #FFB700; animation: ds-blink 1s infinite; }
+.datasrc.amber .ds-l   { color: #FFB700; }
+
+.datasrc.red   { border-color: rgba(255, 59, 110, 0.6); }
+.datasrc.red   .ds-dot { color: #FF3B6E; text-shadow: 0 0 6px #FF3B6E; }
+.datasrc.red   .ds-l   { color: #FF3B6E; }
+
+.datasrc.muted .ds-dot { color: var(--ink-mute); }
+.datasrc.muted .ds-l   { color: var(--ink-dim); }
+
+@keyframes ds-blink {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.35; }
+}
+
+/* Pulse for live state */
+.datasrc.pass::before {
+  content: "";
+  position: absolute;
+  left: 8px; top: 50%;
+  width: 8px; height: 8px;
+  margin-top: -4px;
+  border-radius: 50%;
+  background: #00FF99;
+  opacity: 0;
+  animation: ds-pulse 2.2s infinite;
+  pointer-events: none;
+}
+@keyframes ds-pulse {
+  0%   { opacity: 0.5; transform: scale(0.6); }
+  70%  { opacity: 0;   transform: scale(2.4); }
+  100% { opacity: 0;   transform: scale(2.4); }
+}
+
+/* Tweaks: endpoint input + status row */
+.tweak-row.tweak-stack {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+}
+.tweak-row.tweak-stack > span {
+  font-size: 9.5px;
+  color: var(--ink-mute);
+  letter-spacing: 0.18em;
+}
+.tweak-row input[type="text"], .tweak-row input:not([type]) {
+  background: rgba(0,0,0,0.3);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 6px 8px;
+  border-radius: 2px;
+  outline: none;
+  width: 100%;
+}
+.tweak-row input:focus { border-color: var(--accent); }
+
+.tweak-row.tweak-status {
+  padding-top: 6px;
+  border-top: 1px dashed var(--line);
+}
+
+/* Hide the data-source sub label on narrow screens */
+@media (max-width: 1280px) {
+  .datasrc .ds-sub { display: none; }
+}
+
+/* Topbar shortcuts (moved from rail) */
+.shortcuts {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 18px;
+  padding-left: 18px;
+  border-left: 1px solid var(--line);
+  height: 28px;
+}
+.shortcuts .sc {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.16em;
+  color: var(--ink-dim);
+  text-decoration: none;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  transition: color 0.12s, border-color 0.12s, background 0.12s;
+  text-transform: uppercase;
+}
+.shortcuts .sc:hover {
+  color: var(--accent);
+  border-color: var(--line);
+  background: rgba(0, 255, 204, 0.04);
+}
+.shortcuts .sc.on {
+  color: var(--ink);
+  border-color: var(--accent);
+  background: rgba(0, 255, 204, 0.06);
+}
+.shortcuts .sc-dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--ink-mute);
+  display: inline-block;
+  transition: background 0.12s, box-shadow 0.12s;
+}
+.shortcuts .sc:hover .sc-dot,
+.shortcuts .sc.on .sc-dot {
+  background: var(--accent);
+  box-shadow: 0 0 6px var(--accent);
+}
+
+@media (max-width: 1280px) {
+  .shortcuts .sc { padding: 5px 7px; }
+  .shortcuts { gap: 0; }
+}
+@media (max-width: 1100px) {
+  .shortcuts { display: none; }
+}
+
+/* Status badge on tickets — Tron lightcycle glow.
+   Hard bright edge + dense inner core + long outer trail. */
+.sbadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 1px 7px 1px 6px;
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 9.5px;
+  letter-spacing: 0.16em;
+  border: 1px solid currentColor;
+  border-radius: 1px;
+  background: rgba(0,0,0,0.55);
+  white-space: nowrap;
+  margin-right: auto;
+  position: relative;
+  text-shadow:
+    0 0 4px currentColor,
+    0 0 10px currentColor;
+}
+.sbadge .sbadge-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow:
+    0 0 4px currentColor,
+    0 0 10px currentColor,
+    0 0 18px currentColor;
+}
+
+/* Outer glow ring — stacked shadows mimic the Tron neon halo:
+   - 0 0 0 1px = razor-thin bright edge
+   - inset = inner core glow
+   - outer = soft long trail */
+.sbadge-open {
+  --glow: #B8E6FF;
+  color: #E6F4FF;
+  background:
+    linear-gradient(180deg, rgba(184,230,255,0.18), rgba(184,230,255,0.04)),
+    rgba(0,0,0,0.55);
+  box-shadow:
+    0 0 0 1px var(--glow),
+    inset 0 0 8px rgba(184,230,255,0.55),
+    0 0 6px rgba(184,230,255,0.85),
+    0 0 14px rgba(184,230,255,0.55),
+    0 0 28px rgba(184,230,255,0.30);
+}
+
+.sbadge-accepted {
+  --glow: #00FFCC;
+  color: #B8FFEC;
+  background:
+    linear-gradient(180deg, rgba(0,255,204,0.18), rgba(0,255,204,0.04)),
+    rgba(0,0,0,0.55);
+  box-shadow:
+    0 0 0 1px var(--glow),
+    inset 0 0 8px rgba(0,255,204,0.55),
+    0 0 6px rgba(0,255,204,0.85),
+    0 0 14px rgba(0,255,204,0.55),
+    0 0 28px rgba(0,255,204,0.30);
+}
+
+.sbadge-submitted {
+  --glow: #FFB700;
+  color: #FFE08A;
+  background:
+    linear-gradient(180deg, rgba(255,183,0,0.18), rgba(255,183,0,0.04)),
+    rgba(0,0,0,0.55);
+  box-shadow:
+    0 0 0 1px var(--glow),
+    inset 0 0 8px rgba(255,183,0,0.55),
+    0 0 6px rgba(255,183,0,0.85),
+    0 0 14px rgba(255,183,0,0.55),
+    0 0 28px rgba(255,183,0,0.30);
+}
+
+.sbadge-in_review {
+  --glow: #FFD700;
+  color: #FFEFA8;
+  background:
+    linear-gradient(180deg, rgba(255,215,0,0.22), rgba(255,215,0,0.05)),
+    rgba(0,0,0,0.55);
+  animation: sbadge-tron-pulse 1.8s infinite ease-in-out;
+}
+
+.sbadge-blocked {
+  --glow: #FF3B6E;
+  color: #FFB8C8;
+  background:
+    linear-gradient(180deg, rgba(255,59,110,0.20), rgba(255,59,110,0.05)),
+    rgba(0,0,0,0.55);
+  box-shadow:
+    0 0 0 1px var(--glow),
+    inset 0 0 8px rgba(255,59,110,0.55),
+    0 0 6px rgba(255,59,110,0.95),
+    0 0 16px rgba(255,59,110,0.65),
+    0 0 32px rgba(255,59,110,0.35);
+}
+
+.sbadge-closed {
+  --glow: #22C55E;
+  color: #A7F3C5;
+  background:
+    linear-gradient(180deg, rgba(34,197,94,0.16), rgba(34,197,94,0.04)),
+    rgba(0,0,0,0.55);
+  box-shadow:
+    0 0 0 1px var(--glow),
+    inset 0 0 6px rgba(34,197,94,0.45),
+    0 0 5px rgba(34,197,94,0.65),
+    0 0 12px rgba(34,197,94,0.35);
+}
+
+/* IN REVIEW pulses brightest — it's the live attention state */
+@keyframes sbadge-tron-pulse {
+  0%, 100% {
+    box-shadow:
+      0 0 0 1px #FFD700,
+      inset 0 0 8px rgba(255,215,0,0.55),
+      0 0 6px rgba(255,215,0,0.85),
+      0 0 14px rgba(255,215,0,0.55),
+      0 0 28px rgba(255,215,0,0.30);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px #FFE94D,
+      inset 0 0 12px rgba(255,215,0,0.85),
+      0 0 10px rgba(255,215,0,1),
+      0 0 24px rgba(255,215,0,0.85),
+      0 0 48px rgba(255,215,0,0.55);
+  }
+}
+
+/* Hover lift to reinforce status emphasis */
+.ticket[data-status="blocked"]   { border-left-color: var(--p0) !important; }
+.ticket[data-status="in_review"] { box-shadow: inset 2px 0 0 #FFB700; }
+.ticket[data-status="closed"]    { opacity: 0.55; }
+.ticket[data-status="closed"]:hover { opacity: 1; }

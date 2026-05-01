@@ -1,0 +1,10 @@
+{
+  "meta": {
+    "version": 1,
+    "schema": "lesson@1.0",
+    "oqe_version": "2.0",
+    "doc": "docs/REVIEWER_LOG.md",
+    "note": "Production lesson log. Lessons are authored via the Reviewer Log editor and ratified per docs/REVIEWER_LOG.md §5. Empty array is the valid default."
+  },
+  "lessons": []
+}

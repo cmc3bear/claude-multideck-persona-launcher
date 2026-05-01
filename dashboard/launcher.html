@@ -1956,12 +1956,13 @@ function enrichPersona(key, raw) {
 function personasForProject(project) {
   const all = Object.entries(state.personas).map(([k, v]) => enrichPersona(k, v));
   if (!project || project.id === 'workspace') return all;
-  const projPath = (project.path || '').toLowerCase();
+  const norm = s => (s || '').toLowerCase().replace(/\\/g, '/');
+  const projPath = norm(project.path);
   return all.filter(p => {
-    if (p.scope === 'workspace') return true;
-    const cwd = (p.cwd || '').toLowerCase();
+    if (!p.scope.startsWith('project:')) return true;
+    const cwd = norm(p.cwd);
     if (!cwd) return false;
-    return cwd === projPath || cwd.startsWith(projPath + '\\') || cwd.startsWith(projPath + '/');
+    return cwd === projPath || cwd.startsWith(projPath + '/');
   });
 }
 

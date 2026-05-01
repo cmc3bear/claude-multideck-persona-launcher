@@ -15,6 +15,11 @@ const TTS_OUTPUT_DIR = process.env.DISPATCH_TTS_OUTPUT || path.join(DISPATCH_ROO
 const PERSONAS_PATH = process.env.DISPATCH_PERSONAS_JSON || path.join(DISPATCH_ROOT, 'personas', 'personas.json');
 const LAUNCHER_HTML = path.join(__dirname, 'launcher.html');
 const LAUNCHER_ASSETS = process.env.DISPATCH_LAUNCHER_ASSETS || path.join(__dirname, 'launcher-assets');
+// MULTI-FEAT-0067: claude.design Job Board Dashboard assets
+const JOB_BOARD_DASHBOARD_HTML = path.join(__dirname, 'job-board-dashboard.html');
+const DASHBOARD_SCRIPTS = path.join(__dirname, 'scripts');
+const DASHBOARD_STYLES = path.join(__dirname, 'styles');
+const DASHBOARD_DATA = path.join(__dirname, 'data');
 const TEAM_PRESETS_PATH = process.env.DISPATCH_TEAM_PRESETS || path.join(__dirname, 'team-presets.json');
 const ACTIVE_PROJECTS_DIR = process.env.DISPATCH_PROJECTS_DIR || '';
 const WORKSPACE_ROOT = process.env.DISPATCH_WORKSPACE_ROOT || DISPATCH_ROOT;
@@ -154,6 +159,95 @@ function loadState() {
   return state;
 }
 
+// ============================================================
+// Live state for the claude.design Job Board Dashboard
+// (MULTI-FEAT-0067) — exposes a multi-board + lessons bundle
+// for data/live.js to consume via /state.json.
+// ============================================================
+function discoverJobBoards() {
+  // Pick up every state/job-board*.json (excluding .bak/.backup snapshots)
+  // and return them as a {projectKey: {jobs, meta}} map. Project key is
+  // derived from the file stem ("job-board-multideck.json" -> "multideck",
+  // "job-board.json" -> "workspace").
+  const out = {};
+  let entries = [];
+  try {
+    entries = fs.readdirSync(STATE_DIR);
+  } catch {
+    return out;
+  }
+  for (const file of entries) {
+    if (!file.startsWith('job-board') || !file.endsWith('.json')) continue;
+    if (/\.bak[-.]/i.test(file) || /\.backup[-.]/i.test(file)) continue;
+    let key;
+    if (file === 'job-board.json') key = 'workspace';
+    else {
+      const m = file.match(/^job-board-(.+)\.json$/);
+      key = m ? m[1] : file.replace(/\.json$/, '');
+    }
+    try {
+      const data = JSON.parse(fs.readFileSync(path.join(STATE_DIR, file), 'utf8'));
+      out[key] = {
+        jobs: Array.isArray(data.jobs) ? data.jobs : [],
+        meta: data.meta || {},
+      };
+    } catch (e) {
+      // Skip corrupt boards but log so the operator can find the bad file.
+      console.warn('[state] failed to parse', file, e.message);
+    }
+  }
+  return out;
+}
+
+function loadLessons() {
+  // state/lessons.json is the canonical live lesson log. Absent file =>
+  // empty array (criterion 3: live mode reads from /state.json; lessons
+  // start empty and are populated via the editor).
+  const fp = path.join(STATE_DIR, 'lessons.json');
+  try {
+    const raw = JSON.parse(fs.readFileSync(fp, 'utf8'));
+    if (Array.isArray(raw)) return raw;
+    if (raw && Array.isArray(raw.lessons)) return raw.lessons;
+    return [];
+  } catch {
+    return [];
+  }
+}
+
+function loadMeetings() {
+  const fp = path.join(STATE_DIR, 'meetings.json');
+  try {
+    const raw = JSON.parse(fs.readFileSync(fp, 'utf8'));
+    if (Array.isArray(raw)) return raw;
+    if (raw && Array.isArray(raw.meetings)) return raw.meetings;
+    return [];
+  } catch {
+    return [];
+  }
+}
+
+function buildLiveStateBundle() {
+  // The shape consumed by dashboard/data/live.js (claude.design adapter):
+  //   state["job-boards"][project] = { jobs, meta }
+  //   state.lessons              = [ ...lessons ]
+  //   state.meetings             = [ ...meetings ]
+  // The legacy keys from loadState() are merged in so the briefing
+  // dashboard at / continues to work off the same payload.
+  const base = loadState();
+  base['job-boards'] = discoverJobBoards();
+  base.lessons = loadLessons();
+  base.meetings = loadMeetings();
+  base.meta_live = {
+    server_time: new Date().toISOString(),
+    state_dir: STATE_DIR,
+    version: 'state@1.0',
+    boards: Object.keys(base['job-boards']),
+    lesson_count: base.lessons.length,
+    meeting_count: base.meetings.length,
+  };
+  return base;
+}
+
 function readKokoroStats() {
   // Live depths come from the filesystem so a stale stats.json can't lie
   // about what's queued right now. Counters come from stats.json.
@@ -227,28 +321,40 @@ function slugifyProjectName(name) {
 // Projects discovery
 // ============================================================
 function listProjects() {
+  const fwd = (p) => p.replace(/\\/g, '/');
   const projects = [
     {
       id: 'workspace',
       name: 'WORKSPACE ROOT',
-      path: WORKSPACE_ROOT,
+      path: fwd(WORKSPACE_ROOT),
       scope: 'workspace',
       description: 'Workspace root. All personas available.',
     },
   ];
-  // Scan ACTIVE_PROJECTS_DIR if configured
-  if (ACTIVE_PROJECTS_DIR && fs.existsSync(ACTIVE_PROJECTS_DIR)) {
+  const PROJECT_ALIASES = {
+    'dispatch-framework': { id: 'multideck', name: 'MULTIDECK INFRASTRUCTURE' },
+    'dispatch':           { id: 'multideck-github', name: 'MULTIDECK GITHUB' },
+  };
+  // Scan DISPATCH_PROJECTS_DIR — supports comma-separated list of directories
+  const dirs = ACTIVE_PROJECTS_DIR ? ACTIVE_PROJECTS_DIR.split(',').map(d => d.trim()).filter(Boolean) : [];
+  const seen = new Set();
+  for (const dir of dirs) {
+    if (!fs.existsSync(dir)) continue;
     try {
-      const entries = fs.readdirSync(ACTIVE_PROJECTS_DIR, { withFileTypes: true });
+      const entries = fs.readdirSync(dir, { withFileTypes: true });
       for (const e of entries) {
         if (!e.isDirectory()) continue;
         if (e.name.startsWith('.')) continue;
+        const alias = PROJECT_ALIASES[e.name];
+        const pid = alias ? alias.id : e.name;
+        if (seen.has(pid)) continue;
+        seen.add(pid);
         projects.push({
-          id: e.name,
-          name: e.name.toUpperCase().replace(/-/g, ' '),
-          path: path.join(ACTIVE_PROJECTS_DIR, e.name),
-          scope: `project:${e.name}`,
-          description: `Active project at ${path.join(ACTIVE_PROJECTS_DIR, e.name)}`,
+          id: pid,
+          name: alias ? alias.name : e.name.toUpperCase().replace(/-/g, ' '),
+          path: fwd(path.join(dir, e.name)),
+          scope: `project:${pid}`,
+          description: `Active project at ${fwd(path.join(dir, e.name))}`,
         });
       }
     } catch {}
@@ -424,7 +530,9 @@ function handleLauncher(req, res, url) {
 
   if (url === '/launcher/personas' && method === 'GET') {
     try {
-      const data = fs.readFileSync(PERSONAS_PATH, 'utf8');
+      let data = fs.readFileSync(PERSONAS_PATH, 'utf8');
+      data = data.replace(/\$\{DISPATCH_ROOT\}/g, DISPATCH_ROOT.replace(/\\/g, '/'));
+      data = data.replace(/\$\{DISPATCH_USER_ROOT\}/g, WORKSPACE_ROOT.replace(/\\/g, '/'));
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(data);
     } catch (e) {
@@ -862,13 +970,73 @@ const server = http.createServer((req, res) => {
     return;
   }
   if (url === '/state.json') {
+    // MULTI-FEAT-0067: extended bundle for the claude.design dashboard
+    // adapter (data/live.js). Includes legacy keys for /briefing + /
+    // alongside the new state["job-boards"] map and state.lessons list.
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify(loadState(), null, 2));
+    res.end(JSON.stringify(buildLiveStateBundle(), null, 2));
     return;
   }
   if (url === '/jobs' || url === '/jobs/') {
+    // MULTI-FEAT-0067: serve the claude.design Job Board Dashboard
+    // (renamed to job-board-dashboard.html). The legacy WS-0011 server-
+    // rendered page is preserved at /jobs-classic for backward compat.
+    try {
+      const html = fs.readFileSync(JOB_BOARD_DASHBOARD_HTML, 'utf8');
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(html);
+    } catch (e) {
+      res.writeHead(500, { 'Content-Type': 'text/plain' });
+      res.end('job-board-dashboard.html not found: ' + e.message);
+    }
+    return;
+  }
+  if (url === '/jobs-classic' || url === '/jobs-classic/') {
+    // Legacy WS-0011 page kept reachable so prior bookmarks/links don't
+    // 404 (alternatives_considered note in MULTI-FEAT-0067 manifest).
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
     res.end(renderJobBoardPage(STATE_DIR));
+    return;
+  }
+  // -- Static assets for the claude.design dashboard ---------
+  // Three flat directories: scripts/, styles/, data/. Each is sandboxed
+  // under DASHBOARD_ROOT to refuse path traversal. Directory listings
+  // are not served — only known extensions.
+  const STATIC_PREFIXES = [
+    { prefix: '/scripts/', dir: DASHBOARD_SCRIPTS },
+    { prefix: '/styles/',  dir: DASHBOARD_STYLES  },
+    { prefix: '/data/',    dir: DASHBOARD_DATA    },
+  ];
+  for (const { prefix, dir } of STATIC_PREFIXES) {
+    if (!url.startsWith(prefix)) continue;
+    const relRaw = decodeURIComponent(url.slice(prefix.length));
+    const safeRel = path.normalize(relRaw).replace(/^([\\/])+/, '');
+    if (safeRel.includes('..') || !safeRel) {
+      res.writeHead(403, { 'Content-Type': 'text/plain' });
+      res.end('forbidden');
+      return;
+    }
+    const filePath = path.join(dir, safeRel);
+    if (!filePath.startsWith(dir)) {
+      res.writeHead(403, { 'Content-Type': 'text/plain' });
+      res.end('forbidden');
+      return;
+    }
+    fs.stat(filePath, (err, stat) => {
+      if (err || !stat.isFile()) {
+        res.writeHead(404, { 'Content-Type': 'text/plain' });
+        res.end('asset not found');
+        return;
+      }
+      const ext = path.extname(filePath).toLowerCase();
+      const mime = ASSET_MIME[ext] || 'application/octet-stream';
+      res.writeHead(200, {
+        'Content-Type': mime,
+        'Content-Length': stat.size,
+        'Cache-Control': 'public, max-age=60',
+      });
+      fs.createReadStream(filePath).pipe(res);
+    });
     return;
   }
   if (url === '/api/kokoro/stats') {
@@ -877,7 +1045,7 @@ const server = http.createServer((req, res) => {
   }
 
   res.writeHead(404, { 'Content-Type': 'text/plain' });
-  res.end('Not Found. Try / or /launcher or /audio-feed or /briefing or /jobs or /state.json or /api/kokoro/stats');
+  res.end('Not Found. Try / or /launcher or /audio-feed or /briefing or /jobs or /jobs-classic or /state.json or /api/kokoro/stats');
 });
 
 server.listen(PORT, '0.0.0.0', () => {
@@ -886,8 +1054,9 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log(`  /launcher                MultiDeck launcher (cyberpunk character select)`);
   console.log(`  /briefing                Morning briefing`);
   console.log(`  /audio-feed              Auto-play Kokoro TTS feed`);
-  console.log(`  /jobs                    Visual job board dashboard`);
-  console.log(`  /state.json              Raw state data`);
+  console.log(`  /jobs                    Visual job board dashboard (multi-view, lessons, patterns)`);
+  console.log(`  /jobs-classic            Legacy server-rendered job board (WS-0011)`);
+  console.log(`  /state.json              Live state bundle (job-boards + lessons + briefing)`);
   console.log(`  /api/kokoro/stats        Kokoro queue depth + drop counters`);
   console.log(``);
   console.log(`  State directory: ${STATE_DIR}`);

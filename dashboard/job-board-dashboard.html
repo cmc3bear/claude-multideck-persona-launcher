@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>// MULTIDECK · JOB BOARD //</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles/shell.css?v=5">
+<link rel="stylesheet" href="/styles/variations.css?v=11">
+<link rel="stylesheet" href="/styles/live.css?v=7">
+<link rel="stylesheet" href="/styles/lessons.css?v=3">
+<link rel="stylesheet" href="/styles/patterns.css?v=2">
+<link rel="stylesheet" href="/styles/meeting.css?v=1">
+<script>
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "variation": "board",
+  "density": "balanced",
+  "accent": "cyan",
+  "scanlines": true,
+  "showClosed": false
+}/*EDITMODE-END*/;
+</script>
+</head>
+<body data-scanlines="on">
+  <div class="brand" id="brand"></div>
+  <div class="topbar" id="topbar"></div>
+  <nav class="rail" id="rail"></nav>
+  <main class="main">
+    <div class="controls" id="controls"></div>
+    <div id="view-root"></div>
+  </main>
+
+  <div class="drawer-backdrop" id="backdrop"></div>
+  <aside class="drawer" id="drawer"></aside>
+
+  <div class="tweaks" id="tweaks"></div>
+
+  <!--
+    MULTI-FEAT-0067 wiring notes:
+    - data/jobs.js + data/lessons.js define MOCK fixtures and the always-on
+      helpers (TENETS, computeTenetCounts, matchLessonsToJob, validation
+      registry). They are loaded before live.js so the helpers exist in
+      both modes; live.js then replaces window.JOBS / window.LESSONS /
+      window.PROJECTS / window.PERSONAS when mdk-data-mode=live.
+    - In live mode, sample data must NOT silently substitute on fetch
+      failure — see live.js applyMock() guarded by failHard policy.
+    - lessons-validate.js implements the §2 schema rules per
+      docs/REVIEWER_LOG.md and is reachable from the editor in
+      scripts/lessons.js (which already calls validateLesson()).
+  -->
+  <script src="/data/jobs.js?v=5"></script>
+  <script src="/data/lessons.js?v=3"></script>
+  <script src="/scripts/lessons-validate.js?v=1"></script>
+  <script src="/data/live.js?v=3"></script>
+  <script src="/scripts/shell.js?v=8"></script>
+  <script src="/scripts/views.js?v=8"></script>
+  <script src="/scripts/lessons.js?v=3"></script>
+  <script src="/scripts/patterns.js?v=2"></script>
+  <script src="/scripts/meeting.js?v=1"></script>
+  <script src="/scripts/app.js?v=6"></script>
+</body>
+</html>
