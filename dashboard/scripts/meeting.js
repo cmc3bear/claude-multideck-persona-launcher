@@ -281,7 +281,7 @@
               <option value="">— no linked job —</option>
               ${openJobs.map(j => {
                 const p = personaOf(j.assigned_to);
-                return `<option value="${j.id}" ${j.id===prefill?'selected':''}>#${j.id} · ${escapeHtml(j.subject).slice(0,60)} [${p.callsign}]</option>`;
+                return `<option value="${j.id}" ${j.id===prefill?'selected':''}>#${j.id} · ${escapeHtml(j.subject).slice(0,60)} [${escapeHtml(p.callsign)}]</option>`;
               }).join("")}
             </select>
           </div>
@@ -291,7 +291,7 @@
             <div class="mr-attendee-picker">
               ${Object.entries(window.PERSONAS || {}).map(([key, p]) =>
                 `<button type="button" class="mr-att-pick on" data-mr-att="${key}" style="--att-color:${p.color||'#888'}">
-                  <span class="mr-att-dot" style="background:${p.color||'#888'}"></span>${p.callsign||key}
+                  <span class="mr-att-dot" style="background:${p.color||'#888'}"></span>${escapeHtml(p.callsign||key)}
                 </button>`
               ).join("")}
             </div>
@@ -419,11 +419,11 @@
           <div class="mr-seat-id">
             <span class="mr-dot" style="background:${p.color};box-shadow:0 0 8px ${p.color}"></span>
             <div>
-              <div class="mr-callsign">${p.callsign}</div>
-              <div class="mr-scope">${p.scope || ''}</div>
+              <div class="mr-callsign">${escapeHtml(p.callsign)}</div>
+              <div class="mr-scope">${escapeHtml(p.scope || '')}</div>
             </div>
           </div>
-          <div class="mr-stance mr-stance-${stanceTone}">${script.stance}</div>
+          <div class="mr-stance mr-stance-${stanceTone}">${escapeHtml(script.stance)}</div>
         </header>
         <div class="mr-opening">"${escapeHtml(script.opening)}"</div>
         ${concerns ? `<div class="mr-block"><div class="mr-block-label">CONCERNS</div><ul class="mr-list">${concerns}</ul></div>` : ''}
@@ -441,8 +441,8 @@
           <div class="mr-seat-id">
             <span class="mr-dot" style="background:${p.color};box-shadow:0 0 8px ${p.color}"></span>
             <div>
-              <div class="mr-callsign">${p.callsign}</div>
-              <div class="mr-scope">${p.scope || ''}</div>
+              <div class="mr-callsign">${escapeHtml(p.callsign)}</div>
+              <div class="mr-scope">${escapeHtml(p.scope || '')}</div>
             </div>
           </div>
           <div class="mr-stance mr-stance-mute">PENDING</div>

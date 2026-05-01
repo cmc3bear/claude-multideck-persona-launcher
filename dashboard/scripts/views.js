@@ -2,6 +2,12 @@
 // Variation A — BOARD (kanban)
 // =========================================================
 
+function escapeHtml(s) {
+  return String(s || '').replace(/[&<>"']/g, m => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[m]));
+}
+
 // Synthesize additional plausible dependencies for jobs that have none.
 // Heuristics, applied once:
 //   - Closed audit/design jobs in the same project become prereqs for
@@ -205,9 +211,9 @@ function renderRadarView(root) {
     const loadPct = Math.min(100, activeCount/maxLoad*100);
     const on = App.activeAssignee === k;
     return `<div class="lane-row ${on?'active':''}" style="--agent-color:${p.color}" data-assignee="${k}">
-      <div class="avatar" style="color:${p.color}">${p.callsign.slice(0,2).toUpperCase()}</div>
+      <div class="avatar" style="color:${p.color}">${escapeHtml(p.callsign.slice(0,2).toUpperCase())}</div>
       <div class="meta">
-        <div class="name">${p.callsign}</div>
+        <div class="name">${escapeHtml(p.callsign)}</div>
         <div class="load" title="${activeCount} of ${maxLoad} max concurrent jobs">
           <span class="loadbar"><span style="width:${loadPct}%"></span></span>
           <span class="lpct">${activeCount}/${maxLoad}</span>
@@ -264,8 +270,8 @@ function renderRadarView(root) {
       const top = stackTop + row * (BAR_H + BAR_GAP);
 
       return `<div class="radar-bar ${j.priority.toLowerCase()} ${j.status} ${stressClass}" data-id="${j.id}"
-        style="left:${left}%; width:${width}%; top:${top}px" title="#${j.id} · ${j.subject} · ${ageLabel}">
-        <span class="pid">#${j.id}</span><span class="bsubj">${j.subject}</span>
+        style="left:${left}%; width:${width}%; top:${top}px" title="#${j.id} · ${escapeHtml(j.subject)} · ${ageLabel}">
+        <span class="pid">#${j.id}</span><span class="bsubj">${escapeHtml(j.subject)}</span>
         <span class="bage">${ageLabel}</span>
       </div>`;
     }).join("");
@@ -279,9 +285,9 @@ function renderRadarView(root) {
     .flatMap(j => j.review_history.map(r => ({id: j.id, subject: j.subject, ...r})));
   const tickerItems = verdicts.concat(verdicts).map(v =>
     `<span class="ticker-item">
-      <span class="verdict ${v.verdict}">${v.verdict.toUpperCase()}</span>
+      <span class="verdict ${v.verdict}">${escapeHtml(v.verdict.toUpperCase())}</span>
       <span style="color:var(--ink-mute)">#${v.id}</span>
-      <span>${v.subject}</span>
+      <span>${escapeHtml(v.subject)}</span>
     </span>`
   ).join("");
 
@@ -531,9 +537,9 @@ function renderClusterView(root) {
       <div class="dn-head">
         <span class="dn-pri ${j.priority.toLowerCase()}">${j.priority}</span>
         <span class="dn-id">#${j.id}</span>
-        <span class="dn-agent" title="${p.callsign}" style="background:${p.color}"></span>
+        <span class="dn-agent" title="${escapeHtml(p.callsign)}" style="background:${p.color}"></span>
       </div>
-      <div class="dn-sub">${j.subject.length>52?j.subject.slice(0,50)+'…':j.subject}</div>
+      <div class="dn-sub">${j.subject.length>52?escapeHtml(j.subject.slice(0,50))+'…':escapeHtml(j.subject)}</div>
       <div class="dn-foot">
         <span class="dn-status">${statusLabel}</span>
         ${blockedByCount ? `<span class="dn-count blocked-by" title="${blockedByCount} blocker${blockedByCount===1?'':'s'}">◀ ${blockedByCount}</span>` : ''}
@@ -561,7 +567,7 @@ function renderClusterView(root) {
           <span class="dn-id">#${j.id}</span>
           <span class="dn-agent" style="background:${p.color}"></span>
         </div>
-        <div class="dn-sub">${j.subject.length>52?j.subject.slice(0,50)+'…':j.subject}</div>
+        <div class="dn-sub">${j.subject.length>52?escapeHtml(j.subject.slice(0,50))+'…':escapeHtml(j.subject)}</div>
         <div class="dn-foot"><span class="dn-status">${statusLabel}</span></div>
       `;
       isoGrid.appendChild(el);
@@ -661,10 +667,10 @@ function renderClusterView(root) {
             <span class="br-id">#${r.j.id}</span>
             <span class="br-impact">◀ ${r.impact}</span>
           </div>
-          <div class="br-sub">${r.j.subject.length>46?r.j.subject.slice(0,44)+'…':r.j.subject}</div>
+          <div class="br-sub">${r.j.subject.length>46?escapeHtml(r.j.subject.slice(0,44))+'…':escapeHtml(r.j.subject)}</div>
           <div class="br-bar"><div class="fill" style="width:${barPct}%;background:${p.color}"></div></div>
           <div class="br-foot">
-            <span style="color:${p.color}">${p.callsign}</span>
+            <span style="color:${p.color}">${escapeHtml(p.callsign)}</span>
             <span>${STATUS_LABEL_SHORT[r.j.status]}</span>
           </div>
         </div>`;

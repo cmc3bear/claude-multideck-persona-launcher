@@ -1,18 +1,24 @@
 // Main app — wires shell, tweaks, drawer, and view switching.
 
+function escapeHtml(s) {
+  return String(s || '').replace(/[&<>"']/g, m => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[m]));
+}
+
 function openDrawer(id) {
   const j = JOBS.find(x => x.id === id);
   if (!j) return;
   const p = personaOf(j.assigned_to);
   const poster = j.posted_by || "—";
-  const deps = (j.depends_on||[]).map(d => `<span class="tag">#${d}</span>`).join(" ") || "—";
-  const tags = (j.tags||[]).map(t => `<span class="tag">${t}</span>`).join(" ") || "—";
+  const deps = (j.depends_on||[]).map(d => `<span class="tag">#${escapeHtml(d)}</span>`).join(" ") || "—";
+  const tags = (j.tags||[]).map(t => `<span class="tag">${escapeHtml(t)}</span>`).join(" ") || "—";
 
   const tl = [];
-  if (j.created_at)   tl.push({t:j.created_at, e:`Posted by ${poster}`});
-  if (j.accepted_at)  tl.push({t:j.accepted_at, e:`Accepted by ${p.callsign}`});
+  if (j.created_at)   tl.push({t:j.created_at, e:`Posted by ${escapeHtml(poster)}`});
+  if (j.accepted_at)  tl.push({t:j.accepted_at, e:`Accepted by ${escapeHtml(p.callsign)}`});
   if (j.submitted_at) tl.push({t:j.submitted_at, e:`Submitted for review`});
-  (j.review_history||[]).forEach(r => tl.push({t:r.timestamp||j.submitted_at, e:`${r.reviewer}: ${r.verdict.toUpperCase()}${r.note?' — '+r.note:''}`}));
+  (j.review_history||[]).forEach(r => tl.push({t:r.timestamp||j.submitted_at, e:`${escapeHtml(r.reviewer)}: ${escapeHtml(r.verdict.toUpperCase())}${r.note?' — '+escapeHtml(r.note):''}`}));
   if (j.closed_at)    tl.push({t:j.closed_at, e:`Closed`});
   tl.sort((a,b) => new Date(a.t) - new Date(b.t));
 
@@ -21,25 +27,25 @@ function openDrawer(id) {
     <button class="closebtn" onclick="closeDrawer()">×</button>
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
       <span class="pbadge ${j.priority.toLowerCase()}">${j.priority}</span>
-      <span style="font-family:var(--mono);color:var(--ink-mute);font-size:11px;letter-spacing:0.08em">#${j.id} · ${j.project.toUpperCase()} · ${STATUS_LABEL[j.status]}</span>
+      <span style="font-family:var(--mono);color:var(--ink-mute);font-size:11px;letter-spacing:0.08em">#${j.id} · ${escapeHtml(j.project.toUpperCase())} · ${STATUS_LABEL[j.status]}</span>
     </div>
-    <h3>${j.subject}</h3>
+    <h3>${escapeHtml(j.subject)}</h3>
     <div class="assignee" style="color:${p.color};font-size:12px;margin-top:6px">
-      <span class="dot" style="background:${p.color}"></span>${p.callsign} · ${p.scope}
+      <span class="dot" style="background:${p.color}"></span>${escapeHtml(p.callsign)} · ${escapeHtml(p.scope)}
     </div>
 
     <div class="label">DESCRIPTION</div>
-    <p>${j.description || "—"}</p>
+    <p>${escapeHtml(j.description || "—")}</p>
 
     ${renderPriorLessonsPanel(j)}
 
-    ${j.result ? `<div class="label">RESULT</div><p>${j.result}</p>` : ""}
-    ${j.blocked_reason ? `<div class="label" style="color:var(--p0)">BLOCKER</div><p style="color:var(--p0)">${j.blocked_reason}</p>` : ""}
-    ${j.alternatives_considered ? `<div class="label">ALTERNATIVES</div><p>${j.alternatives_considered}</p>` : ""}
+    ${j.result ? `<div class="label">RESULT</div><p>${escapeHtml(j.result)}</p>` : ""}
+    ${j.blocked_reason ? `<div class="label" style="color:var(--p0)">BLOCKER</div><p style="color:var(--p0)">${escapeHtml(j.blocked_reason)}</p>` : ""}
+    ${j.alternatives_considered ? `<div class="label">ALTERNATIVES</div><p>${escapeHtml(j.alternatives_considered)}</p>` : ""}
 
     <div class="label">METADATA</div>
     <dl class="kvs">
-      <dt>Posted</dt><dd>${poster} · ${relTime(j.created_at)} ago</dd>
+      <dt>Posted</dt><dd>${escapeHtml(poster)} · ${relTime(j.created_at)} ago</dd>
       <dt>Deps</dt><dd>${deps}</dd>
       <dt>Tags</dt><dd>${tags}</dd>
       ${j.eta_hours !== undefined ? `<dt>ETA</dt><dd>${j.eta_hours}h</dd>` : ""}

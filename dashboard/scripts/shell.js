@@ -1,4 +1,10 @@
 // Shared app state + utility helpers
+
+function escapeHtml(s) {
+  return String(s || '').replace(/[&<>"']/g, m => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[m]));
+}
 const App = {
   activeVariation: localStorage.getItem("mdk-variation") || "board",
   activeProject: "all",
@@ -141,7 +147,7 @@ function renderRail() {
     const n = JOBS.filter(j=>j.project===p.id && (App.showClosed || j.status!=="closed")).length;
     return `<li class="nav-item ${App.activeProject===p.id?'active':''}" data-project="${p.id}">
       <span class="dot" style="background:${p.color};box-shadow:0 0 6px ${p.color}"></span>
-      <span style="flex:1">${p.name}</span>
+      <span style="flex:1">${escapeHtml(p.name)}</span>
       <span style="color:var(--ink-mute);font-size:10px">${n}</span>
     </li>`;
   }).join("");
@@ -161,9 +167,9 @@ function renderRail() {
     const p = PERSONAS[k];
     const activeCount = JOBS.filter(j=>j.assigned_to===k && j.project===projectId && j.status!=="closed").length;
     const on = App.activeAssignee === k;
-    return `<div class="roster-row ${on?'active':''}" data-assignee="${k}" title="${p.callsign} · ${p.scope}" style="--agent-color:${p.color}">
+    return `<div class="roster-row ${on?'active':''}" data-assignee="${k}" title="${escapeHtml(p.callsign)} · ${escapeHtml(p.scope)}" style="--agent-color:${p.color}">
       <span class="chip" style="background:${p.color};color:${p.color}"></span>
-      <span class="name">${p.callsign}</span>
+      <span class="name">${escapeHtml(p.callsign)}</span>
       <span class="load">${activeCount>0?activeCount:"·"}</span>
     </div>`;
   }
@@ -180,7 +186,7 @@ function renderRail() {
     return `<div class="roster-group">
       <div class="roster-group-head">
         <span class="gdot" style="background:${proj.color};box-shadow:0 0 6px ${proj.color}"></span>
-        <span class="gname">${proj.name}</span>
+        <span class="gname">${escapeHtml(proj.name)}</span>
         <span class="gcount">${agents.length} · ${projJobCount}</span>
       </div>
       ${agents.map(k => agentRow(k, proj.id)).join("")}
@@ -200,7 +206,7 @@ function renderRail() {
       const on = App.activeAssignee === k;
       return `<div class="roster-row ${on?'active':''}" data-assignee="${k}" style="--agent-color:${p.color}">
         <span class="chip" style="background:${p.color};color:${p.color}"></span>
-        <span class="name">${p.callsign}</span>
+        <span class="name">${escapeHtml(p.callsign)}</span>
         <span class="load">${activeCount>0?activeCount:"·"}</span>
       </div>`;
     }).join("")}
@@ -285,7 +291,7 @@ function renderControls() {
 // Ticket renderer (used in board + drawer list)
 function ticket(j) {
   const p = personaOf(j.assigned_to);
-  const tags = (j.tags||[]).slice(0,3).map(t=>`<span class="tag">${t}</span>`).join("");
+  const tags = (j.tags||[]).slice(0,3).map(t=>`<span class="tag">${escapeHtml(t)}</span>`).join("");
   const progress = j.status === "closed" ? null
     : (j.progress !== undefined ? j.progress : (j.status==="submitted" || j.status==="in_review" ? 1 : 0));
   return `
@@ -297,14 +303,14 @@ function ticket(j) {
         </span>
         <span class="id">#${j.id}</span>
       </div>
-      <div class="subject">${j.subject}</div>
+      <div class="subject">${escapeHtml(j.subject)}</div>
       <div class="meta">
         <span class="assignee" style="color:${p.color}">
-          <span class="dot" style="background:${p.color}"></span>${p.callsign}
+          <span class="dot" style="background:${p.color}"></span>${escapeHtml(p.callsign)}
         </span>
         <span>·</span>
         <span>${relTime(j.created_at)} ago</span>
-        ${j.blocked_reason?`<span>·</span><span style="color:var(--p0)">⚠ ${j.blocked_reason}</span>`:""}
+        ${j.blocked_reason?`<span>·</span><span style="color:var(--p0)">⚠ ${escapeHtml(j.blocked_reason)}</span>`:""}
       </div>
       ${progress!==null && progress>0 && progress<1 ? `<div class="progress"><span style="width:${Math.round(progress*100)}%"></span></div>`:""}
       ${tags?`<div class="meta">${tags}</div>`:""}
