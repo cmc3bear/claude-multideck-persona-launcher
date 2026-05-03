@@ -156,12 +156,18 @@ def verdict_from_rows(rows):
     return v, scores
 
 
-def invoke_judge(rows, judge_runtime: str, project_root: Path) -> str:
+def invoke_judge(rows, judge_runtime: str, project_root: Path, allow_dangerous: bool = False) -> str:
     """Optionally have a runtime render a written verdict on the comparison.
 
     judge_runtime: 'claude' or 'opencode'. The judge sees the criteria + both
     runtimes' snippets and produces a paragraph verdict. Skipped silently on
     failure — the structural score still applies.
+
+    allow_dangerous: must be True (via --allow-dangerous CLI flag) to pass
+    --dangerously-skip-permissions to the judge subprocess. Without it the
+    subprocess runs with normal permission prompts, which requires an
+    interactive terminal. Use allow_dangerous only in unattended CI environments
+    where you trust the job artifacts used to build the prompt.
     """
     if judge_runtime not in ("claude", "opencode"):
         return ""
@@ -178,9 +184,13 @@ def invoke_judge(rows, judge_runtime: str, project_root: Path) -> str:
         prompt_lines.append("")
     prompt = "\n".join(prompt_lines)
     if judge_runtime == "claude":
-        cmd = ["claude", "-p", prompt, "--dangerously-skip-permissions"]
+        cmd = ["claude", "-p", prompt]
+        if allow_dangerous:
+            cmd.append("--dangerously-skip-permissions")
     else:
-        cmd = ["opencode", "run", "--dangerously-skip-permissions", prompt]
+        cmd = ["opencode", "run", prompt]
+        if allow_dangerous:
+            cmd.insert(2, "--dangerously-skip-permissions")
     try:
         out = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
         return (out.stdout or "").strip()
@@ -211,7 +221,7 @@ def cmd_compare(args):
     scored = score_pair(cj, oj)
     rows = scored.get("criteria_scores", [])
     verdict, points = verdict_from_rows(rows)
-    judge_text = invoke_judge(rows, args.judge, FRAMEWORK_ROOT) if args.judge else ""
+    judge_text = invoke_judge(rows, args.judge, FRAMEWORK_ROOT, allow_dangerous=getattr(args, "allow_dangerous", False)) if args.judge else ""
     entry = {
         "pair_id": cj.get("vs_pair_id") or oj.get("vs_pair_id") or f"{args.claude_job}+{args.opencode_job}",
         "subject": cj.get("subject") or oj.get("subject") or "",
@@ -260,6 +270,7 @@ def cmd_auto(args):
         sub = argparse.Namespace(
             claude_job=cj["id"], opencode_job=oj["id"],
             project=args.project, judge=args.judge,
+            allow_dangerous=getattr(args, "allow_dangerous", False),
         )
         cmd_compare(sub)
 
@@ -294,10 +305,14 @@ def main():
     comp.add_argument("claude_job")
     comp.add_argument("opencode_job")
     comp.add_argument("--judge", choices=["claude", "opencode"], help="optional LLM judge for written verdict")
+    comp.add_argument("--allow-dangerous", action="store_true", dest="allow_dangerous",
+                      help="pass --dangerously-skip-permissions to the judge subprocess (only for unattended CI; prompts otherwise)")
     comp.set_defaults(func=cmd_compare)
 
     auto = sub.add_parser("auto", help="auto-find unpaired vs_pair_id jobs and compare")
     auto.add_argument("--judge", choices=["claude", "opencode"])
+    auto.add_argument("--allow-dangerous", action="store_true", dest="allow_dangerous",
+                      help="pass --dangerously-skip-permissions to the judge subprocess")
     auto.set_defaults(func=cmd_auto)
 
     bd = sub.add_parser("board", help="print scoreboard summary")

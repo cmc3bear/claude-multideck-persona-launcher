@@ -31,6 +31,7 @@ VOICE_MAP = {
     "dm":                  {"voice": "dm",        "lang": "a", "speed": 1.0,  "callsign": "Dungeon-Master"},
     "npc-agent":           {"voice": "am_adam",    "lang": "a", "speed": 1.0,  "callsign": "NPC"},
     "npc":                 {"voice": "am_adam",    "lang": "a", "speed": 1.0,  "callsign": "NPC"},
+    "frasier":             {"voice": "bf_emma",   "lang": "b", "speed": 1.05, "callsign": "Frasier"},
     "default":             {"voice": "am_puck",   "lang": "a", "speed": 1.05, "callsign": ""},
 }
 

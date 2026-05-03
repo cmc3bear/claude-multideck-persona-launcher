@@ -13,8 +13,7 @@ then a shared file, if discovery fails.
 Each persona entry includes a 'callsign' field that the TTS hook prepends to the text
 so each voice introduces itself when speaking.
 
-MultiDeck framework: Default personas only (dispatch, architect, engineer, reviewer, researcher,
-launcher-engineer, voice-technician, persona-author, commercial-producer).
+MultiDeck framework: see VOICE_MAP below for the full persona list.
 Users can extend VOICE_MAP with custom personas. Custom voice tensors are added via CUSTOM_VOICES.
 """
 import sys, os, json

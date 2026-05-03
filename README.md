@@ -2,7 +2,7 @@
 
 **A multi-agent orchestration framework for Claude Code that looks like a video game title screen. On purpose.**
 
-Nine AI operatives. Nine voices. One launcher. You pick your team from a character-select screen, hit DEPLOY, and real Claude Code sessions spin up in color-coded terminal tabs, each with its own persona, scope, and synthesized voice. A job board tracks the work. A quality gate reviews it. An audio feed plays their reports out loud so you can walk away from the keyboard and just listen.
+Multiple AI operatives. Each with their own voice. One launcher. You pick your team from a character-select screen, hit DEPLOY, and real Claude Code sessions spin up in color-coded terminal tabs, each with its own persona, scope, and synthesized voice. A job board tracks the work. A quality gate reviews it. An audio feed plays their reports out loud so you can walk away from the keyboard and just listen.
 
 It runs entirely local. Zero API cost with a Claude Code CLI membership. Fork it, add your own operatives, your own voices, your own background music. Make it yours.
 
@@ -22,7 +22,7 @@ It runs entirely local. Zero API cost with a Claude Code CLI membership. Fork it
 
 [Watch the full 60-second hero spot](https://github.com/cmc3bear/claude-multideck-persona-launcher/raw/main/docs/media/hero-60s.mp4)
 
-*Boot sequence to deployment. Nine operatives. One deck. And you.*
+*Boot sequence to deployment. Your operatives. One deck. And you.*
 
 ---
 
@@ -193,7 +193,7 @@ Visit `http://localhost:3045`. Key routes:
 
 ## The Deck
 
-MultiDeck ships with nine operatives. Each one has a callsign, a terminal tab color, a Kokoro voice, and a defined scope of work.
+MultiDeck ships with twelve operatives out of the box. Each one has a callsign, a terminal tab color, a Kokoro voice, and a defined scope of work.
 
 | Callsign | Voice | Role |
 |---|---|---|

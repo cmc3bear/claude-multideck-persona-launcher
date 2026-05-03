@@ -26,28 +26,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `CUSTOM_VOICES` in `hooks/kokoro-speak.py`, `hooks/kokoro-generate-mp3.py`, and `hooks/set-voice.py` now use `DISPATCH_DM_VOICE_PT` env var instead of a hardcoded file path. Existing deployments with a custom DM voice tensor: set `DISPATCH_DM_VOICE_PT=/path/to/dm-voice.pt` before launch.
 - `personas/personas.json` DM and NPC `cwd` entries use `${DISPATCH_USER_ROOT}/dnd-campaign` (templated) instead of an absolute path. Update to your actual campaign directory in your local fork.
+- `scripts/vs-comparator.py` `--judge` flag now requires an explicit `--allow-dangerous` flag to pass `--dangerously-skip-permissions` to the judge subprocess. Without it the judge runs with normal permission prompts.
 
-### Changed
+---
 
-- **`DISPATCH_LAUNCHER_TRANSPORT` default is now auto-detected** (MULTI-FEAT-0063). When the env var is unset the dashboard picks `tmux` on hosts where WSL Ubuntu, tmux, and the claude binary are all present, otherwise `wt` on Windows or `sh` on Linux/macOS. Operators with full WSL setups now get the detach/reattach-capable tmux path without opt-in. **Rollback:** set `DISPATCH_LAUNCHER_TRANSPORT=wt` to force the legacy Windows Terminal flow even on a host that could run tmux. The env var override always wins. Builds on the WSL+tmux+claude probe shipped in MULTI-UI-0064.
+## [0.4.0] - 2026-04-21
 
 ### Added
 
-- **Topology B operator guide** at `docs/TMUX_TOPOLOGY.md` — keybinds, attach/detach workflow, empirical pane-count threshold (N=12 readable on a 240×60 terminal with the standard title format), and troubleshooting (MULTI-FEAT-0065)
-- **`scripts/install-wsl-kokoro-venv.sh`** — reproducible WSL Kokoro venv installer with pinned versions, idempotent, supports `--verify` (drift detection) and `--force` (rebuild). Closes the B-2 audio path portability gap from MULTI-FEAT-0055 (MULTI-OQE-0062)
-- **`scripts/measure-mnt-f-throughput.py`** — TTS-cadence and stress-mode write throughput probe for `/mnt/f` vs an ext4 baseline. R2 risk from MULTI-FEAT-0055 feasibility resolved: 23.87 MB/s sustained, p95 4ms — ~500x headroom over realistic TTS workloads (MULTI-OQE-0062)
-- **`scripts/measure-pane-threshold.sh`** — empirical pane-readability probe for tmux tiled layouts (MULTI-FEAT-0065)
-- **Persistent transport preference** in the launcher UI via `localStorage`. Selection survives reload; help glyph next to the transport row explains tmux availability state on hover/click/focus (MULTI-UI-0064)
-- **`availability_reason` field** on `GET /launcher/transports` distinguishing `available`, `wsl-not-detected`, `wsl-detected-tmux-missing`, `tmux-installed-but-no-claude`, and `platform-not-windows` (MULTI-UI-0064)
-- **ATTACH/DETACH HELP modal** in the launcher, visible only when tmux is the selected transport, with the top keybinds and a pointer to `docs/TMUX_TOPOLOGY.md` (MULTI-FEAT-0065)
-- **`scripts/test-mutex-cross-os.{py,sh}` skew correction** — `--barrier-ts` busy-wait gate eliminates cold-start asymmetry between WSL Linux Python and powershell-spawned Windows Python; 20-round atomicity verified, bias inverted vs the MULTI-FEAT-0055 baseline confirming launch-skew was the original asymmetry source (MULTI-OQE-0062)
-- **`dispatch-agent.py remove`** now kills the matching tmux pane in the shared `multideck` session (when running) and rebalances the tiled layout so other persona PIDs are preserved (MULTI-FEAT-0065)
+- **Visual job board** at `/jobs` — six view modes: Board, Dispatch Radar, Constellation, Reviewer Log, Pattern Detector, Meeting Room. Legacy server-rendered view preserved at `/jobs-classic`.
+- **Lessons system (OQE 2.0)** — structured lesson capture with schema validation per `docs/REVIEWER_LOG.md §2`. Top-5 lesson matcher surfaces prior lessons on every open job's detail drawer.
+- **Pattern Detector view** — cross-job tenet-break trends, worktype heatmap, phase distribution, and coverage gap analysis.
+- **Meeting Room** — create and browse structured agent round-tables linked to jobs.
+- **Modular JS/CSS architecture** under `dashboard/scripts/` and `dashboard/styles/`.
+- **State templates** for clean initialization of lessons, meetings, and all runtime state files in `dashboard/state-templates/`.
+- **`/state.json` multi-board bundle** — `job-boards` map + `lessons` + `meetings` + legacy briefing keys. Per-project boards discovered automatically from `state/job-board-<name>.json`.
+- **OQE 2.0 six-tenet short form** (T1–T6) added to `docs/OQE_DISCIPLINE.md`; Reviewer Log and Lesson Capture Protocol cross-referenced.
+- **Topology B operator guide** at `docs/TMUX_TOPOLOGY.md` — keybinds, attach/detach workflow, empirical pane-count threshold, troubleshooting.
+- **`scripts/install-wsl-kokoro-venv.sh`** — reproducible WSL Kokoro venv installer with pinned versions, idempotent, supports `--verify` and `--force`.
+- **Persistent transport preference** in the launcher UI via `localStorage`. `availability_reason` field on `GET /launcher/transports` distinguishes five availability states.
+- **ATTACH/DETACH HELP modal** in the launcher (tmux transport only).
+- **WSL Ubuntu transport precondition** — Claude Code CLI in WSL Ubuntu calling Windows-side Kokoro hooks via WSL Interop. Includes `docs/WSL_SETUP.md`, `scripts/wsl/wsl-binfmt.service`, and WSL hook bridge scripts.
 
-- **WSL Ubuntu transport precondition** for tmux persona spawning (MULTI-INFRA-0056, unblocks MULTI-FEAT-0055). Claude Code CLI now installs and runs inside WSL Ubuntu, calling Windows-side Kokoro hooks via WSL Interop. No duplicate Kokoro/torch install in WSL — bridges shell out to the existing Windows kokoro-venv. The current `scripts/launch-persona.ps1` (Windows Terminal tab spawning) remains the default transport; the planned `scripts/launch-persona-tmux.sh` will use this WSL install to drive `tmux new-window` for native multiplexed persona lanes.
-- `docs/WSL_SETUP.md` — full install guide covering non-root user creation, native installer, the systemd-binfmt re-enable workaround, the WSL→Windows hook bridge, and end-to-end audio-feed verification
-- `scripts/wsl/wsl-binfmt.service` — one-shot systemd unit that re-registers WSLInterop on boot (Ubuntu disables `systemd-binfmt.service` under `systemd=true`, which silently breaks Windows .exe execution from WSL bash)
-- `scripts/wsl/wsl-stop-hook.sh` and `scripts/wsl/wsl-tool-hook.sh` — bash bridges that forward Claude Code Stop and PostToolUse events to `speak-kokoro.py` / `speak-tool-status.py` running under the Windows kokoro-venv. Sets `DISPATCH_ROOT` so MP3s land in dispatch-framework's `tts-output/` (not the legacy `dispatch/` default). Forwards `CLAUDE_CODE_SSE_PORT` through `WSLENV` so per-session voice-config isolation works across the boundary.
-- `scripts/wsl/wsl-claude-settings.json` — template `~/.claude/settings.json` that wires the bridges into Claude Code
+### Changed
+
+- **`DISPATCH_LAUNCHER_TRANSPORT` default is now auto-detected** — picks `tmux` when WSL Ubuntu, tmux, and the claude binary are all present; otherwise `wt` on Windows or `sh` on Linux/macOS. Set `DISPATCH_LAUNCHER_TRANSPORT=wt` to force the legacy flow.
+
+---
+
+## [0.3.0] - 2026-04-18
+
+### Added
+
+- **OQE criteria enforcement** — objectives require a minimum of 5 testable, independently verifiable success criteria. Vague criteria ("works correctly", "looks good") are explicitly rejected and flagged by Reviewer.
+- **1:1 evidence mapping** — every criterion needs STRONG or MODERATE evidence before a job can close.
+- **Completion Gate phase** — restate each criterion with evidence citation before declaring done.
+- **`job-board.py --criteria` flag** — track OQE criteria per job for full traceability.
+
+---
+
+## [0.2.0] - 2026-04-16
+
+### Added
+
+- **Workspace governance** (`docs/WORKSPACE_GOVERNANCE.md`) — 9 coordination standards, project boundary enforcement, push denial escalation protocol.
+- **`alternatives_considered` field** now required on job close.
+- **Validate command** added to `job-board.py`.
+- **Hero 60-second commercial spot** and GIF previews in README.
+- **Team mode** and distinct persona screenshots in the launcher.
+
+---
 
 ## [0.1.2] - 2026-04-15
 
