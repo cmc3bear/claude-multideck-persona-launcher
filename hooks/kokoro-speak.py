@@ -28,7 +28,12 @@ from kokoro_queue import enqueue as queue_enqueue, drain as queue_drain, play_ff
 #     "ffmpeg_reverb": "...",
 #     "reverb_mix": 0.2,
 # }
-CUSTOM_VOICES = {}
+_dm_voice_pt = os.environ.get("DISPATCH_DM_VOICE_PT", "")
+CUSTOM_VOICES = {
+    **({
+        "dm": {"voice_pt": _dm_voice_pt, "lang": "a", "speed": 1.0},
+    } if _dm_voice_pt else {}),
+}
 
 def apply_post_processing(wav_path, custom_cfg, session_id):
     """Apply ffmpeg post-processing chain for custom voices (dry + reverb layer mix)."""

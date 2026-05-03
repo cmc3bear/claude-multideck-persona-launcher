@@ -28,6 +28,15 @@ It runs entirely local. Zero API cost with a Claude Code CLI membership. Fork it
 
 ## What's New
 
+**v0.5.0** — OpenCode + Local Models
+- Run any persona on a local Ollama model instead of Claude Code. New `[ LOCAL ]` mode in the launcher sets runtime to OpenCode; HUD shows active runtime in color (gold = Claude, cyan = OpenCode, purple = VS)
+- `scripts/launch-persona-opencode.ps1` — spawn a persona under OpenCode with a configurable Ollama model (default: `qwen3-coder:30b-32k`); honors `DISPATCH_OPENCODE_MODEL` env var
+- `scripts/convert-personas-to-opencode.py` — converts all personas to OpenCode agent files at `~/.config/opencode/agents/<key>.md`; re-run after editing personas to regenerate
+- VS mode (`scripts/vs-comparator.py`) — pair a Claude job and an OpenCode job on the same spec; per-criterion OQE scorecard written to `state/vs-scoreboard.json`
+- `/launcher/models` endpoint — reads registered Ollama models from `~/.config/opencode/opencode.json` and surfaces them in the launcher model selector
+- Three new example personas: **Dungeon-Master** (D&D 5e with server-authoritative dice API), **NPC-Agent** (in-character NPC spawned with identity and secret), **Frasier** (CBT-style wellness chat)
+- `DISPATCH_DM_VOICE_PT` env var for custom Kokoro voice tensor — no hardcoded paths in the distributed hooks
+
 **v0.4.0** — Job Board Dashboard + OQE 2.0 Self-Improvement Loop
 - Visual job board at `/jobs` replaces the old server-rendered page (legacy preserved at `/jobs-classic`)
 - Six view modes: Board, Dispatch Radar, Constellation, Reviewer Log, Pattern Detector, Meeting Room
@@ -403,6 +412,9 @@ Key environment variables:
 | `DISPATCH_LAUNCHER_ASSETS` | Portraits, intros, music | `./dashboard/launcher-assets` |
 | `DISPATCH_TEAM_PRESETS` | Team preset definitions | `./dashboard/team-presets.json` |
 | `DISPATCH_WORKSPACE_ROOT` | Workspace root for state context | `$DISPATCH_ROOT` |
+| `DISPATCH_OPENCODE_MODEL` | Ollama model used by OpenCode runtime | `ollama/qwen3-coder:30b-32k` |
+| `DISPATCH_OPENCODE_AGENTS_DIR` | Output directory for converted OpenCode agent files | `~/.config/opencode/agents` |
+| `DISPATCH_DM_VOICE_PT` | Path to a custom Kokoro `.pt` voice tensor for the `dm` voice key | unset (standard voice used) |
 
 The job board dashboard reads additional state files from `DISPATCH_STATE_DIR` automatically:
 

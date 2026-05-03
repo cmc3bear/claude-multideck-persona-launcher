@@ -927,6 +927,10 @@
   }
 
   .top-hud .label { color: var(--text-dim); margin-right: 6px; }
+  #hud-runtime { font-weight: bold; letter-spacing: 1px; }
+  #hud-runtime[data-runtime="claude"]   { color: #FFB700; text-shadow: 0 0 6px #FFB700; }
+  #hud-runtime[data-runtime="opencode"] { color: var(--neon-cyan); text-shadow: 0 0 6px var(--neon-cyan); }
+  #hud-runtime[data-runtime="vs"]       { color: #D946EF; text-shadow: 0 0 6px #D946EF; }
 
   /* ============ LAUNCHING OVERLAY ============ */
   .overlay {
@@ -1420,6 +1424,35 @@
     </div>
   </div>
 
+  <!-- ============ MODE SELECT (post node, pre agent) ============ -->
+  <div class="screen hidden" id="mode-select-screen">
+    <button class="back-btn" data-back="project-screen">[ ESC ] BACK</button>
+    <div class="select-header">CHOOSE YOUR MODE</div>
+    <div class="select-sub">// pick the runtime that drives the deck</div>
+    <div class="project-grid mode-grid" id="mode-grid">
+      <div class="project-card mode-card" data-mode="opencode" data-mode-accent="cyan">
+        <div class="project-name">[ LOCAL ]</div>
+        <div class="project-path">runtime &middot; opencode + qwen3-coder:30b</div>
+        <div class="project-desc">true local. zero api cost. lives on your gpu. discipline depends entirely on the local model holding it.</div>
+      </div>
+      <div class="project-card mode-card" data-mode="claude" data-mode-accent="orange">
+        <div class="project-name">[ CO-OP ]</div>
+        <div class="project-path">runtime &middot; claude code</div>
+        <div class="project-desc">cloud claude. baseline. the discipline you already trust. costs api dollars but never drifts.</div>
+      </div>
+      <div class="project-card mode-card" data-mode="vs" data-mode-accent="magenta">
+        <div class="project-name">[ VS ]</div>
+        <div class="project-path">runtime &middot; opencode &harr; claude</div>
+        <div class="project-desc">same job, two runtimes, side by side. the comparator scores who held discipline. how you find out if local is ready.</div>
+      </div>
+    </div>
+    <div class="hint-bar">
+      <span class="key">&larr;&uarr;&darr;&rarr;</span> NAVIGATE
+      <span class="key">ENTER</span> SELECT
+      <span class="key">ESC</span> BACK
+    </div>
+  </div>
+
   <!-- ============ PROJECT SELECT ============ -->
   <div class="screen hidden" id="project-screen">
     <button class="back-btn" data-back="title-screen">[ ESC ] BACK</button>
@@ -1492,7 +1525,10 @@
   <!-- ============ CHARACTER SELECT ============ -->
   <div class="screen hidden" id="select-screen">
     <button class="back-btn" data-back="project-screen">[ ESC ] BACK</button>
-    <div class="top-hud" id="top-hud"><span class="label">PROJECT:</span> <span id="hud-project">-</span></div>
+    <div class="top-hud" id="top-hud">
+      <div><span class="label">PROJECT:</span> <span id="hud-project">-</span></div>
+      <div><span class="label">RUNTIME:</span> <span id="hud-runtime" data-runtime="claude">CO-OP</span></div>
+    </div>
     <div class="select-header">SELECT OPERATIVE</div>
     <div class="select-sub" id="select-sub">// scanning available agents</div>
 
@@ -1545,6 +1581,13 @@
                 <a href="#" id="tmux-attach-modal-close" style="color:#00FFCC; text-decoration:none; border-bottom:1px dotted #00FFCC;">close</a>
               </div>
             </div>
+          </div>
+          <div class="model-row" id="model-row" style="margin: 8px 0; font: 12px 'JetBrains Mono', monospace; letter-spacing: 1px; color: #00FFCC; opacity: 0.85;">
+            <span style="color:#888; margin-right:8px;">// MODEL //</span>
+            <select id="model-select" style="background:#001815; color:#00FFCC; border:1px solid #00FFCC; padding:2px 6px; font:12px 'JetBrains Mono', monospace; cursor:pointer; min-width:240px;">
+              <option value="">[ persona default ]</option>
+            </select>
+            <span id="model-help" style="margin-left:8px; color:#888; font-size:10px;">applies to LOCAL / VS modes</span>
           </div>
           <input type="text" class="prompt-input" id="initial-prompt" placeholder="initial prompt (optional)" autocomplete="off">
         </div>
@@ -1601,6 +1644,7 @@
 const GLYPHS = {
   dispatch: 'D', architect: 'A', engineer: 'E', reviewer: 'R', researcher: 'Q',
   'launcher-engineer': 'L', 'voice-technician': 'V', 'persona-author': 'P', 'commercial-producer': 'C',
+  'dungeon-master': '⚔', 'npc-agent': '♟',
 };
 
 const STATS = {
@@ -1613,6 +1657,8 @@ const STATS = {
   'voice-technician':    { hp:  80, atk: 70, def: 90, int: 95, class: 'Audio Engineer',flavor: 'Kokoro hooks, the mutex queue, per-session voice isolation, callsign announcements, ffmpeg post-processing chains. The reason your voices don\u2019t overlap.' },
   'persona-author':      { hp:  70, atk: 50, def: 80, int: 98, class: 'Meta-Agent',    flavor: 'Writes other personas. Maintains personas.json, keeps templates in sync, validates cross-references. The agent that agents are born from.' },
   'commercial-producer': { hp:  75, atk: 80, def: 75, int: 88, class: 'Narrator',      flavor: 'End to end commercial production. Draft script, VO generation, music bed integration, scene direction, Redline gate. Your voice when the product ships.' },
+  'dungeon-master':      { hp: 999, atk: 95, def: 80, int: 99, class: 'Dungeon Master', flavor: 'D&D 5e campaign engine. Server-authoritative dice, scene narration, world state, NPC spawning, consequence tracking. No plot armor. The dice decide.' },
+  'npc-agent':           { hp:  50, atk: 60, def: 40, int: 70, class: 'NPC',            flavor: 'In-character non-player character. Unique voice, own agenda, own secrets. Can lie, bargain, betray, or help. Identity assigned at spawn.' },
 };
 
 const DASHBOARDS = [
@@ -1642,6 +1688,9 @@ const state = {
   bootDone: false,
   studioDone: false,
   titleGateOpen: false,
+  runtime: 'claude',  // 'claude' | 'opencode' | 'vs' — set by mode-select screen
+  models: [],          // populated from /launcher/models
+  selectedModel: '',   // empty = persona default; otherwise provider/model id
 };
 
 const MUSIC_KEY = 'dispatch_launcher_track';
@@ -1789,19 +1838,22 @@ function selectedTransport() {
 // ============ FETCH DATA ============
 async function loadData() {
   try {
-    const [pr, pj, mu, tp, tx] = await Promise.all([
+    const [pr, pj, mu, tp, tx, md] = await Promise.all([
       fetch('/launcher/personas').then(r => r.json()),
       fetch('/launcher/projects').then(r => r.json()),
       fetch('/launcher/music').then(r => r.json()),
       fetch('/launcher/team-presets').then(r => r.json()),
       fetch('/launcher/transports').then(r => r.json()).catch(() => ({ available: ['wt'], default: 'wt' })),
+      fetch('/launcher/models').then(r => r.json()).catch(() => ({ models: [] })),
     ]);
     state.personas = pr.personas || {};
     state.projects = pj.projects || [];
     state.tracks = mu.tracks || [];
     state.teamPresets = tp.presets || [];
     state.transports = tx;
+    state.models = md.models || [];
     applyTransportUI(tx);
+    populateModelSelect();
     renderProjectGrid();
     renderMusicGrid();
     renderTeamPresetsGrid();
@@ -1809,6 +1861,43 @@ async function loadData() {
     refreshContinueLabel();
   } catch (e) {
     console.error('failed to load launcher data', e);
+  }
+}
+
+// Populate the MODEL dropdown from /launcher/models. The first option
+// (empty value) means "use the persona's configured default" — the launch
+// script falls back to DISPATCH_OPENCODE_MODEL or the qwen3-coder default.
+function populateModelSelect() {
+  const sel = document.getElementById('model-select');
+  if (!sel) return;
+  // preserve the placeholder option, drop any prior dynamic ones
+  while (sel.options.length > 1) sel.remove(1);
+  (state.models || []).forEach(m => {
+    const opt = document.createElement('option');
+    opt.value = m.id;
+    opt.textContent = `${m.name} (${m.id})`;
+    sel.appendChild(opt);
+  });
+  if (state.selectedModel) sel.value = state.selectedModel;
+  sel.addEventListener('change', () => {
+    state.selectedModel = sel.value || '';
+    refreshModelRowState();
+  });
+  refreshModelRowState();
+}
+
+// Show/hide the model row depending on runtime — Claude/Co-op mode doesn't use
+// the model picker (Claude Code chooses its own model). Local and VS modes do.
+function refreshModelRowState() {
+  const row = document.getElementById('model-row');
+  const help = document.getElementById('model-help');
+  if (!row) return;
+  if (state.runtime === 'claude') {
+    row.style.opacity = '0.4';
+    if (help) help.textContent = 'CO-OP uses Claude Code default — model picker inactive';
+  } else {
+    row.style.opacity = '0.85';
+    if (help) help.textContent = state.runtime === 'vs' ? 'applies to OpenCode side of VS' : 'applies to OpenCode session';
   }
 }
 
@@ -1857,7 +1946,11 @@ function loadTeamPreset(preset) {
   state.team = preset.personas.filter(k => state.filteredPersonas.some(p => p.key === k));
   refreshTeamBadges();
   refreshTeamLaunchButton();
-  showScreen('select-screen');
+  // Team presets also gate through mode-select so the operator picks a runtime
+  // before the team deploys.
+  showScreen('mode-select-screen');
+  bindModeCards();
+  setTimeout(() => setKbdIndex(0, '#mode-grid .mode-card'), 50);
 }
 
 // ============ MUSIC ============
@@ -1966,6 +2059,48 @@ function personasForProject(project) {
   });
 }
 
+// ============ HUD ============
+function refreshHudRuntime() {
+  const el = document.getElementById('hud-runtime');
+  if (!el) return;
+  const labels = { claude: 'CO-OP', opencode: 'LOCAL', vs: 'VS' };
+  el.textContent = labels[state.runtime] || state.runtime.toUpperCase();
+  el.setAttribute('data-runtime', state.runtime);
+}
+
+// ============ MODE SELECT ============
+// Wires the three mode-select cards. Idempotent — safe to call multiple times.
+// Flow: project-screen -> selectProject() -> mode-select-screen -> select-screen.
+// Mode-select gates every path to character-select except CONTINUE (which
+// restores last-used runtime via saveLastSession).
+let modeCardsBound = false;
+function bindModeCards() {
+  if (modeCardsBound) return;
+  modeCardsBound = true;
+  document.querySelectorAll('#mode-grid .mode-card').forEach((card, i) => {
+    card.addEventListener('mouseenter', () => setKbdIndex(i, '#mode-grid .mode-card'));
+    card.addEventListener('click', () => {
+      const mode = card.getAttribute('data-mode');
+      state.runtime = mode;
+      refreshHudRuntime();
+      refreshModelRowState();
+      console.log('[MODE-SELECT] runtime =', mode);
+      // Render character grid only after runtime is chosen so the deploy
+      // overlay text can reflect it (future enhancement).
+      if (!state.filteredPersonas || state.filteredPersonas.length === 0) {
+        if (state.currentProject) {
+          state.filteredPersonas = personasForProject(state.currentProject);
+        } else {
+          state.filteredPersonas = Object.values(state.personas);
+        }
+        renderCharacterGrid();
+      }
+      showScreen('select-screen');
+      setTimeout(() => setKbdIndex(0, '#grid .character-card'), 50);
+    });
+  });
+}
+
 // ============ RENDER PROJECT GRID ============
 function renderProjectGrid() {
   const grid = document.getElementById('project-grid');
@@ -1990,7 +2125,11 @@ function selectProject(p) {
   document.getElementById('hud-project').textContent = p.name + '  [' + p.path + ']';
   state.filteredPersonas = personasForProject(p);
   renderCharacterGrid();
-  showScreen('select-screen');
+  // Gate to character-select goes through mode-select so the operator picks
+  // a runtime (Local/Co-op/VS) before deploying.
+  showScreen('mode-select-screen');
+  bindModeCards();
+  setTimeout(() => setKbdIndex(0, '#mode-grid .mode-card'), 50);
 }
 
 // ============ RENDER CHARACTER GRID ============
@@ -2210,6 +2349,7 @@ function showScreen(id) {
 function currentSelector() {
   switch (state.currentScreen) {
     case 'title-screen':       return '#title-menu .menu-item';
+    case 'mode-select-screen': return '#mode-grid .mode-card';
     case 'project-screen':     return '#project-grid .project-card';
     case 'dashboards-screen':  return '#dashboard-grid .dashboard-card';
     case 'teams-screen':       return '#team-presets-grid .preset-card';
@@ -2256,6 +2396,19 @@ function handleTitleAction(action) {
       document.getElementById('hud-project').textContent = project.name + '  [' + project.path + ']';
       state.filteredPersonas = personasForProject(project);
       renderCharacterGrid();
+      // CONTINUE restores the runtime from the saved session so the operator
+      // doesn't have to re-pick the mode every time. NEW GAME / LOAD / TEAMS
+      // all still flow through mode-select-screen.
+      if (save.runtime && ['claude', 'opencode', 'vs'].includes(save.runtime)) {
+        state.runtime = save.runtime;
+      }
+      if (typeof save.model === 'string') {
+        state.selectedModel = save.model;
+        const sel = document.getElementById('model-select');
+        if (sel) sel.value = save.model;
+      }
+      refreshHudRuntime();
+      refreshModelRowState();
       // Try to pre-select the saved persona
       const savedIdx = state.filteredPersonas.findIndex(p => p.key === save.personaKey);
       if (savedIdx >= 0) {
@@ -2293,7 +2446,10 @@ const SAVE_KEY = 'dispatch_launcher_save';
 function saveLastSession(projectId, personaKey) {
   try {
     localStorage.setItem(SAVE_KEY, JSON.stringify({
-      projectId, personaKey, ts: Date.now(),
+      projectId, personaKey,
+      runtime: state.runtime,
+      model: state.selectedModel || '',
+      ts: Date.now(),
     }));
   } catch {}
 }
@@ -2489,6 +2645,8 @@ async function launchSelected() {
         dangerous,
         prompt,
         transport: selectedTransport(),
+        runtime: state.runtime,
+        model: state.selectedModel || '',
       }),
     });
     console.log('[DEPLOY] response status', r.status);
@@ -2554,6 +2712,8 @@ async function launchTeam() {
         dangerous,
         prompt,
         transport: selectedTransport(),
+        runtime: state.runtime,
+        model: state.selectedModel || '',
       }),
     });
     const data = await r.json();
@@ -2628,6 +2788,7 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     e.preventDefault();
     if (state.currentScreen === 'select-screen')      showScreen('project-screen');
+    else if (state.currentScreen === 'mode-select-screen') showScreen('project-screen');
     else if (state.currentScreen === 'project-screen' ||
              state.currentScreen === 'new-project-screen' ||
              state.currentScreen === 'dashboards-screen' ||

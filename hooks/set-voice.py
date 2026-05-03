@@ -29,13 +29,25 @@ VOICE_MAP = {
     "voice-technician":   {"voice": "af_nova",   "lang": "a", "speed": 1.05, "callsign": "Voice-Technician"},
     "persona-author":     {"voice": "af_heart",  "lang": "a", "speed": 1.0,  "callsign": "Persona-Author"},
     "commercial-producer":{"voice": "bm_fable",  "lang": "b", "speed": 0.95, "callsign": "Commercial-Producer"},
+    "dungeon-master":     {"voice": "dm",        "lang": "a", "speed": 1.0,  "callsign": "Dungeon-Master"},
+    "dm":                 {"voice": "dm",        "lang": "a", "speed": 1.0,  "callsign": "Dungeon-Master"},
+    "frasier":            {"voice": "bf_emma",   "lang": "b", "speed": 1.05, "callsign": "Frasier"},
+    "npc-agent":          {"voice": "am_adam",    "lang": "a", "speed": 1.0,  "callsign": "NPC"},
+    "npc":                {"voice": "am_adam",    "lang": "a", "speed": 1.0,  "callsign": "NPC"},
     "default":            {"voice": "am_puck",   "lang": "a", "speed": 1.05, "callsign": ""},
 }
 
 # CUSTOM_VOICES: Add custom voice tensor mappings here.
 # Example: "my_voice": {"voice_pt": "/path/to/my_voice.pt", "lang": "a", "speed": 1.0, ...}
 # See kokoro-speak.py for the full schema (includes ffmpeg post-processing chains).
-CUSTOM_VOICES = {}
+# Drive the path via env var so it works across machines without hardcoded paths:
+#   export DISPATCH_DM_VOICE_PT="/path/to/dm-voice.pt"
+_dm_voice_pt = os.environ.get("DISPATCH_DM_VOICE_PT", "")
+CUSTOM_VOICES = {
+    **({
+        "dm": {"voice_pt": _dm_voice_pt, "lang": "a", "speed": 1.0},
+    } if _dm_voice_pt else {}),
+}
 
 def main():
     args = sys.argv[1:]
@@ -71,11 +83,20 @@ def main():
     session_id = _discover_session_id()
     port = os.environ.get("CLAUDE_CODE_SSE_PORT")
 
+    # Write to both the local hooks dir AND the Windows-side hooks dir where
+    # kokoro-speak.py (the actual TTS runtime) reads voice configs from.
+    # In WSL, the Windows hooks dir is at /mnt/c/Users/<user>/.claude/hooks.
+    windows_hooks = "/mnt/c/Users/" + os.environ.get("USER", "") + "/.claude/hooks"
+    write_dirs = [hooks_dir]
+    if os.path.isdir(windows_hooks) and os.path.realpath(windows_hooks) != os.path.realpath(hooks_dir):
+        write_dirs.append(windows_hooks)
+
     paths_written = []
-    if session_id:
-        paths_written.append(os.path.join(hooks_dir, f"voice-config-{session_id}.json"))
-    if port:
-        paths_written.append(os.path.join(hooks_dir, f"voice-config-{port}.json"))
+    for d in write_dirs:
+        if session_id:
+            paths_written.append(os.path.join(d, f"voice-config-{session_id}.json"))
+        if port:
+            paths_written.append(os.path.join(d, f"voice-config-{port}.json"))
     if not paths_written:
         paths_written.append(os.path.join(hooks_dir, "voice-config.json"))
 

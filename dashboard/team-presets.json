@@ -17,6 +17,12 @@
       "name": "Investigation",
       "description": "Researcher + Reviewer — research with source grading and review",
       "personas": ["researcher", "reviewer"]
+    },
+    {
+      "id": "dnd-campaign",
+      "name": "D&D Campaign",
+      "description": "Dungeon Master + NPC agents for live D&D 5e campaign on localhost:3055",
+      "personas": ["dungeon-master"]
     }
   ]
 }

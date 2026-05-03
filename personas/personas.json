@@ -94,6 +94,36 @@
       "agent_file": "personas/COMMERCIAL_PRODUCER_AGENT.md",
       "description": "End-to-end commercial production: script, VO, music bed, scene direction, review gate, final master.",
       "scope": "project:multideck"
+    },
+    "dungeon-master": {
+      "callsign": "Dungeon-Master",
+      "color_hex": "#C9A44A",
+      "tab_color": "#3B2E14",
+      "voice_key": "dm",
+      "cwd": "${DISPATCH_USER_ROOT}/dnd-campaign",
+      "agent_file": "personas/DUNGEON_MASTER_AGENT.md",
+      "description": "D&D 5e DM. Server-authoritative dice, scene narration, world state, NPC management. No plot armor.",
+      "scope": "project:dnd-campaign"
+    },
+    "npc-agent": {
+      "callsign": "NPC",
+      "color_hex": "#94A3B8",
+      "tab_color": "#1E293B",
+      "voice_key": "npc",
+      "cwd": "${DISPATCH_USER_ROOT}/dnd-campaign",
+      "agent_file": "personas/NPC_AGENT.md",
+      "description": "In-character NPC for D&D campaign. Spawned with name, role, voice, and secret via initial prompt.",
+      "scope": "project:dnd-campaign"
+    },
+    "frasier": {
+      "callsign": "Frasier",
+      "color_hex": "#60A5FA",
+      "tab_color": "#1E3A8A",
+      "voice_key": "frasier",
+      "cwd": "${DISPATCH_USER_ROOT}/therapist",
+      "agent_file": "personas/FRAISER_AGENT.md",
+      "description": "CBT chat therapist for emotional support and mental wellness.",
+      "scope": "project:multideck"
     }
   }
 }

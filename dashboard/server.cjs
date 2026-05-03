@@ -1,4 +1,5 @@
 const http = require('http');
+const https = require('https');
 const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
@@ -26,6 +27,13 @@ const WORKSPACE_ROOT = process.env.DISPATCH_WORKSPACE_ROOT || DISPATCH_ROOT;
 const LAUNCH_SCRIPT_PS1 = path.join(DISPATCH_ROOT, 'scripts', 'launch-persona.ps1');
 const LAUNCH_SCRIPT_SH = path.join(DISPATCH_ROOT, 'scripts', 'launch-persona.sh');
 const LAUNCH_SCRIPT_TMUX = path.join(DISPATCH_ROOT, 'scripts', 'launch-persona-tmux.sh');
+const LAUNCH_SCRIPT_OPENCODE_PS1 = path.join(DISPATCH_ROOT, 'scripts', 'launch-persona-opencode.ps1');
+const VALID_RUNTIMES = ['claude', 'opencode', 'vs'];
+const DEFAULT_RUNTIME = 'claude';
+const OPENCODE_CONFIG_PATH = path.join(
+  process.env.USERPROFILE || process.env.HOME || '',
+  '.config', 'opencode', 'opencode.json'
+);
 const KOKORO_QUEUE_STATS = path.join(DISPATCH_ROOT, 'hooks', '.kokoro-queue', 'stats.json');
 const KOKORO_QUEUE_ROOT = path.join(DISPATCH_ROOT, 'hooks', '.kokoro-queue');
 const IS_WINDOWS = process.platform === 'win32';
@@ -322,22 +330,44 @@ function slugifyProjectName(name) {
 // ============================================================
 function listProjects() {
   const fwd = (p) => p.replace(/\\/g, '/');
-  const projects = [
-    {
-      id: 'workspace',
-      name: 'WORKSPACE ROOT',
-      path: fwd(WORKSPACE_ROOT),
-      scope: 'workspace',
-      description: 'Workspace root. All personas available.',
-    },
-  ];
+  const PINNED_PATH = path.join(DISPATCH_ROOT, 'state', 'projects-pinned.json');
+
+  // Load pinned baseline. This file is gitignored (state/*.json) so personal
+  // project lists never leak into the public framework repo. If the file is
+  // missing, fall back to a minimal default so the launcher still works.
+  let projects = [];
+  if (fs.existsSync(PINNED_PATH)) {
+    try {
+      const pinned = JSON.parse(fs.readFileSync(PINNED_PATH, 'utf8'));
+      if (Array.isArray(pinned.projects)) {
+        projects = pinned.projects.filter(p => p && p.id && p.path).map(p => ({
+          id: p.id,
+          name: p.name || p.id.toUpperCase(),
+          path: fwd(p.path),
+          scope: p.scope || `project:${p.id}`,
+          description: p.description || '',
+        }));
+      }
+    } catch (e) {
+      console.warn('[launcher] failed to parse projects-pinned.json:', e.message);
+    }
+  }
+  if (projects.length === 0) {
+    projects = [{
+      id: 'workspace', name: 'WORKSPACE ROOT', path: fwd(WORKSPACE_ROOT),
+      scope: 'workspace', description: 'Workspace root. All personas available.',
+    }];
+  }
+
+  // Auto-discovery scan for newly-created projects under DISPATCH_PROJECTS_DIR.
+  // Pinned IDs always win — discovered entries with the same id (or path) are skipped.
   const PROJECT_ALIASES = {
-    'dispatch-framework': { id: 'multideck', name: 'MULTIDECK INFRASTRUCTURE' },
+    'dispatch-framework': { id: 'multideck', name: 'MULTIDECK (DISPATCH)' },
     'dispatch':           { id: 'multideck-github', name: 'MULTIDECK GITHUB' },
   };
-  // Scan DISPATCH_PROJECTS_DIR — supports comma-separated list of directories
+  const seen = new Set(projects.map(p => p.id));
+  const seenPaths = new Set(projects.map(p => p.path));
   const dirs = ACTIVE_PROJECTS_DIR ? ACTIVE_PROJECTS_DIR.split(',').map(d => d.trim()).filter(Boolean) : [];
-  const seen = new Set();
   for (const dir of dirs) {
     if (!fs.existsSync(dir)) continue;
     try {
@@ -345,16 +375,19 @@ function listProjects() {
       for (const e of entries) {
         if (!e.isDirectory()) continue;
         if (e.name.startsWith('.')) continue;
+        const full = fwd(path.join(dir, e.name));
+        if (seenPaths.has(full)) continue;
         const alias = PROJECT_ALIASES[e.name];
         const pid = alias ? alias.id : e.name;
         if (seen.has(pid)) continue;
         seen.add(pid);
+        seenPaths.add(full);
         projects.push({
           id: pid,
           name: alias ? alias.name : e.name.toUpperCase().replace(/-/g, ' '),
-          path: fwd(path.join(dir, e.name)),
+          path: full,
           scope: `project:${pid}`,
-          description: `Active project at ${fwd(path.join(dir, e.name))}`,
+          description: `Active project at ${full}`,
         });
       }
     } catch {}
@@ -381,9 +414,66 @@ function tmuxSessionExists(name) {
   }
 }
 
+// Read OpenCode's registered models from ~/.config/opencode/opencode.json so the
+// launcher UI can offer them as a dropdown. Returns
+// [{ id: "ollama/qwen3-coder:30b-32k", name: "Qwen3-Coder 30B (32k ctx)", provider: "ollama" }, ...].
+// Empty array if config missing or unreadable.
+function listOpencodeModels() {
+  try {
+    const cfg = JSON.parse(fs.readFileSync(OPENCODE_CONFIG_PATH, 'utf8'));
+    const out = [];
+    for (const [provName, prov] of Object.entries(cfg.provider || {})) {
+      const models = (prov && prov.models) || {};
+      for (const [modelId, modelMeta] of Object.entries(models)) {
+        out.push({
+          id: `${provName}/${modelId}`,
+          name: (modelMeta && modelMeta.name) || modelId,
+          provider: provName,
+        });
+      }
+    }
+    return out;
+  } catch (e) {
+    return [];
+  }
+}
+
+function spawnPersonaOpencode(personaKey, initialPrompt, callsignSuffix, model) {
+  // OpenCode runtime spawn — wt only for v1. tmux + opencode is a future addition.
+  // Voice + /color injector are intentionally skipped (no SSE_PORT equivalent;
+  // OpenCode TUI handles colors natively).
+  if (!IS_WINDOWS) {
+    throw new Error('opencode runtime currently supports Windows wt transport only');
+  }
+  const args = [
+    '/c', 'start', '""', '/b',
+    'powershell', '-NoProfile', '-ExecutionPolicy', 'Bypass',
+    '-File', LAUNCH_SCRIPT_OPENCODE_PS1, personaKey,
+  ];
+  if (initialPrompt) args.push(initialPrompt);
+  if (callsignSuffix) args.push('-CallsignSuffix', callsignSuffix);
+  if (model) args.push('-Model', model);
+  const child = spawn('cmd.exe', args, { detached: true, stdio: 'ignore', windowsHide: true });
+  child.unref();
+}
+
 function spawnPersona(personaKey, initialPrompt, transport, options) {
   const xport = String(transport || DEFAULT_TRANSPORT).toLowerCase();
   const opts = options || {};
+  const runtime = String(opts.runtime || DEFAULT_RUNTIME).toLowerCase();
+
+  // Runtime branch — opencode skips transport (wt-only) and the rest of the
+  // Claude wt/tmux machinery below. VS spawns both runtimes side-by-side with
+  // distinct callsign suffixes so the operator can tell them apart.
+  if (runtime === 'opencode') {
+    spawnPersonaOpencode(personaKey, initialPrompt, opts.callsignSuffix || '', opts.model || '');
+    return;
+  }
+  if (runtime === 'vs') {
+    spawnPersona(personaKey, initialPrompt, xport, { ...opts, runtime: 'claude', callsignSuffix: 'CLD' });
+    spawnPersonaOpencode(personaKey, initialPrompt, 'OCD', opts.model || '');
+    return;
+  }
 
   if (IS_WINDOWS) {
     if (xport === 'tmux') {
@@ -528,6 +618,11 @@ function handleLauncher(req, res, url) {
     return true;
   }
 
+  if (url === '/launcher/models' && method === 'GET') {
+    sendJson(res, 200, { models: listOpencodeModels() });
+    return true;
+  }
+
   if (url === '/launcher/personas' && method === 'GET') {
     try {
       let data = fs.readFileSync(PERSONAS_PATH, 'utf8');
@@ -622,7 +717,13 @@ function handleLauncher(req, res, url) {
       }
       const initialPrompt = typeof body.prompt === 'string' ? body.prompt : '';
       const transport = String(body.transport || DEFAULT_TRANSPORT).toLowerCase();
-      if (!transportAvailable(transport)) {
+      const runtime = String(body.runtime || DEFAULT_RUNTIME).toLowerCase();
+      const model = typeof body.model === 'string' ? body.model.trim() : '';
+      if (!VALID_RUNTIMES.includes(runtime)) {
+        return sendJson(res, 400, { error: 'invalid runtime', runtime, valid: VALID_RUNTIMES });
+      }
+      // Transport availability only matters for Claude path; opencode is wt-only.
+      if (runtime !== 'opencode' && !transportAvailable(transport)) {
         return sendJson(res, 400, {
           error: 'transport not available',
           transport,
@@ -633,14 +734,16 @@ function handleLauncher(req, res, url) {
         // For tmux: open a viewer window only if the session doesn't yet
         // exist. If the operator already has a wt window attached to
         // multideck, this single launch slots in silently.
-        const sessionExists = (transport === 'tmux') ? tmuxSessionExists('multideck') : false;
-        spawnPersona(personaKey, initialPrompt, transport, { sessionExists });
+        const sessionExists = (transport === 'tmux' && runtime === 'claude') ? tmuxSessionExists('multideck') : false;
+        spawnPersona(personaKey, initialPrompt, transport, { sessionExists, runtime, model });
         sendJson(res, 200, {
           ok: true,
           persona: personaKey,
           callsign: registry.personas[personaKey].callsign,
           transport,
-          packed_into_existing_session: transport === 'tmux' && sessionExists,
+          runtime,
+          model: model || null,
+          packed_into_existing_session: transport === 'tmux' && runtime === 'claude' && sessionExists,
         });
       } catch (e) {
         sendJson(res, 500, { error: 'spawn failed', detail: e.message });
@@ -667,7 +770,12 @@ function handleLauncher(req, res, url) {
 
       const initialPrompt = typeof body.prompt === 'string' ? body.prompt : '';
       const transport = String(body.transport || DEFAULT_TRANSPORT).toLowerCase();
-      if (!transportAvailable(transport)) {
+      const runtime = String(body.runtime || DEFAULT_RUNTIME).toLowerCase();
+      const model = typeof body.model === 'string' ? body.model.trim() : '';
+      if (!VALID_RUNTIMES.includes(runtime)) {
+        return sendJson(res, 400, { error: 'invalid runtime', runtime, valid: VALID_RUNTIMES });
+      }
+      if (runtime !== 'opencode' && !transportAvailable(transport)) {
         return sendJson(res, 400, {
           error: 'transport not available',
           transport,
@@ -678,14 +786,16 @@ function handleLauncher(req, res, url) {
       // Open a viewer wt window only for the first member, and only if the
       // session doesn't already exist. All other members slot in silently
       // as new tiled panes. wt transport keeps the per-member tab behavior.
-      const sessionExistsAtLaunch = (transport === 'tmux') ? tmuxSessionExists('multideck') : false;
+      // OpenCode runtime: each persona gets its own wt tab regardless.
+      const sessionExistsAtLaunch = (transport === 'tmux' && runtime === 'claude') ? tmuxSessionExists('multideck') : false;
       const deployed = [];
       keys.forEach((k, i) => {
         setTimeout(() => {
           try {
-            const opts = (transport === 'tmux')
-              ? { openViewer: i === 0 && !sessionExistsAtLaunch }
-              : undefined;
+            const baseOpts = { runtime, model };
+            const opts = (transport === 'tmux' && runtime === 'claude')
+              ? { ...baseOpts, openViewer: i === 0 && !sessionExistsAtLaunch }
+              : baseOpts;
             spawnPersona(k, initialPrompt, transport, opts);
           } catch (e) {
             console.error('team spawn failed for', k, e.message);
@@ -697,8 +807,9 @@ function handleLauncher(req, res, url) {
         ok: true,
         deployed,
         transport,
+        runtime,
         stagger_ms: 700,
-        viewer_opened: transport === 'tmux' ? !sessionExistsAtLaunch : null,
+        viewer_opened: (transport === 'tmux' && runtime === 'claude') ? !sessionExistsAtLaunch : null,
       });
     }).catch((e) => sendJson(res, 400, { error: 'bad body', detail: e.message }));
     return true;
@@ -1041,6 +1152,72 @@ const server = http.createServer((req, res) => {
   }
   if (url === '/api/kokoro/stats') {
     sendJson(res, 200, readKokoroStats());
+    return;
+  }
+
+  if (url === '/api/claude/complete' && req.method === 'POST') {
+    readJsonBody(req).then((body) => {
+      const prompt = String(body.prompt || '');
+      if (!prompt) return sendJson(res, 400, { error: 'prompt required' });
+      const apiKey = process.env.ANTHROPIC_API_KEY;
+      if (!apiKey) return sendJson(res, 503, { error: 'ANTHROPIC_API_KEY not configured' });
+      const payload = JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 512,
+        messages: [{ role: 'user', content: prompt }],
+      });
+      const options = {
+        hostname: 'api.anthropic.com',
+        path: '/v1/messages',
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'Content-Length': Buffer.byteLength(payload),
+        },
+      };
+      const proxyReq = https.request(options, (proxyRes) => {
+        let data = '';
+        proxyRes.on('data', (chunk) => { data += chunk; });
+        proxyRes.on('end', () => {
+          try {
+            const parsed = JSON.parse(data);
+            const text = (parsed.content?.[0]?.text) || '';
+            sendJson(res, 200, { text });
+          } catch (e) {
+            sendJson(res, 502, { error: 'invalid response from Claude API' });
+          }
+        });
+      });
+      proxyReq.on('error', (e) => sendJson(res, 502, { error: 'Claude API request failed', detail: e.message }));
+      proxyReq.write(payload);
+      proxyReq.end();
+    }).catch((e) => sendJson(res, 400, { error: 'bad body', detail: e.message }));
+    return;
+  }
+
+  if (url === '/api/meetings' && req.method === 'POST') {
+    readJsonBody(req).then((body) => {
+      const meeting = body.meeting;
+      if (!meeting || !meeting.id) return sendJson(res, 400, { error: 'meeting.id required' });
+      const fp = path.join(STATE_DIR, 'meetings.json');
+      try {
+        let existing = [];
+        try {
+          const raw = fs.readFileSync(fp, 'utf8');
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed.meetings)) existing = parsed.meetings;
+        } catch (_) {}
+        const idx = existing.findIndex((m) => m.id === meeting.id);
+        if (idx >= 0) existing[idx] = meeting;
+        else existing.push(meeting);
+        fs.writeFileSync(fp, JSON.stringify({ meetings: existing }, null, 2));
+        sendJson(res, 200, { ok: true, id: meeting.id });
+      } catch (e) {
+        sendJson(res, 500, { error: 'failed to save meeting', detail: e.message });
+      }
+    }).catch((e) => sendJson(res, 400, { error: 'bad body', detail: e.message }));
     return;
   }
 

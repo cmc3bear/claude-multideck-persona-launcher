@@ -140,6 +140,11 @@
     else window.MEETINGS.push(meeting);
     window.MEETINGS_BY_ID = window.MEETINGS_BY_ID || {};
     window.MEETINGS_BY_ID[meeting.id] = meeting;
+    fetch('/api/meetings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ meeting }),
+    }).catch(() => {});
   }
 
   function nextMeetingId() {
@@ -472,7 +477,7 @@
     banner.textContent = "INVOKING SUB-AGENTS LIVE — STREAMING RESPONSES…";
 
     const attendees = m.attendees || [];
-    const docExcerpt = await fetchDocExcerpt();
+    const docExcerpt = m.type === 'ratification' ? await fetchDocExcerpt() : '';
     const job = m.job_id ? (window.JOBS || []).find(j => j.id === m.job_id) : null;
 
     let completed = 0;
@@ -531,9 +536,7 @@ Respond ONLY in this exact JSON format (no prose, no code fence):
 }
 
 Keep each string under 200 characters. Be specific to YOUR scope. No filler.
-
-PROTOCOL EXCERPT:
-${docExcerpt}`;
+${docExcerpt ? `\nPROTOCOL EXCERPT:\n${docExcerpt}` : ''}`;
   }
 
   function parseLiveResponse(text) {

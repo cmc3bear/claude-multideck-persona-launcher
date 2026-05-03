@@ -19,6 +19,24 @@
     mode: localStorage.getItem("mdk-data-mode") || "mock",   // "mock" | "live"
   };
 
+  // Claude API proxy — used by meeting.js rerunLive() to invoke agents server-side.
+  // The server proxies to Anthropic so the API key never touches the browser.
+  window.claude = {
+    complete: async (prompt) => {
+      const resp = await fetch('/api/claude/complete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt }),
+      });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        throw new Error(err.error || 'Claude proxy error ' + resp.status);
+      }
+      const data = await resp.json();
+      return data.text;
+    },
+  };
+
   // Connection state surfaced for the shell to render
   window.LiveData = {
     cfg: { ...DEFAULTS },

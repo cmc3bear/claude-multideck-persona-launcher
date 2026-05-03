@@ -27,12 +27,21 @@ VOICE_MAP = {
     "voice-technician":    {"voice": "af_nova",   "lang": "a", "speed": 1.05, "callsign": "Voice-Technician"},
     "persona-author":      {"voice": "af_heart",  "lang": "a", "speed": 1.0,  "callsign": "Persona-Author"},
     "commercial-producer": {"voice": "bm_fable",  "lang": "b", "speed": 0.95, "callsign": "Commercial-Producer"},
+    "dungeon-master":      {"voice": "dm",        "lang": "a", "speed": 1.0,  "callsign": "Dungeon-Master"},
+    "dm":                  {"voice": "dm",        "lang": "a", "speed": 1.0,  "callsign": "Dungeon-Master"},
+    "npc-agent":           {"voice": "am_adam",    "lang": "a", "speed": 1.0,  "callsign": "NPC"},
+    "npc":                 {"voice": "am_adam",    "lang": "a", "speed": 1.0,  "callsign": "NPC"},
     "default":             {"voice": "am_puck",   "lang": "a", "speed": 1.05, "callsign": ""},
 }
 
 # Mirror of custom voice configs from kokoro-speak.py
-# Add custom voice tensors here if needed
-CUSTOM_VOICES = {}
+# Drive the path via DISPATCH_DM_VOICE_PT env var — no hardcoded paths.
+_dm_voice_pt = os.environ.get("DISPATCH_DM_VOICE_PT", "")
+CUSTOM_VOICES = {
+    **({
+        "dm": {"voice_pt": _dm_voice_pt, "lang": "a", "speed": 1.0},
+    } if _dm_voice_pt else {}),
+}
 
 
 def scrub_text(text: str) -> str:

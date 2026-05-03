@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+---
+
+## [0.5.0] - 2026-05-02
+
+### Added
+
+- **OpenCode runtime support** — personas can now run on a local Ollama model instead of Claude Code. New launcher mode button `[ LOCAL ]` sets runtime to `opencode`. The HUD shows the active runtime in color: gold for Claude, cyan for OpenCode, purple for VS.
+- **`scripts/launch-persona-opencode.ps1`** — Windows Terminal launcher that spawns a persona under OpenCode with a configurable Ollama model (default: `ollama/qwen3-coder:30b-32k`). Honors `DISPATCH_OPENCODE_MODEL` env var and `-Model` param. `wt`-transport only for v1.
+- **`scripts/convert-personas-to-opencode.py`** — converts the MultiDeck persona registry (`personas/personas.json` + persona markdown files) to OpenCode agent definition files at `~/.config/opencode/agents/<key>.md`. Re-run after editing personas to regenerate. Respects `DISPATCH_OPENCODE_AGENTS_DIR` and `DISPATCH_OPENCODE_MODEL` env vars.
+- **VS mode comparator** (`scripts/vs-comparator.py`) — pairs two completed jobs (one Claude, one OpenCode) that ran the same spec and produces a per-criterion OQE scorecard in `state/vs-scoreboard.json`. Structural scoring (criteria coverage + evidence presence) in v1; `--judge` flag for a runtime-rendered written verdict. `auto` subcommand pairs all unscored `vs_pair_id` entries automatically.
+- **`/launcher/models` endpoint** — reads registered Ollama models from `~/.config/opencode/opencode.json` and surfaces them in the launcher model dropdown. Model selection applies to LOCAL and VS runtime modes.
+- **Three new example personas** — Dungeon-Master (D&D 5e DM with server-authoritative dice and scene API), NPC-Agent (in-character NPC spawned with identity + secret via initial prompt), and Frasier (CBT-style wellness chat). Ship as template personas illustrating project-scoped and therapist use cases.
+- **`DISPATCH_DM_VOICE_PT`** env var — points the `dm` custom voice key to a Kokoro `.pt` tensor file. When unset the `dm` key falls back to a standard Kokoro voice; no hardcoded paths in the distributed hooks.
+- **WSL dual-write** for `set-voice.py` — when running inside WSL, voice configs are written to both the WSL hooks directory and the Windows-side `~/.claude/hooks` so the Windows Kokoro runtime picks up per-session voice without cross-OS path issues.
+
+### Changed
+
+- `CUSTOM_VOICES` in `hooks/kokoro-speak.py`, `hooks/kokoro-generate-mp3.py`, and `hooks/set-voice.py` now use `DISPATCH_DM_VOICE_PT` env var instead of a hardcoded file path. Existing deployments with a custom DM voice tensor: set `DISPATCH_DM_VOICE_PT=/path/to/dm-voice.pt` before launch.
+- `personas/personas.json` DM and NPC `cwd` entries use `${DISPATCH_USER_ROOT}/dnd-campaign` (templated) instead of an absolute path. Update to your actual campaign directory in your local fork.
+
 ### Changed
 
 - **`DISPATCH_LAUNCHER_TRANSPORT` default is now auto-detected** (MULTI-FEAT-0063). When the env var is unset the dashboard picks `tmux` on hosts where WSL Ubuntu, tmux, and the claude binary are all present, otherwise `wt` on Windows or `sh` on Linux/macOS. Operators with full WSL setups now get the detach/reattach-capable tmux path without opt-in. **Rollback:** set `DISPATCH_LAUNCHER_TRANSPORT=wt` to force the legacy Windows Terminal flow even on a host that could run tmux. The env var override always wins. Builds on the WSL+tmux+claude probe shipped in MULTI-UI-0064.
