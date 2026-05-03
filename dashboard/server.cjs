@@ -18,6 +18,7 @@ const LAUNCHER_HTML = path.join(__dirname, 'launcher.html');
 const LAUNCHER_ASSETS = process.env.DISPATCH_LAUNCHER_ASSETS || path.join(__dirname, 'launcher-assets');
 // MULTI-FEAT-0067: claude.design Job Board Dashboard assets
 const JOB_BOARD_DASHBOARD_HTML = path.join(__dirname, 'job-board-dashboard.html');
+const BUILDER_HTML = path.join(__dirname, 'builder.html');
 const DASHBOARD_SCRIPTS = path.join(__dirname, 'scripts');
 const DASHBOARD_STYLES = path.join(__dirname, 'styles');
 const DASHBOARD_DATA = path.join(__dirname, 'data');
@@ -873,6 +874,58 @@ function handleAudioFeed(req, res, url) {
 }
 
 // ============================================================
+// Persona Builder routes
+// GET  /builder       — serve builder.html
+// POST /builder/run   — run the builder pipeline, return JSON
+// ============================================================
+function handleBuilder(req, res, url) {
+  const method = req.method || 'GET';
+
+  if ((url === '/builder' || url === '/builder/') && method === 'GET') {
+    try {
+      const html = fs.readFileSync(BUILDER_HTML, 'utf8');
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(html);
+    } catch (e) {
+      res.writeHead(500, { 'Content-Type': 'text/plain' });
+      res.end('builder.html not found: ' + e.message);
+    }
+    return true;
+  }
+
+  if (url === '/builder/run' && method === 'POST') {
+    readJsonBody(req).then(async (body) => {
+      const opts = {
+        dryRun: !!body.dry_run,
+        noJobs: !!body.no_jobs,
+        force:  !!body.force,
+      };
+      // Allowlist persona fields — never forward agent_file, key, or unknown props (path traversal prevention)
+      const rawInputs = {
+        callsign:    body.callsign,
+        role:        body.role,
+        scope:       body.scope,
+        description: body.description,
+        cwd:         body.cwd,
+        color_hex:   body.color_hex,
+        tab_color:   body.tab_color,
+        voice_key:   body.voice_key,
+      };
+      try {
+        const { runPipeline } = require('../scripts/lib/builder-pipeline');
+        const result = await runPipeline(rawInputs, opts);
+        sendJson(res, result.ok ? 200 : 422, result);
+      } catch (e) {
+        sendJson(res, 500, { ok: false, error: e.message });
+      }
+    }).catch((e) => sendJson(res, 400, { error: 'bad body', detail: e.message }));
+    return true;
+  }
+
+  return false;
+}
+
+// ============================================================
 // Main dashboard renderer (unchanged from previous version)
 // ============================================================
 function renderMainDashboard() {
@@ -995,6 +1048,7 @@ function renderMainDashboard() {
   <a href="/launcher">LAUNCHER</a>
   <a href="/briefing">BRIEFING</a>
   <a href="/audio-feed">AUDIO FEED</a>
+  <a href="/builder">PERSONA BUILDER</a>
   <a href="/state.json">STATE</a>
 </div>
 <div class="card">
@@ -1068,6 +1122,9 @@ const server = http.createServer((req, res) => {
 
   // Audio feed routes
   if (handleAudioFeed(req, res, url)) return;
+
+  // Builder routes
+  if (handleBuilder(req, res, url)) return;
 
   // Core dashboard routes
   if (url === '/' || url === '/desktop' || url === '/desktop/') {
@@ -1222,7 +1279,7 @@ const server = http.createServer((req, res) => {
   }
 
   res.writeHead(404, { 'Content-Type': 'text/plain' });
-  res.end('Not Found. Try / or /launcher or /audio-feed or /briefing or /jobs or /jobs-classic or /state.json or /api/kokoro/stats');
+  res.end('Not Found. Try / or /launcher or /audio-feed or /briefing or /jobs or /jobs-classic or /builder or /state.json or /api/kokoro/stats');
 });
 
 server.listen(PORT, '0.0.0.0', () => {
@@ -1234,6 +1291,7 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log(`  /jobs                    Visual job board dashboard (multi-view, lessons, patterns)`);
   console.log(`  /jobs-classic            Legacy server-rendered job board (WS-0011)`);
   console.log(`  /state.json              Live state bundle (job-boards + lessons + briefing)`);
+  console.log(`  /builder                 Interactive Persona Builder (form UI + pipeline API)`);
   console.log(`  /api/kokoro/stats        Kokoro queue depth + drop counters`);
   console.log(``);
   console.log(`  State directory: ${STATE_DIR}`);

@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PERSONA BUILDER // MULTIDECK</title>
+<style>
+  :root {
+    --neon-cyan:   #00FFCC;
+    --neon-amber:  #FFB700;
+    --neon-red:    #FF4444;
+    --neon-green:  #00FF88;
+    --bg:          #020c0a;
+    --bg-mid:      #0a1a15;
+    --bg-panel:    #0d2018;
+    --border:      #1a4035;
+    --text:        #c0d8d0;
+    --dim:         #4a7a6a;
+    --font:        'JetBrains Mono', 'Consolas', monospace;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 13px;
+    min-height: 100vh;
+    padding: 24px;
+  }
+  .header {
+    text-align: center;
+    margin-bottom: 32px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .header h1 {
+    color: var(--neon-cyan);
+    font-size: 22px;
+    letter-spacing: 4px;
+    text-shadow: 0 0 12px var(--neon-cyan);
+  }
+  .header .sub {
+    color: var(--dim);
+    font-size: 11px;
+    letter-spacing: 2px;
+    margin-top: 6px;
+  }
+  .layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+  @media (max-width: 780px) { .layout { grid-template-columns: 1fr; } }
+  .panel {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 20px;
+  }
+  .panel-title {
+    color: var(--neon-amber);
+    font-size: 11px;
+    letter-spacing: 3px;
+    margin-bottom: 20px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .field { margin-bottom: 18px; }
+  .field label {
+    display: block;
+    color: var(--neon-cyan);
+    font-size: 11px;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+  }
+  .field .hint {
+    color: var(--dim);
+    font-size: 10px;
+    margin-bottom: 4px;
+  }
+  .field input, .field select {
+    width: 100%;
+    background: var(--bg-mid);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 13px;
+    padding: 8px 10px;
+    outline: none;
+    transition: border-color .15s;
+  }
+  .field input:focus, .field select:focus { border-color: var(--neon-cyan); }
+  .field input.error { border-color: var(--neon-red); }
+  .field .err-msg { color: var(--neon-red); font-size: 10px; margin-top: 4px; display: none; }
+  .field input.error + .err-msg { display: block; }
+  .color-row { display: flex; gap: 8px; align-items: center; }
+  .color-row input[type=color] {
+    width: 40px; height: 34px; padding: 2px; cursor: pointer; flex-shrink: 0;
+  }
+  .color-row input[type=text] { flex: 1; }
+  .dry-run-row {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 18px;
+    font-size: 11px; color: var(--dim);
+  }
+  .dry-run-row input[type=checkbox] { width: 14px; height: 14px; cursor: pointer; accent-color: var(--neon-amber); }
+  .btn {
+    display: block; width: 100%;
+    padding: 12px;
+    background: transparent;
+    border: 1px solid var(--neon-cyan);
+    color: var(--neon-cyan);
+    font-family: var(--font);
+    font-size: 13px;
+    letter-spacing: 2px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: background .15s, box-shadow .15s;
+    margin-top: 8px;
+  }
+  .btn:hover { background: rgba(0,255,204,.08); box-shadow: 0 0 12px rgba(0,255,204,.3); }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+  .btn.danger { border-color: var(--neon-red); color: var(--neon-red); }
+  #output-panel { grid-column: 1 / -1; }
+  #output-panel .panel-title { color: var(--neon-green); }
+  #output-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    padding: 14px;
+    min-height: 120px;
+    white-space: pre-wrap;
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--text);
+    overflow-y: auto;
+    max-height: 500px;
+  }
+  .check-line { display: flex; gap: 8px; margin: 2px 0; }
+  .check-line.pass  { color: var(--neon-green); }
+  .check-line.fail  { color: var(--neon-red);   }
+  .check-line.warn  { color: var(--neon-amber);  }
+  .check-line.info  { color: var(--dim);         }
+  .status-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    font-size: 11px;
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+  }
+  .status-badge.pass { background: rgba(0,255,136,.1); border: 1px solid var(--neon-green); color: var(--neon-green); }
+  .status-badge.fail { background: rgba(255,68,68,.1);  border: 1px solid var(--neon-red);   color: var(--neon-red);   }
+  .status-badge.running { background: rgba(255,183,0,.1); border: 1px solid var(--neon-amber); color: var(--neon-amber); }
+  #voices-list { font-size: 10px; color: var(--dim); margin-top: 6px; line-height: 1.8; }
+  .section-sep { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>// PERSONA BUILDER</h1>
+  <div class="sub">MULTIDECK &nbsp;·&nbsp; OQE 2.0 &nbsp;·&nbsp; INTERACTIVE PERSONA CREATION SYSTEM</div>
+</div>
+
+<div class="layout">
+
+  <div class="panel">
+    <div class="panel-title">// IDENTITY</div>
+
+    <div class="field">
+      <label>CALLSIGN</label>
+      <div class="hint">Display name, 2–40 chars</div>
+      <input id="callsign" type="text" placeholder="e.g. DataWeaver" autocomplete="off">
+      <div class="err-msg">Required, 2–40 characters</div>
+    </div>
+
+    <div class="field">
+      <label>ROLE <span style="color:var(--dim)">(one sentence, max 120 chars)</span></label>
+      <input id="role" type="text" placeholder="e.g. Data pipeline design and optimization">
+      <div class="err-msg">10–120 characters required</div>
+    </div>
+
+    <div class="field">
+      <label>SCOPE</label>
+      <div class="hint">workspace · global · project:&lt;name&gt;</div>
+      <input id="scope" type="text" placeholder="project:my-project" value="project:multideck">
+      <div class="err-msg">Must be workspace, global, or project:name</div>
+    </div>
+
+    <div class="field">
+      <label>DESCRIPTION <span style="color:var(--dim)">(launcher card text, max 200 chars)</span></label>
+      <input id="description" type="text" placeholder="One sentence for the launcher card">
+      <div class="err-msg">10–200 characters required</div>
+    </div>
+
+    <div class="field">
+      <label>WORKING DIRECTORY</label>
+      <div class="hint">Absolute path or ${DISPATCH_USER_ROOT}/...</div>
+      <input id="cwd" type="text" placeholder="${DISPATCH_USER_ROOT}/my-project">
+      <div class="err-msg">Required</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">// APPEARANCE &amp; VOICE</div>
+
+    <div class="field">
+      <label>ACCENT COLOR <span style="color:var(--dim)">(#RRGGBB)</span></label>
+      <div class="color-row">
+        <input id="color_hex_picker" type="color" value="#00FFCC">
+        <input id="color_hex" type="text" placeholder="#00FFCC" value="#00FFCC">
+      </div>
+      <div class="err-msg">Must be #RRGGBB</div>
+    </div>
+
+    <div class="field">
+      <label>TAB COLOR <span style="color:var(--dim)">(#RRGGBB — auto-darkens from accent)</span></label>
+      <div class="color-row">
+        <input id="tab_color_picker" type="color" value="#003833">
+        <input id="tab_color" type="text" placeholder="#003833" value="#003833">
+      </div>
+      <div class="err-msg">Must be #RRGGBB</div>
+    </div>
+
+    <hr class="section-sep">
+
+    <div class="field">
+      <label>VOICE KEY</label>
+      <div class="hint">Kokoro built-in or custom tensor key</div>
+      <input id="voice_key" type="text" placeholder="am_puck" value="am_puck" autocomplete="off">
+      <div class="err-msg">Required</div>
+      <div id="voices-list">Loading voice list...</div>
+    </div>
+
+    <hr class="section-sep">
+
+    <div class="dry-run-row">
+      <input id="dry_run" type="checkbox">
+      <label for="dry_run">DRY RUN — validate without writing files</label>
+    </div>
+    <div class="dry-run-row">
+      <input id="no_jobs" type="checkbox">
+      <label for="no_jobs">SKIP starter job generation</label>
+    </div>
+    <div class="dry-run-row">
+      <input id="force" type="checkbox">
+      <label for="force">FORCE — bypass duplicate/conflict detection</label>
+    </div>
+
+    <button class="btn" id="deploy-btn" onclick="deploy()">[ DEPLOY PERSONA ]</button>
+  </div>
+
+  <div class="panel" id="output-panel">
+    <div class="panel-title">// BUILD OUTPUT</div>
+    <div id="status-area"></div>
+    <div id="output-box">Awaiting deployment...</div>
+  </div>
+
+</div>
+
+<script>
+// ── Sync color pickers ────────────────────────────────────────────────────────
+
+function syncPicker(textId, pickerId) {
+  const txt = document.getElementById(textId);
+  const pk  = document.getElementById(pickerId);
+  txt.addEventListener('input', () => {
+    if (/^#[0-9A-Fa-f]{6}$/.test(txt.value)) pk.value = txt.value;
+    if (textId === 'color_hex') autoDarken();
+  });
+  pk.addEventListener('input', () => {
+    txt.value = pk.value;
+    if (textId === 'color_hex') autoDarken();
+  });
+}
+syncPicker('color_hex', 'color_hex_picker');
+syncPicker('tab_color', 'tab_color_picker');
+
+function autoDarken() {
+  const hex = document.getElementById('color_hex').value;
+  if (!/^#[0-9A-Fa-f]{6}$/.test(hex)) return;
+  const r = Math.floor(parseInt(hex.slice(1,3),16) * 0.35).toString(16).padStart(2,'0');
+  const g = Math.floor(parseInt(hex.slice(3,5),16) * 0.35).toString(16).padStart(2,'0');
+  const b = Math.floor(parseInt(hex.slice(5,7),16) * 0.35).toString(16).padStart(2,'0');
+  const dark = `#${r}${g}${b}`;
+  document.getElementById('tab_color').value = dark;
+  document.getElementById('tab_color_picker').value = dark;
+}
+
+// ── Load voice list ───────────────────────────────────────────────────────────
+
+const KNOWN_VOICES = [
+  'af_sky','af_alloy','af_aoede','af_bella','af_heart','af_jessica','af_kore',
+  'af_nicole','af_nova','af_river','af_sarah','af_luna',
+  'am_adam','am_echo','am_eric','am_fenrir','am_liam','am_michael','am_onyx','am_puck','am_santa',
+  'bf_alice','bf_emma','bf_isabella','bf_lily',
+  'bm_daniel','bm_fable','bm_george','bm_lewis',
+];
+document.getElementById('voices-list').textContent =
+  'Built-in: ' + KNOWN_VOICES.join(' · ');
+
+// ── Validation ────────────────────────────────────────────────────────────────
+
+function v(id) { return document.getElementById(id).value.trim(); }
+function markError(id, isError) {
+  document.getElementById(id).classList.toggle('error', isError);
+}
+
+function validateForm() {
+  let ok = true;
+  const checks = [
+    ['callsign',    s => s.length >= 2 && s.length <= 40],
+    ['role',        s => s.length >= 10 && s.length <= 120],
+    ['scope',       s => s === 'workspace' || s === 'global' || /^project:[a-zA-Z0-9_-]+$/.test(s)],
+    ['description', s => s.length >= 10 && s.length <= 200],
+    ['cwd',         s => s.length >= 2],
+    ['color_hex',   s => /^#[0-9A-Fa-f]{6}$/.test(s)],
+    ['tab_color',   s => /^#[0-9A-Fa-f]{6}$/.test(s)],
+    ['voice_key',   s => s.length >= 2],
+  ];
+  for (const [id, fn] of checks) {
+    const valid = fn(v(id));
+    markError(id, !valid);
+    if (!valid) ok = false;
+  }
+  return ok;
+}
+
+// ── Output rendering ──────────────────────────────────────────────────────────
+
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function line(cls, icon, text) {
+  const d = document.createElement('div');
+  d.className = `check-line ${cls}`;
+  d.textContent = `${icon} ${text}`;
+  return d;
+}
+
+function renderResult(result) {
+  const sa  = document.getElementById('status-area');
+  const box = document.getElementById('output-box');
+  box.innerHTML = '';
+  sa.innerHTML  = '';
+
+  if (!result.ok) {
+    sa.innerHTML = `<div class="status-badge fail">BUILD FAILED</div>`;
+    const errs = result.errors || result.conflicts?.map(c=>c.message) || [result.error || 'Unknown error'];
+    errs.forEach(e => box.appendChild(line('fail','✗', e)));
+    return;
+  }
+
+  const vStatus = result.validation_report?.status === 'pass' ? 'pass' : 'fail';
+  const vLabel  = esc(result.validation_report?.status?.toUpperCase() || 'DONE');
+  sa.innerHTML = `<div class="status-badge ${vStatus}">${result.dry_run ? 'DRY RUN — ' : ''}${vLabel}</div>`;
+
+  if (!result.dry_run) {
+    box.appendChild(line('pass','✓', `Agent file:   ${result.agent_md_path}`));
+    box.appendChild(line('pass','✓', `Registry:     personas/personas.json updated`));
+    if (result.jobs_result) box.appendChild(line('pass','✓', `Starter jobs: ${result.jobs_result.count} created`));
+    result.voice_results?.forEach(vr => {
+      if (vr.skipped) box.appendChild(line('info','~', `Voice map:    ${vr.reason}`));
+      else            box.appendChild(line('pass','✓', `Voice map:    updated`));
+    });
+  } else {
+    box.appendChild(line('warn','~', 'DRY RUN — no files written'));
+  }
+
+  if (result.validation_report) {
+    box.appendChild(document.createElement('br'));
+    const vr = result.validation_report;
+    vr.checks.forEach(c => {
+      box.appendChild(line(c.result === 'pass' ? 'pass' : 'fail',
+        c.result === 'pass' ? '✓' : '✗', c.name));
+      if (c.result === 'fail') box.appendChild(line('fail','  ', c.evidence));
+    });
+    vr.warnings?.forEach(w => box.appendChild(line('warn','⚠', w)));
+  }
+}
+
+// ── Deploy ────────────────────────────────────────────────────────────────────
+
+async function deploy() {
+  if (!validateForm()) {
+    document.getElementById('output-box').textContent = 'Fix validation errors above.';
+    return;
+  }
+
+  const btn = document.getElementById('deploy-btn');
+  btn.disabled = true;
+  btn.textContent = '[ BUILDING... ]';
+
+  const sa  = document.getElementById('status-area');
+  const box = document.getElementById('output-box');
+  sa.innerHTML = '<div class="status-badge running">RUNNING</div>';
+  box.textContent = 'Pipeline executing...';
+
+  const body = {
+    callsign:    v('callsign'),
+    role:        v('role'),
+    scope:       v('scope'),
+    description: v('description'),
+    cwd:         v('cwd'),
+    color_hex:   v('color_hex'),
+    tab_color:   v('tab_color'),
+    voice_key:   v('voice_key'),
+    dry_run:     document.getElementById('dry_run').checked,
+    no_jobs:     document.getElementById('no_jobs').checked,
+    force:       document.getElementById('force').checked,
+  };
+
+  try {
+    const res  = await fetch('/builder/run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    renderResult(data);
+  } catch (e) {
+    sa.innerHTML = '<div class="status-badge fail">ERROR</div>';
+    box.textContent = `Request failed: ${e.message}`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '[ DEPLOY PERSONA ]';
+  }
+}
+
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') deploy();
+});
+</script>
+</body>
+</html>
