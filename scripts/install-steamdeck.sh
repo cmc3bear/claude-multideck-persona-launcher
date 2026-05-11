@@ -335,6 +335,61 @@ EOF
   ok "desktop entry written"
 }
 
+# ---------- step 8b: wire PreToolUse hook into Claude Code settings.json ----------
+# The hook bridges Claude's AskUserQuestion tool to the dashboard's glyph
+# modal. Idempotent: if a hook with matcher "AskUserQuestion" pointing at this
+# script is already present, the script does nothing.
+ensure_claude_hook() {
+  local hook_path="$MULTIDECK_ROOT/hooks/dashboard-question-bridge.py"
+  [[ -f "$hook_path" ]] || fail "hook script missing: $hook_path"
+
+  log "Wiring PreToolUse hook into ~/.claude/settings.json"
+  # Run the Python merge inside the box so it uses the same python3 the hook
+  # itself will use at runtime, and so the home path inside the container
+  # matches the install location.
+  in_box "python3 - <<'PY'
+import json, os
+from pathlib import Path
+
+settings_path = Path.home() / '.claude' / 'settings.json'
+settings_path.parent.mkdir(parents=True, exist_ok=True)
+
+if settings_path.exists():
+    try:
+        data = json.loads(settings_path.read_text() or '{}')
+    except Exception:
+        data = {}
+else:
+    data = {}
+
+hooks = data.setdefault('hooks', {})
+pre = hooks.setdefault('PreToolUse', [])
+
+hook_cmd = 'python3 ${hook_path}'
+already = False
+for entry in pre:
+    if entry.get('matcher') == 'AskUserQuestion':
+        for h in entry.get('hooks', []):
+            if h.get('command') == hook_cmd:
+                already = True
+                break
+        if not already:
+            entry.setdefault('hooks', []).append({'type': 'command', 'command': hook_cmd})
+            already = True
+        break
+
+if not already:
+    pre.append({
+        'matcher': 'AskUserQuestion',
+        'hooks': [{'type': 'command', 'command': hook_cmd}],
+    })
+
+settings_path.write_text(json.dumps(data, indent=2))
+print(f'wrote {settings_path}')
+PY"
+  ok "PreToolUse hook wired"
+}
+
 # ---------- step 9: optional personal overlay ----------
 apply_overlay() {
   [[ -z "$OVERLAY" ]] && return
@@ -370,6 +425,7 @@ ensure_claude_code
 ensure_dashboard_deps
 ensure_kokoro_venv
 ensure_whisper
+ensure_claude_hook
 write_env_file
 write_desktop_entry
 apply_overlay

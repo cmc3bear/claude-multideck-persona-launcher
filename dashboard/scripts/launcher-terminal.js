@@ -495,3 +495,24 @@ const MatrixRain = (() => {
 document.getElementById('terminal-min-btn').addEventListener('click', minimizeTerminalPanel);
 document.getElementById('terminal-new-btn').addEventListener('click', newTerminalSession);
 document.getElementById('terminal-restore-tab').addEventListener('click', restoreTerminalPanel);
+
+// Minimal public API for sibling modules (launcher-stt, launcher-question-modal).
+// Keeping the surface tight: send text into the active session and read which
+// session is active. No internal state is exposed.
+window.MultideckTerminal = {
+  sendToActiveSession(text) {
+    if (!activeTerminalId) return false;
+    const s = terminalSessions.get(activeTerminalId);
+    if (!s || !s.ws || s.ws.readyState !== WebSocket.OPEN) return false;
+    s.ws.send(JSON.stringify({ type: 'input', data: text }));
+    return true;
+  },
+  hasActiveSession() {
+    if (!activeTerminalId) return false;
+    const s = terminalSessions.get(activeTerminalId);
+    return !!(s && s.ws && s.ws.readyState === WebSocket.OPEN);
+  },
+  getActiveSessionId() {
+    return activeTerminalId;
+  },
+};
