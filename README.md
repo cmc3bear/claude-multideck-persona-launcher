@@ -440,6 +440,7 @@ Everything coordinates via filesystem. No database. No message broker. JSON stat
 | [OQE_DISCIPLINE.md](docs/OQE_DISCIPLINE.md) | The full OQE methodology |
 | [KOKORO_SETUP.md](docs/KOKORO_SETUP.md) | Kokoro TTS installation and configuration |
 | [WSL_SETUP.md](docs/WSL_SETUP.md) | Install Claude Code in WSL Ubuntu as a tmux persona transport |
+| [STEAMDECK_SETUP.md](docs/STEAMDECK_SETUP.md) | Run MultiDeck on a Steam Deck via distrobox, with a Non-Steam Game shortcut |
 | [VOICE_RULES.md](docs/VOICE_RULES.md) | TTS-safe writing conventions |
 | [DASHBOARD_GUIDE.md](docs/DASHBOARD_GUIDE.md) | Dashboard routes, configuration, and static asset paths |
 | [CLAUDE_DISPATCH_INTEGRATION.md](docs/CLAUDE_DISPATCH_INTEGRATION.md) | Voice queueing, callsigns, and audio feed |
