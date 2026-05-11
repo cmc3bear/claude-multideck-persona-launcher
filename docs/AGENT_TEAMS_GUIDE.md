@@ -366,7 +366,7 @@ Researcher → "Benchmarks compiled. Ready for comparison"
 Keep the job board dashboard open:
 
 ```
-http://localhost:3045/dashboard
+http://localhost:3046/dashboard
 ```
 
 Watch for:

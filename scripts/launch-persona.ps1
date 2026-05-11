@@ -54,7 +54,7 @@ if ($Transport -ne "wt" -and $Transport -ne "tmux") {
 # Read personas.json from configurable path or default
 $personasPath = $env:DISPATCH_PERSONAS_JSON
 if (-not $personasPath) {
-    $personasPath = Join-Path $PSScriptRoot ".." "personas" "personas.json"
+    $personasPath = [System.IO.Path]::Combine($PSScriptRoot, "..", "personas", "personas.json")
 }
 
 if (-not (Test-Path $personasPath)) {
@@ -83,7 +83,7 @@ $voiceKey = $p.voice_key
 # ----------------------------------------------------------------------
 if ($Transport -eq "tmux") {
     $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
-    # Convert F:\03-INFRASTRUCTURE\... → /mnt/f/03-INFRASTRUCTURE/...
+    # Convert F:\03-INFRASTRUCTURE\... → /mnt/<drive>/path/to/multideck
     $wslRepoRoot = $repoRoot -replace '\\', '/'
     if ($wslRepoRoot -match '^([A-Za-z]):/(.*)$') {
         $wslRepoRoot = "/mnt/$($Matches[1].ToLower())/$($Matches[2])"
@@ -142,7 +142,7 @@ $basePrompt = @"
 Your first actions on startup, in this exact order:
 
 1. Set the terminal title to "$callsign" by printing this ANSI escape:
-   Write-Host -NoNewline \`\`e]0;$callsign\`\`a\`\`
+   Write-Host -NoNewline "``e]0;$callsign``a"
 
 2. Use the Bash tool to run exactly this command (forward slashes, single-quoted path, no shell expansion):
    python "$PSScriptRoot/../hooks/set-voice.py" $voiceKey
@@ -162,6 +162,12 @@ if ($InitialPrompt) {
 $bytes = [System.Text.Encoding]::UTF8.GetBytes($basePrompt)
 $b64 = [Convert]::ToBase64String($bytes)
 
+# Pre-build the OSC title-set escape with literal ESC (0x1B) and BEL (0x07) bytes
+# from the outer scope. Embedding the literal bytes (rather than `e/`a) sidesteps
+# PowerShell 5.1's missing `e support — the inner shell receives the actual bytes
+# and the terminal interprets them regardless of PS edition.
+$titleEscape = "$([char]27)]0;$callsign$([char]7)"
+
 # Build the full inner script and pass it to powershell via -EncodedCommand.
 # Why: wt's command-line parser treats `;` as a wt-level command separator. If we
 # pass a multi-statement -Command string to powershell through wt, everything after
@@ -169,10 +175,10 @@ $b64 = [Convert]::ToBase64String($bytes)
 # claude invocation never runs. -EncodedCommand wraps the whole inner script in a
 # single base64 token that wt cannot split on.
 $innerScript = @"
-Write-Host -NoNewline \`\`e]0;$callsign\`\`a\`\`
+Write-Host -NoNewline '$titleEscape'
 Write-Host "Launching $callsign persona (dangerous mode)..." -ForegroundColor Cyan
-\$decoded = [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('$b64'))
-claude --dangerously-skip-permissions --name "$callsign" \$decoded
+`$decoded = [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('$b64'))
+claude --dangerously-skip-permissions --name "$callsign" `$decoded
 "@
 
 # PowerShell's -EncodedCommand requires UTF-16 LE base64
@@ -208,32 +214,32 @@ Write-Host "  Claude /color: $claudeColor (queued)" -ForegroundColor Gray
 # Logs to %TEMP%\multideck-color-inject-<persona>.log so we can debug timing.
 $logPath = "${env:TEMP}\multideck-color-inject-$key.log"
 $colorInjector = @"
-\$ErrorActionPreference = 'Continue'
-function Log(\$msg) {
-    \$line = "[`$(Get-Date -Format 'HH:mm:ss.fff')] \$msg"
-    Add-Content -LiteralPath '$logPath' -Value \$line
+`$ErrorActionPreference = 'Continue'
+function Log(`$msg) {
+    `$line = "[`$(Get-Date -Format 'HH:mm:ss.fff')] `$msg"
+    Add-Content -LiteralPath '$logPath' -Value `$line
 }
 Log 'injector start'
 Start-Sleep -Seconds 9
 Log 'after initial 9s sleep'
 Add-Type -AssemblyName System.Windows.Forms
-\$shell = New-Object -ComObject WScript.Shell
-\$activated = \$false
-for (\$i = 0; \$i -lt 10; \$i++) {
-    if (\$shell.AppActivate('$callsign')) {
-        Log "AppActivate('$callsign') succeeded on attempt \$i"
-        \$activated = \$true
+`$shell = New-Object -ComObject WScript.Shell
+`$activated = `$false
+for (`$i = 0; `$i -lt 10; `$i++) {
+    if (`$shell.AppActivate('$callsign')) {
+        Log "AppActivate('$callsign') succeeded on attempt `$i"
+        `$activated = `$true
         break
     }
     Start-Sleep -Milliseconds 400
 }
-if (-not \$activated) {
+if (-not `$activated) {
     Log "AppActivate failed after 10 tries; trying ProcessName=WindowsTerminal"
-    \$wt = Get-Process WindowsTerminal -ErrorAction SilentlyContinue | Where-Object MainWindowTitle -match '$callsign' | Select-Object -First 1
-    if (\$wt) {
-        Log "found wt PID `$(\$wt.Id) title=`$(\$wt.MainWindowTitle)"
-        \$shell.AppActivate(\$wt.Id) | Out-Null
-        \$activated = \$true
+    `$wt = Get-Process WindowsTerminal -ErrorAction SilentlyContinue | Where-Object MainWindowTitle -match '$callsign' | Select-Object -First 1
+    if (`$wt) {
+        Log "found wt PID `$(`$wt.Id) title=`$(`$wt.MainWindowTitle)"
+        `$shell.AppActivate(`$wt.Id) | Out-Null
+        `$activated = `$true
     } else {
         Log "no wt process matched"
     }

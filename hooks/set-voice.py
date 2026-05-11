@@ -30,9 +30,15 @@ VOICE_MAP = {
     "commercial-producer":{"voice": "bm_fable",  "lang": "b", "speed": 0.95, "callsign": "Commercial-Producer"},
     "dungeon-master":     {"voice": "dm",        "lang": "a", "speed": 1.0,  "callsign": "Dungeon-Master"},
     "dm":                 {"voice": "dm",        "lang": "a", "speed": 1.0,  "callsign": "Dungeon-Master"},
-    "frasier":            {"voice": "bf_emma",   "lang": "b", "speed": 1.05, "callsign": "Frasier"},
-    "npc-agent":          {"voice": "am_adam",    "lang": "a", "speed": 1.0,  "callsign": "NPC"},
-    "npc":                {"voice": "am_adam",    "lang": "a", "speed": 1.0,  "callsign": "NPC"},
+    "frasier":            {"voice": "bm_george", "lang": "b", "speed": 1.0,  "callsign": "Frasier"},
+    "daphne":             {"voice": "bf_emma",   "lang": "b", "speed": 1.0,  "callsign": "Daphne"},
+    "roz":                {"voice": "af_nova",   "lang": "a", "speed": 1.1,  "callsign": "Roz"},
+    "niles":              {"voice": "bm_fable",  "lang": "b", "speed": 1.0,  "callsign": "Niles"},
+    "martin":             {"voice": "am_adam",   "lang": "a", "speed": 0.95, "callsign": "Martin"},
+    "npc-agent":          {"voice": "am_adam",   "lang": "a", "speed": 1.0,  "callsign": "NPC"},
+    "npc":                {"voice": "am_adam",   "lang": "a", "speed": 1.0,  "callsign": "NPC"},
+    "test1":              {"voice": "am_puck",   "lang": "a", "speed": 1.05, "callsign": "test1"},
+
     "default":            {"voice": "am_puck",   "lang": "a", "speed": 1.05, "callsign": ""},
 }
 

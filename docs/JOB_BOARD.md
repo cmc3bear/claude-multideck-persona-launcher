@@ -418,20 +418,20 @@ board.close(job.id, reason="Cancelled")
 
 ```bash
 # Create job
-curl -X POST http://localhost:3045/api/jobs \
+curl -X POST http://localhost:3046/api/jobs \
   -H "Content-Type: application/json" \
   -d '{"agent":"architect","summary":"Task"}'
 
 # Assign
-curl -X PATCH http://localhost:3045/api/jobs/JOB-0047 \
+curl -X PATCH http://localhost:3046/api/jobs/JOB-0047 \
   -d '{"assigned_to":"architect"}'
 
 # Submit
-curl -X POST http://localhost:3045/api/jobs/JOB-0047/submit \
+curl -X POST http://localhost:3046/api/jobs/JOB-0047/submit \
   -d '{"results":"Done","evidence":"[...]"}'
 
 # Review
-curl -X POST http://localhost:3045/api/jobs/JOB-0047/review \
+curl -X POST http://localhost:3046/api/jobs/JOB-0047/review \
   -d '{"decision":"approved","feedback":"..."}'
 ```
 

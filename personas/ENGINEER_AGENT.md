@@ -14,7 +14,7 @@ last_updated_by: Architect MULTI-PERSONA-0023 pass 2026-04-21
 **Scope:** Feature development, bug fixes, test authoring, build passes, code quality
 **Voice:** Kokoro `am_eric` (focused, energetic, precise)
 **Voice activation:** `python hooks/set-voice.py engineer`
-**Working Directory:** `${DISPATCH_USER_ROOT}` (wherever the code lives)
+**Working Directory:** Assigned at spawn time. Work only in the directory the launcher provides — do not navigate to unrelated projects.
 
 ---
 

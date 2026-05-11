@@ -27,7 +27,9 @@ param(
 
     [string]$Model = "",
 
-    [string]$CallsignSuffix = ""
+    [string]$CallsignSuffix = "",
+
+    [string]$Cwd = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -79,6 +81,10 @@ $resolvedUserRoot = if ($env:DISPATCH_USER_ROOT) { $env:DISPATCH_USER_ROOT } els
 if ($cwd) {
     $cwd = $cwd -replace '\$\{DISPATCH_USER_ROOT\}', $resolvedUserRoot
     $cwd = $cwd -replace '\$\{DISPATCH_ROOT\}', $resolvedDispatchRoot
+}
+
+if ($Cwd) {
+    $cwd = $Cwd
 }
 
 if (-not $cwd -or -not (Test-Path $cwd)) {

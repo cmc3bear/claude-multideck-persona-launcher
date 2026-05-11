@@ -127,7 +127,7 @@ A dashboard route (`/audio-feed`) that:
 node dashboard/server.cjs
 
 # Open in browser (leave open in background)
-http://localhost:3045/audio-feed
+http://localhost:3046/audio-feed
 ```
 
 The page:
@@ -218,7 +218,7 @@ If you're monitoring the job board programmatically:
 import requests
 
 # Poll audio feed
-resp = requests.get("http://localhost:3045/api/tts-queue")
+resp = requests.get("http://localhost:3046/api/tts-queue")
 queue = resp.json()
 
 for msg in queue["recent_messages"]:
@@ -228,7 +228,7 @@ for msg in queue["recent_messages"]:
 Or use SSE in your own client:
 
 ```javascript
-const eventSource = new EventSource("http://localhost:3045/api/tts-stream");
+const eventSource = new EventSource("http://localhost:3046/api/tts-stream");
 eventSource.addEventListener("tts-generated", (event) => {
   const data = JSON.parse(event.data);
   console.log(`${data.agent}: ${data.transcript}`);
@@ -346,7 +346,7 @@ Global TTS daemon configuration:
 - Check lock directory: `ls -la .kokoro-speak-lock/` (should be empty if daemon is running)
 
 **Browser not getting audio:**
-- Verify SSE endpoint: `curl http://localhost:3045/api/tts-stream` (should show event stream)
+- Verify SSE endpoint: `curl http://localhost:3046/api/tts-stream` (should show event stream)
 - Check browser console for CORS errors (dashboard should allow same-origin)
 - Verify audio files exist: `ls -la tts-output/*.mp3`
 

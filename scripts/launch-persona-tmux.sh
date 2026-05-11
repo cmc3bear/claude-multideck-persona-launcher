@@ -46,12 +46,16 @@ usage() {
 }
 
 ATTACH=true
+SAFE=false
+CWD_OVERRIDE=""
 PERSONA=""
 PROMPT=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --no-attach) ATTACH=false; shift ;;
+    --safe)      SAFE=true; shift ;;
+    --cwd)       CWD_OVERRIDE="$2"; shift 2 ;;
     -h|--help)   usage 0 ;;
     --) shift; break ;;
     -*) echo "unknown flag: $1" >&2; usage 2 ;;
@@ -78,7 +82,7 @@ CLAUDE_BIN="${DISPATCH_CLAUDE_BIN:-claude}"
   echo "personas.json not found at $DISPATCH_PERSONAS_JSON" >&2; exit 1
 }
 
-# Translate Windows-style paths (F:/foo) to WSL (/mnt/f/foo)
+# Translate Windows-style paths (C:/foo) to WSL (/mnt/c/foo)
 to_wsl_path() {
   local p="$1"
   if [[ "$p" =~ ^([A-Za-z]):[/\\](.*)$ ]]; then
@@ -125,6 +129,11 @@ CWD="$(to_wsl_path "$RAW_CWD")"
   echo "cwd does not exist: $CWD (raw: $RAW_CWD)" >&2
   CWD="$DISPATCH_ROOT"
 }
+
+if [[ -n "$CWD_OVERRIDE" ]]; then
+  CWD="$CWD_OVERRIDE"
+  [[ -d "$CWD" ]] || { echo "cwd override does not exist: $CWD" >&2; exit 1; }
+fi
 
 # Resolve hooks dir in WSL terms for the activation prompt.
 # Project-local hooks/ takes precedence; fall back to ~/.claude/hooks/ for
@@ -214,8 +223,13 @@ tmux send-keys -t "$PANE_TARGET" "clear" Enter
 tmux send-keys -t "$PANE_TARGET" \
   "$SCRIPT_DIR_ESC/multideck-banner.sh '$CALLSIGN' '$COLOR_HEX'" Enter
 tmux send-keys -t "$PANE_TARGET" "source '$DISPATCH_KOKORO_VENV/bin/activate' 2>/dev/null" Enter
-tmux send-keys -t "$PANE_TARGET" \
-  "$CLAUDE_BIN --dangerously-skip-permissions --name '$CALLSIGN' \"\$(cat '$PERSIST_PROMPT')\"" Enter
+if $SAFE; then
+  tmux send-keys -t "$PANE_TARGET" \
+    "$CLAUDE_BIN --name '$CALLSIGN' \"\$(cat '$PERSIST_PROMPT')\"" Enter
+else
+  tmux send-keys -t "$PANE_TARGET" \
+    "$CLAUDE_BIN --dangerously-skip-permissions --name '$CALLSIGN' \"\$(cat '$PERSIST_PROMPT')\"" Enter
+fi
 
 # ---- Attach unless dashboard caller suppressed it ----
 if $ATTACH; then

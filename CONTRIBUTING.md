@@ -227,7 +227,7 @@ Edit the job board code to validate against the new schema.
 ## Testing Your Changes
 
 - **Voice playback** — Preview TTS output with `python hooks/voice-audition.py`
-- **Dashboard routes** — Run `node dashboard/server.cjs` and verify routes load at `http://localhost:3045`
+- **Dashboard routes** — Run `node dashboard/server.cjs` and verify routes load at `http://localhost:3046`
 - **Manual testing** — Create a test job, assign to your new agent, verify completion flow
 - **Automated tests** — A formal test suite is a planned addition
 

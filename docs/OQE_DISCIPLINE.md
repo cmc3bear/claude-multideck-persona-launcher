@@ -489,6 +489,7 @@ Examples:
 | `WS` | Workspace / Dispatch infrastructure |
 | `MULTI` | MultiDeck |
 | `PLANEX` | Planex-Core |
+| `OQEL` | OQE-Labs signals intelligence platform |
 
 New projects register a code before their first job. No ad-hoc codes.
 

@@ -28,6 +28,14 @@ It runs entirely local. Zero API cost with a Claude Code CLI membership. Fork it
 
 ## What's New
 
+**v0.6.0** — Browser Terminal + Remote Access
+
+- **Browser transport** — fourth launcher transport option (`BROWSER`) opens a live Claude session inside the browser itself. No terminal emulator required. Runs via WebSocket to a host pseudo-TTY; the `claude` process has full local filesystem access.
+- **Multi-session tab management** — spawn as many agents as you want; each gets its own tab in the terminal panel header with an independent `×` close. `[ + NEW ]` returns to character select while keeping all sessions alive. `[ − MIN ]` hides the panel without killing anything; a restore tab shows `[ ◈ N TERMINALS ACTIVE ]`.
+- **Matrix rain panel** — cyberpunk character stream to the right of each terminal. Composites all active persona accent colors (each column picks randomly from the pool of running agents). Persona portraits tile as watermarks on the canvas. Density scales with session count, column width shrinks so the rain gets visibly denser as you add agents.
+- **Terminal color theming** — xterm foreground, cursor, and ANSI color slots are set to the persona's accent color at session init. The "SECURE CHANNEL ESTABLISHED" banner uses ANSI true-color to match exactly.
+- **Tailscale remote access** — because the server listens on `0.0.0.0:3046`, any device on your Tailscale network can open the launcher and run a full browser terminal session. The spawned `claude` process runs on your dev machine. Access your local agents from a phone, laptop, or tablet from anywhere.
+
 **v0.5.0** — OpenCode + Local Models
 - Run any persona on a local Ollama model instead of Claude Code. New `[ LOCAL ]` mode in the launcher sets runtime to OpenCode; HUD shows active runtime in color (gold = Claude, cyan = OpenCode, purple = VS)
 - `scripts/launch-persona-opencode.ps1` — spawn a persona under OpenCode with a configurable Ollama model (default: `qwen3-coder:30b-32k`); honors `DISPATCH_OPENCODE_MODEL` env var

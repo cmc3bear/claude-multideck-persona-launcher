@@ -14,7 +14,7 @@ This is the precondition for MULTI-FEAT-0055 (WSL tmux persona transport). Witho
 ## Architecture
 
 ```
-WSL Ubuntu (cmc3b@WSL)              Windows
+WSL Ubuntu (multideck@WSL)              Windows
 ─────────────────────────           ─────────────────────────
 claude (native installer)
    │
@@ -61,10 +61,10 @@ WSL ships with a default user that may be `root`. Running Claude Code as root is
 
 ```bash
 wsl -d Ubuntu -- bash -c '
-  useradd -m -s /bin/bash -u 1000 cmc3b
-  usermod -aG sudo cmc3b
-  echo "cmc3b ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/cmc3b
-  chmod 440 /etc/sudoers.d/cmc3b
+  useradd -m -s /bin/bash -u 1000 multideck
+  usermod -aG sudo multideck
+  echo "multideck ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/multideck
+  chmod 440 /etc/sudoers.d/multideck
 '
 ```
 
@@ -75,14 +75,14 @@ Set the user as the default WSL login by editing `/etc/wsl.conf` inside WSL:
 systemd=true
 
 [user]
-default=cmc3b
+default=multideck
 ```
 
 Apply with `wsl --shutdown` then re-enter WSL. Verify:
 
 ```bash
 wsl -d Ubuntu -- bash -c 'id'
-# uid=1000(cmc3b) gid=1001(cmc3b) groups=1001(cmc3b),27(sudo)
+# uid=1000(multideck) gid=1001(multideck) groups=1001(multideck),27(sudo)
 ```
 
 ## Step 2 — Re-enable WSL Interop under systemd (CRITICAL)
@@ -95,7 +95,7 @@ Install a tiny one-shot systemd unit that registers WSLInterop on boot. The unit
 
 ```bash
 wsl -d Ubuntu -- sudo bash -c '
-  cp /mnt/f/03-INFRASTRUCTURE/dispatch-framework/scripts/wsl/wsl-binfmt.service /etc/systemd/system/wsl-binfmt.service
+  cp /mnt/c/path/to/multideck/scripts/wsl/wsl-binfmt.service /etc/systemd/system/wsl-binfmt.service
   chmod 644 /etc/systemd/system/wsl-binfmt.service
   systemctl daemon-reload
   systemctl enable wsl-binfmt.service
@@ -109,7 +109,7 @@ wsl -d Ubuntu -- ls /proc/sys/fs/binfmt_misc/
 Verify Windows .exe interop works after cold restart:
 
 ```bash
-wsl -d Ubuntu -- /mnt/c/Users/cmc3b/.claude/hooks/kokoro-venv/Scripts/python.exe -c "from kokoro import KPipeline; print('OK')"
+wsl -d Ubuntu -- /mnt/c/Users/multideck/.claude/hooks/kokoro-venv/Scripts/python.exe -c "from kokoro import KPipeline; print('OK')"
 # OK
 ```
 
@@ -149,7 +149,7 @@ Verify across a cold restart:
 ```bash
 wsl --shutdown
 wsl -d Ubuntu -- bash -lc 'which claude; claude --version'
-# /home/cmc3b/.local/bin/claude
+# /home/multideck/.local/bin/claude
 # 2.x.y (Claude Code)
 ```
 
@@ -160,7 +160,7 @@ wsl -d Ubuntu -- bash -lc 'which claude; claude --version'
 The fix: symlink the binary into `/usr/local/bin`, which is on the default PATH for every shell type:
 
 ```bash
-wsl -d Ubuntu -- sudo ln -sf /home/cmc3b/.local/bin/claude /usr/local/bin/claude
+wsl -d Ubuntu -- sudo ln -sf /home/multideck/.local/bin/claude /usr/local/bin/claude
 ```
 
 Verify the literal non-login form now resolves:
@@ -197,10 +197,10 @@ wsl -d Ubuntu -- bash -lc 'claude --version'
 `wsl -d Ubuntu` (no `--cd` flag) inherits the caller's Windows working directory and translates it to `/mnt/<drive>/<path>`. Launching from Windows Terminal at `C:\Users\<user>` puts WSL Claude in `/mnt/c/Users/<user>` — not in the dispatch-framework workspace. To guarantee the workspace as CWD regardless of caller, use the `--cd` flag:
 
 ```bash
-wsl -d Ubuntu --cd /mnt/f/03-INFRASTRUCTURE/dispatch-framework -- claude
+wsl -d Ubuntu --cd /mnt/c/path/to/multideck -- claude
 ```
 
-For tmux-based persona spawning (MULTI-FEAT-0055), `scripts/launch-persona-tmux.sh` should use `--cd` resolved from the persona's `cwd` field in `personas/personas.json` (e.g., `${DISPATCH_ROOT}` → `/mnt/f/03-INFRASTRUCTURE/dispatch-framework`).
+For tmux-based persona spawning (MULTI-FEAT-0055), `scripts/launch-persona-tmux.sh` should use `--cd` resolved from the persona's `cwd` field in `personas/personas.json` (e.g., `${DISPATCH_ROOT}` → `/mnt/c/path/to/multideck`).
 
 ## Step 5 — Install the WSL hook bridges
 
@@ -209,9 +209,9 @@ Bridges forward Claude Code Stop and PostToolUse events to the Windows kokoro-ve
 ```bash
 wsl -d Ubuntu -- bash -c '
   mkdir -p ~/.claude/hooks
-  cp /mnt/f/03-INFRASTRUCTURE/dispatch-framework/scripts/wsl/wsl-stop-hook.sh ~/.claude/hooks/
-  cp /mnt/f/03-INFRASTRUCTURE/dispatch-framework/scripts/wsl/wsl-tool-hook.sh ~/.claude/hooks/
-  cp /mnt/f/03-INFRASTRUCTURE/dispatch-framework/scripts/wsl/wsl-claude-settings.json ~/.claude/settings.json
+  cp /mnt/c/path/to/multideck/scripts/wsl/wsl-stop-hook.sh ~/.claude/hooks/
+  cp /mnt/c/path/to/multideck/scripts/wsl/wsl-tool-hook.sh ~/.claude/hooks/
+  cp /mnt/c/path/to/multideck/scripts/wsl/wsl-claude-settings.json ~/.claude/settings.json
   chmod 755 ~/.claude/hooks/wsl-*.sh
   chmod 644 ~/.claude/settings.json
 '
@@ -224,13 +224,13 @@ The bridges set two env vars and forward them through `WSLENV` so the spawned Wi
 | `DISPATCH_ROOT` | `F:\03-INFRASTRUCTURE\dispatch-framework` | Directs `kokoro-speak.py` to write MP3 to this repo's `tts-output/` (otherwise defaults to legacy `dispatch/` path) |
 | `CLAUDE_CODE_SSE_PORT` | (set by Claude Code session) | Voice-config isolation — each session reads its own `voice-config-${PORT}.json` |
 
-If your Windows username is not `cmc3b` or your repo path is not `F:\03-INFRASTRUCTURE\dispatch-framework`, edit `wsl-stop-hook.sh` and `wsl-tool-hook.sh` to match before copying.
+If your Windows username is not `multideck` or your repo path is not `F:\03-INFRASTRUCTURE\dispatch-framework`, edit `wsl-stop-hook.sh` and `wsl-tool-hook.sh` to match before copying.
 
 ## Step 6 — Verify the end-to-end audio feed
 
 ```bash
 # Set up a fake voice config for the test
-wsl -d Ubuntu -- bash -c 'CLAUDE_CODE_SSE_PORT=test-wsl python3 /mnt/c/Users/cmc3b/.claude/hooks/set-voice.py dispatch'
+wsl -d Ubuntu -- bash -c 'CLAUDE_CODE_SSE_PORT=test-wsl python3 /mnt/c/Users/multideck/.claude/hooks/set-voice.py dispatch'
 
 # Trigger the Stop hook with a test payload
 wsl -d Ubuntu -- bash -c '
@@ -242,13 +242,13 @@ wsl -d Ubuntu -- bash -c '
 sleep 15
 
 # Check that the MP3 landed
-ls -la /mnt/f/03-INFRASTRUCTURE/dispatch-framework/tts-output/
+ls -la /mnt/c/path/to/multideck/tts-output/
 
-# Confirm the dashboard serves it (assumes server is running on 3045)
-curl -s http://localhost:3045/audio-feed/list | python -m json.tool | grep -A2 '"filename"' | head -10
+# Confirm the dashboard serves it (assumes server is running on 3046)
+curl -s http://localhost:3046/audio-feed/list | python -m json.tool | grep -A2 '"filename"' | head -10
 ```
 
-If the MP3 appears in `tts-output/` and the audio-feed list contains it, the chain is working. Open `http://localhost:3045/audio-feed` in a browser tab to hear new entries auto-play.
+If the MP3 appears in `tts-output/` and the audio-feed list contains it, the chain is working. Open `http://localhost:3046/audio-feed` in a browser tab to hear new entries auto-play.
 
 ## Caveats and known landmines
 
@@ -258,11 +258,11 @@ If the MP3 appears in `tts-output/` and the audio-feed list contains it, the cha
 
 **Hook command expansion.** Claude Code reads `~/.claude/settings.json` and runs the `command` string through a shell. Setting env vars inline in that string can fail through the same path-translation gotcha. Always route through a wrapper script (the `.sh` bridges) — keeps the settings.json simple and the env handling auditable.
 
-**`kokoro-speak.py` `DISPATCH_ROOT` default is wrong for this repo.** The script's hardcoded fallback is `F:/03-INFRASTRUCTURE/dispatch` (legacy directory name). The bridge scripts override this via `DISPATCH_ROOT` env so MP3s land in `dispatch-framework/tts-output`. If you remove the env override, MP3s vanish into the legacy directory.
+**Override `DISPATCH_ROOT` if you have a legacy default.** Some older installs hardcoded a Windows-side fallback for the TTS output directory. The bridge scripts pass `DISPATCH_ROOT` explicitly so MP3s land in your active multideck repo's `tts-output/`. If you remove the env override, MP3s may vanish into the legacy directory. Always export `DISPATCH_ROOT` in the bridge script.
 
 **WSL Interop register is transient.** The kernel-level `binfmt_misc` register entry resets on `wsl --shutdown`. The `wsl-binfmt.service` unit installed in Step 2 re-registers it on every boot. If you skip Step 2 and rely on a one-time manual `echo > /proc/sys/fs/binfmt_misc/register`, the next shutdown wipes it and the bridge silently fails.
 
-**Two `tts-output` directories on this host.** `F:/03-INFRASTRUCTURE/dispatch/tts-output` is the legacy dispatch directory. `F:/03-INFRASTRUCTURE/dispatch-framework/tts-output` is the dispatch-framework (this repo) directory. The Windows-side Claude Code session writes to the former; the WSL bridge writes to the latter (via `DISPATCH_ROOT`). Confusion is easy. The audio-feed dashboard serves whichever one its `DISPATCH_ROOT` points at when launched.
+**Multiple `tts-output` directories.** If you have more than one multideck checkout on the same host, each has its own `tts-output/`. The audio-feed dashboard serves whichever one its `DISPATCH_ROOT` points at when launched. Always set `DISPATCH_ROOT` explicitly when starting the dashboard if you keep multiple checkouts.
 
 **Quiet hours suppress audio.** `speak-kokoro.py` checks `is_quiet_hours()` (default 1:00–6:30 local time) and silently returns. If you test the bridge during quiet hours, no MP3 is produced. Move clock or edit `QUIET_START`/`QUIET_END` for testing.
 

@@ -50,222 +50,376 @@ function lt(hoursAgo) {
   return new Date(Date.now() + hoursAgo * 3600e3).toISOString();
 }
 
+// Synced from canonical F:\03-INFRASTRUCTURE\dispatch-framework\state\lessons.json at 2026-05-10T10:44:47.548890Z
+// Source of truth: dispatch-framework/state/lessons.json
+// To re-sync: python F:\tmp\sync-lessons-mock-to-canonical.py
 window.LESSONS = [
   {
-    id: "LESSON-0001",
-    job_id: "MULTIDECK-ASSET-0039",
-    created_at: lt(-90),
-    status: "ratified",
-    applies_to_tags: ["negative-property", "asset-generation", "pii", "verification"],
-    matches_worktypes: ["ASSET", "FEAT"],
-    what_happened:
-      "Job 11 (predecessor portrait set) was closed PASS with note 'no personal data', but two of the nine portraits contained reference photo backgrounds that included a real person's office whiteboard with handwritten names. Caught by the standing gate on a downstream asset scan, eight days post-acceptance.",
-    noted_at_phase: "POST_ACCEPTANCE",
-    noted_at_gate: "STANDING",
-    confidence_at_decision: "HIGH",
-    alternatives_considered:
-      "(a) Generate from text-only prompts (chosen alt for 39); (b) Reference photos with manual scrub pass; (c) Reference photos with automated face/text detection. Chose (b) at the time — assumed visual scan was sufficient.",
-    oqe_path: true,
-    criteria_passed: [
-      { criterion: "All 9 portraits delivered at 384×512 PNG", evidence_strength: "STRONG" },
-      { criterion: "Cyberpunk style consistent across set", evidence_strength: "MODERATE" },
-      { criterion: "No personal data in output", evidence_strength: "LIMITED" },
+    "id": "LESSON-0001",
+    "job_id": "MULTIDECK-VS-0001",
+    "created_at": "2026-05-04T10:00:00Z",
+    "status": "ratified",
+    "applies_to_tags": [
+      "regression",
+      "test-harness",
+      "iterative-fix",
+      "fix",
+      "safety-net"
     ],
-    tenets_broken: [
-      { tenet: 4, how: "Closed on LIMITED evidence — 'no personal data' was a spot-check, not a verifiable scan." },
-      { tenet: 5, how: "Note 'no personal data' cited no scan tool, no file path, no methodology." },
+    "matches_worktypes": [
+      "FIX",
+      "FEAT"
     ],
-    root_cause:
-      "Negative-claim verification ('X is NOT present') was treated as default-true without instrumented evidence. Reviewer accepted reviewer-self-attestation in lieu of a tool-backed scan.",
-    applies_to:
-      "Any asset-generation job where output must be free of a class of content (PII, branded marks, copyrighted material, profanity). Negative-property criteria in general.",
-    mitigations: [
-      "Require tool-backed scan with linkable output (e.g. OCR pass over images, named-entity scan over text) for any 'X NOT present' criterion.",
-      "Reject LIMITED evidence on negative-property claims at the Completion Gate — auto-flag, not advisory.",
-      "Add 'negative-property' classification to criteria so the Review Gate can pattern-match and demand stronger evidence.",
+    "what_happened": "VS R2 (accumulated-context round): OpenCode introduced a syntax error while attempting a mid-test fix. The fix addressed the immediate failure but broke previously passing code. With no harness confirming prior state, the regression was invisible until the full suite ran — at which point the pipeline was unrunnable and scored 0/10 hard requirements.",
+    "noted_at_phase": "COMPLETION",
+    "noted_at_gate": "REVIEW",
+    "confidence_at_decision": "HIGH",
+    "alternatives_considered": "(a) Fix inline without re-running suite (chosen by OpenCode, fastest); (b) Re-run full suite after each fix; (c) Isolate the failing case first, confirm fix in isolation, then run full suite. Claude used (c) implicitly — every fix was validated against existing tests before moving on.",
+    "oqe_path": false,
+    "criteria_passed": [],
+    "tenets_broken": [
+      {
+        "tenet": 4,
+        "how": "No evidence was gathered that prior passing tests still passed after the mid-fix change — the 'fix is safe' claim was unverified."
+      },
+      {
+        "tenet": 2,
+        "how": "No success criterion required regression-free state after each incremental fix step."
+      }
     ],
+    "root_cause": "Iterative repair without a continuously-green test harness. Each fix only checked the new symptom; prior passing behavior was assumed stable, not verified. The assumption broke on a syntax error that the author couldn't catch without running the interpreter.",
+    "applies_to": "Any multi-step fix sequence where each step is a potential regression vector. Especially relevant when the fix author is also the only test runner.",
+    "mitigations": [
+      "Every mid-task fix must be followed by a full suite run before the next change. No exceptions — single broken re-run is a blocker, not a note.",
+      "FIX job criteria must include 'all previously passing tests still pass after each incremental change' as an explicit criterion.",
+      "If a fix introduces a syntax/parse error that breaks the suite, the task is immediately paused and the error diagnosed before any further changes."
+    ]
   },
   {
-    id: "LESSON-0002",
-    job_id: "MULTIDECK-FIX-0052",
-    created_at: lt(-30),
-    status: "ratified",
-    applies_to_tags: ["reproduction-parity", "chaos-test", "reliability", "vague-criterion"],
-    matches_worktypes: ["FIX"],
-    what_happened:
-      "SSE reconnect storm fix shipped with claim '200 clients, zero reconnect storm'. Caught in review: chaos test was run against a single restart event, not the rolling-restart scenario that originally triggered the bug. Test was real but didn't cover the actual failure mode.",
-    noted_at_phase: "COMPLETION",
-    noted_at_gate: "REVIEW",
-    confidence_at_decision: "HIGH",
-    alternatives_considered:
-      "(a) Single-restart chaos test (chosen, faster); (b) Rolling-restart test matching prod incident; (c) Replay of original log capture against new code. Chose (a) for speed.",
-    oqe_path: true,
-    criteria_passed: [
-      { criterion: "Exponential backoff implemented (1,2,4,8s max 30s)", evidence_strength: "STRONG" },
-      { criterion: "Single watcher per file", evidence_strength: "STRONG" },
-      { criterion: "Verified under load", evidence_strength: "MODERATE" },
+    "id": "LESSON-0002",
+    "job_id": "MULTIDECK-VS-0002",
+    "created_at": "2026-05-04T10:05:00Z",
+    "status": "ratified",
+    "applies_to_tags": [
+      "planning",
+      "oqe-citations",
+      "leading-indicator",
+      "implementation-depth",
+      "quality-prediction"
     ],
-    tenets_broken: [
-      { tenet: 2, how: "'Verified under load' was not specific enough — didn't constrain WHICH load profile, allowing the wrong one to satisfy the criterion." },
-      { tenet: 5, how: "Criterion didn't cite the original incident log it was meant to defend against." },
+    "matches_worktypes": [
+      "FEAT",
+      "FIX",
+      "SPEC"
     ],
-    root_cause:
-      "Vague success criterion. 'Verified under load' is the kind of phrase OQE 2.0 explicitly rejects — it accepts any load test, including ones that don't reproduce the bug.",
-    applies_to:
-      "Any bug fix where the success criterion describes the test type rather than the failure mode being defended against.",
-    mitigations: [
-      "Bug-fix criteria must cite the original incident log/file and specify 'reproduces under conditions X, then fails to reproduce under same conditions after fix'.",
-      "Review Gate adds a 'reproduction parity' check for any FIX worktype — test inputs must mirror incident inputs.",
-      "Add criterion-template library for FIX jobs that prefills 'pre-fix repro confirmed' + 'post-fix repro fails' as default.",
+    "what_happened": "VS R3 (clean-context round): Claude's planning phase cited OQE §N section references inline, named concrete subsystems, and enumerated acceptance criteria before any implementation. Claude scored 81/90 with 48/48 tests passing. OpenCode produced no planning artifacts, no §N citations in code, and a 'test suite' that was a console.log script — scoring 42/90 with 0 passing structured tests. The planning quality at T=0 predicted the implementation quality at T=end with high fidelity.",
+    "noted_at_phase": "POST_ACCEPTANCE",
+    "noted_at_gate": "NONE",
+    "confidence_at_decision": "HIGH",
+    "alternatives_considered": "Not a design decision — an observed correlation. Implication: allocating planning time (O-phase + Q-phase) is not overhead, it is load-bearing for implementation quality.",
+    "oqe_path": true,
+    "criteria_passed": [
+      {
+        "criterion": "48/48 structured tests pass",
+        "evidence_strength": "STRONG"
+      },
+      {
+        "criterion": "OQE §N citations present in code comments",
+        "evidence_strength": "STRONG"
+      },
+      {
+        "criterion": "Safety infrastructure (TmpFileRegistry, SIGINT cleanup) present",
+        "evidence_strength": "STRONG"
+      }
     ],
+    "tenets_broken": [],
+    "root_cause": "Not a failure — a validated positive finding. Planning quality (§N citations, explicit criteria, named subsystems) is a leading indicator of implementation quality because it forces the implementer to resolve ambiguity before writing code, not during.",
+    "applies_to": "Any job where implementation quality needs to be predicted before the implementation is done. Planning review gates, code review prioritization.",
+    "mitigations": [
+      "Creation Gate checks for at least one §N section citation in the O-Frame before allowing the job to move to E-phase.",
+      "Jobs with zero §N citations in planning artifacts are flagged MODERATE confidence automatically — the operator must override to HIGH.",
+      "Planning artifacts are reviewed independently before implementation begins, not as part of the same submission."
+    ]
   },
   {
-    id: "LESSON-0003",
-    job_id: "MULTIDECK-FEAT-0035",
-    created_at: lt(-200),
-    status: "ratified",
-    applies_to_tags: ["governance", "enforcement", "bypass", "completeness-lens", "security"],
-    matches_worktypes: ["FEAT", "SPEC", "GATE"],
-    what_happened:
-      "Runtime boundary enforcement was implemented and shipped at HIGH confidence. Three weeks later a cross-project leak was found: the --project banner could be silenced by an env var that wasn't documented. The escape hatch existed in the code at decision time but wasn't surfaced during the Q-phase review.",
-    noted_at_phase: "POST_ACCEPTANCE",
-    noted_at_gate: "NONE",
-    confidence_at_decision: "HIGH",
-    alternatives_considered:
-      "(a) Three-layer enforcement with env-var override (chosen); (b) Three-layer with no override; (c) Single hard-fail layer. Override was chosen to allow ops escape during incidents — but the override wasn't tracked as part of the surface area.",
-    oqe_path: true,
-    criteria_passed: [
-      { criterion: "--project banner visible on every CLI invocation", evidence_strength: "STRONG" },
-      { criterion: "boundary_rule field enforced in job-board.py", evidence_strength: "STRONG" },
-      { criterion: "List reminder shown when crossing project context", evidence_strength: "STRONG" },
+    "id": "LESSON-0003",
+    "job_id": "MULTIDECK-VS-0003",
+    "created_at": "2026-05-04T10:10:00Z",
+    "status": "ratified",
+    "applies_to_tags": [
+      "test-quality",
+      "assertion",
+      "console-log",
+      "false-confidence",
+      "evidence"
     ],
-    tenets_broken: [
-      { tenet: 3, how: "HIGH confidence rating skipped the 'completeness' lens — the env-var escape hatch was a known surface that wasn't enumerated." },
-      { tenet: 1, how: "Problem statement was 'enforce boundaries' not 'prevent cross-project leaks under all conditions including ops overrides' — too narrow framing let the escape hatch slip out of scope." },
+    "matches_worktypes": [
+      "FIX",
+      "FEAT",
+      "OQE"
     ],
-    root_cause:
-      "The Q-phase 'completeness' lens was treated as a checkbox rather than an enumeration. Known escape hatches in the code weren't surfaced as part of the system's threat surface.",
-    applies_to:
-      "Any enforcement, validation, or governance feature where bypass mechanisms exist. Security features in general.",
-    mitigations: [
-      "Q-phase completeness lens for governance features must produce an explicit enumeration of all bypass mechanisms (env vars, CLI flags, config files, fallbacks).",
-      "If any bypass exists, it must appear as its own success criterion ('bypass X is documented and audit-logged').",
-      "Add 'governance' classification to job tags — Standing Gate scans these for bypass-mechanism documentation post-merge.",
+    "what_happened": "VS R3: OpenCode's test deliverable was a script that printed console.log statements — no assertions, no pass/fail logic. A script that never asserts can never fail, making it worse than no test: it produces a test-shaped artifact that creates false confidence and satisfies a 'tests exist' criterion without providing any signal.",
+    "noted_at_phase": "COMPLETION",
+    "noted_at_gate": "REVIEW",
+    "confidence_at_decision": "HIGH",
+    "alternatives_considered": "(a) console.log verification script (OpenCode, chosen); (b) Assertion-based test suite with pass/fail reporting (Claude, chosen); (c) Manual spot-check with documented results. Only (b) and (c) produce falsifiable evidence.",
+    "oqe_path": false,
+    "criteria_passed": [],
+    "tenets_broken": [
+      {
+        "tenet": 4,
+        "how": "Test output that cannot fail is not evidence — it is a ritual. 'Tests pass' has no meaning when the test cannot assert a failure."
+      },
+      {
+        "tenet": 5,
+        "how": "A test script with no assertions cites nothing linkable. It cannot support a 'criterion met' claim under §5."
+      }
     ],
+    "root_cause": "Confusing test-shaped output for test evidence. A verification script that prints observations is a logging tool, not a test suite. The distinction matters because test evidence is only valid if the test can fail.",
+    "applies_to": "Any job where a 'tests written' criterion could be satisfied by a non-asserting script. All FIX and FEAT jobs that require test evidence.",
+    "mitigations": [
+      "Review Gate rejects any test artifact where no assertion framework (assert, expect, jest, pytest, etc.) is present in the test source — console.log-only scripts are classified LIMITED evidence.",
+      "Test evidence must include a run output showing at least one PASS/FAIL or equivalent assertion result, not just printed values.",
+      "Job criteria for testing must specify 'X assertions pass' not 'tests written' — the count of assertions is the criterion, not the existence of a file."
+    ]
   },
   {
-    id: "LESSON-0004",
-    job_id: "MULTIDECK-OQE-0033",
-    created_at: lt(-260),
-    status: "ratified",
-    applies_to_tags: ["performance", "single-source", "load-bearing", "codec", "latency"],
-    matches_worktypes: ["OQE", "SPEC", "FEAT"],
-    what_happened:
-      "OQE design doc compared MP3 vs WAV with the criterion 'feed transport works on cell'. Single test on one carrier in one location passed at MODERATE confidence and the decision was locked. Two months later, users on slower connections reported 8s+ load times — the tested location had unrepresentatively good signal.",
-    noted_at_phase: "POST_ACCEPTANCE",
-    noted_at_gate: "NONE",
-    confidence_at_decision: "MODERATE",
-    alternatives_considered:
-      "(a) MP3 128k (chosen); (b) MP3 96k; (c) Opus 64k; (d) WAV. Chose (a) on size+quality tradeoff. Cell test was acknowledged as single-source.",
-    oqe_path: true,
-    criteria_passed: [
-      { criterion: "MP3 file size <1MB for typical 30s clip", evidence_strength: "STRONG" },
-      { criterion: "Sub-second encode on 4090", evidence_strength: "STRONG" },
-      { criterion: "Plays on cell", evidence_strength: "LIMITED" },
+    "id": "LESSON-0004",
+    "job_id": "MULTIDECK-VS-0004",
+    "created_at": "2026-05-04T10:15:00Z",
+    "status": "ratified",
+    "applies_to_tags": [
+      "evidence-pack",
+      "missing-deliverables",
+      "oqe-citations",
+      "job-cards",
+      "structural-completeness"
     ],
-    tenets_broken: [
-      { tenet: 4, how: "'Plays on cell' was LIMITED (single source, single carrier, single location) and was the deciding criterion for the codec — closing on LIMITED for a load-bearing claim." },
-      { tenet: 3, how: "MODERATE confidence acknowledged the single-source weakness but the decision proceeded at that level instead of gathering more — should have been LOW pending more samples." },
+    "matches_worktypes": [
+      "SPEC",
+      "OQE",
+      "FEAT"
     ],
-    root_cause:
-      "MODERATE-confidence decisions on load-bearing criteria are systematically risky. The framework allows them but 'documented caveats' is a weaker enforcement than 'do not proceed' (LOW).",
-    applies_to:
-      "Any decision where a single criterion is load-bearing for the choice (codec, schema, protocol, vendor). Performance/latency claims in particular.",
-    mitigations: [
-      "Identify load-bearing criteria explicitly in the O-Frame; for those, MODERATE confidence is treated as LOW (do not proceed).",
-      "Performance criteria must specify the test matrix (carriers/devices/conditions) BEFORE evidence is gathered, not after.",
-      "Standing Gate periodically re-runs performance criteria from closed jobs against current data; flags drift.",
+    "what_happened": "VS R4A (independent review of OpenCode/devstral output): Reviewer scored 15/60. Three deliverables (Evidence Pack Definition, Risks and Failure Modes, Recommended Build Order) were entirely absent. Zero §N citations across all 9 submitted documents. All 9 job cards missing oqe_version, alternatives_considered, and problem fields. The submitted artifacts described what evidence would exist, not actual evidence.",
+    "noted_at_phase": "COMPLETION",
+    "noted_at_gate": "REVIEW",
+    "confidence_at_decision": "MODERATE",
+    "alternatives_considered": "(a) Describe evidence that would exist when the work is done (chosen by devstral — zero cost, not evidence); (b) Produce actual evidence artifacts with citations (Claude approach); (c) Partial delivery with explicit 'not yet done' markers. Only (b) and (c) are honest.",
+    "oqe_path": false,
+    "criteria_passed": [],
+    "tenets_broken": [
+      {
+        "tenet": 4,
+        "how": "Every submission that describes future evidence rather than presenting present evidence is a T4 failure by definition."
+      },
+      {
+        "tenet": 5,
+        "how": "Zero §N citations means no criterion cited a linkable standard — assertions were made without traceable basis."
+      },
+      {
+        "tenet": 6,
+        "how": "oqe_version absent from all 9 job cards — framework version undeclared."
+      }
     ],
+    "root_cause": "An evidence pack that lists what evidence will exist is a proposal, not a pack. The structural format of an evidence artifact (section headings, item list) was present; the actual content (measurements, citations, test outputs) was absent. Format compliance ≠ evidence compliance.",
+    "applies_to": "Any job requiring an evidence pack, spec deliverable, or OQE job card. Especially multi-deliverable specs where the temptation to index content before creating it is high.",
+    "mitigations": [
+      "Review Gate checks each evidence pack item for at least one STRONG or MODERATE evidence citation — items containing only forward-looking language ('will be', 'can be', 'should be') are flagged as missing.",
+      "Job cards are schema-validated at submission time: oqe_version, problem, and alternatives_considered fields are required; absent = auto-reject.",
+      "§N citation count is tracked as a submission metric; zero citations triggers an automatic FAIL at the Review Gate regardless of prose quality."
+    ]
   },
   {
-    id: "LESSON-0005",
-    job_id: "MULTIDECK-FEAT-0030",
-    created_at: lt(-340),
-    status: "ratified",
-    applies_to_tags: ["version-drift", "spec-transition", "process-failure", "vague-criterion"],
-    matches_worktypes: [],
-    what_happened:
-      "Audio transport controls were declared MET with the result string 'works as expected'. Reviewer flagged at gate, sent back for proper criteria + evidence. Roundtrip cost 6 hours that should have been zero — the engineer had the evidence, just hadn't structured it. This was pre-OQE-2.0 and the engineer claimed they were unaware §13 even applied yet.",
-    noted_at_phase: "COMPLETION",
-    noted_at_gate: "REVIEW",
-    confidence_at_decision: "HIGH",
-    alternatives_considered:
-      "Not applicable — this was a process failure, not a design failure. Implementation choice was sound.",
-    oqe_path: false,
-    criteria_passed: [
-      { criterion: "PREV/NEXT/SEEK controls implemented", evidence_strength: "STRONG" },
-      { criterion: "Clickable history", evidence_strength: "STRONG" },
-      { criterion: "Works as expected", evidence_strength: "LIMITED" },
+    "id": "LESSON-0005",
+    "job_id": "MULTIDECK-VS-0005",
+    "created_at": "2026-05-04T10:20:00Z",
+    "status": "ratified",
+    "applies_to_tags": [
+      "structural-hallucination",
+      "readme-first",
+      "index-before-content",
+      "spec",
+      "deliverable-gap"
     ],
-    tenets_broken: [
-      { tenet: 6, how: "Artifact didn't declare its OQE version — engineer was operating against an outdated mental model of the framework." },
-      { tenet: 2, how: "'Works as expected' is the canonical rejected criterion phrase per §2." },
+    "matches_worktypes": [
+      "SPEC",
+      "FEAT",
+      "OQE"
     ],
-    root_cause:
-      "Version drift. The engineer's local working copy of the spec was stale and didn't reflect §11–§14 enforcement. The Creation Gate didn't catch this because the job was created before §14 went live.",
-    applies_to:
-      "Transition periods around any spec version bump. Any job created before an enforcement gate goes live but submitted after.",
-    mitigations: [
-      "Creation Gate stamps the artifact's OQE version at job-post time and locks it; submission is validated against THAT version, not current.",
-      "On spec version bumps, all open jobs receive an automated note: 'this job was created under v1.x; submission accepted under v1.x rules'.",
-      "Engineer onboarding includes a §6 self-check: 'what OQE version are you reading' as gate to first commit.",
+    "what_happened": "VS R4A (devstral): 3 files / 101 lines produced against a task requiring 8+ deliverable files. The README listed 6 files that were never created, complete with filenames and descriptions. The index was complete; the indexed content was not. This is structurally identical to writing a table of contents before writing the chapters — the map precedes the territory by an indefinite amount.",
+    "noted_at_phase": "COMPLETION",
+    "noted_at_gate": "REVIEW",
+    "confidence_at_decision": "LOW",
+    "alternatives_considered": "(a) Write README/index first, then files (devstral — index completed, files not); (b) Write files first, generate README from what actually exists; (c) Write files and README together, neither referencing something not yet present. Only (b) and (c) are safe.",
+    "oqe_path": false,
+    "criteria_passed": [],
+    "tenets_broken": [
+      {
+        "tenet": 4,
+        "how": "A README pointing to non-existent files is not evidence of those files — it is a claim without backing."
+      },
+      {
+        "tenet": 1,
+        "how": "The problem (content gaps) is obscured when the index is complete — readers conclude delivery is further along than it is."
+      }
     ],
+    "root_cause": "Structural hallucination pattern: generating a complete directory index or table of contents for content that doesn't yet exist. The README is convincing as a deliverable on its own, making the missing files harder to notice on casual review.",
+    "applies_to": "Any deliverable set with an index, README, or manifest. Especially multi-file specs and evidence packs where the index is a separate file from the content.",
+    "mitigations": [
+      "Review Gate checks that every file named in a README, manifest, or index actually exists in the submission before marking any criterion complete.",
+      "READMEs and index files are the last thing written, not the first — no exceptions for multi-deliverable jobs.",
+      "If a file listed in an index is absent, the entire submission is returned as incomplete — partial delivery is not accepted for indexed deliverable sets."
+    ]
   },
   {
-    id: "LESSON-0006",
-    job_id: "WORKSPACE-FEAT-0044",
-    created_at: lt(-12),
-    status: "ratified",
-    applies_to_tags: ["synthetic-data", "fixture-provenance", "data-shape", "calendar", "sync"],
-    matches_worktypes: ["FEAT", "FIX"],
-    what_happened:
-      "Calendar gcal_read sync shipped with 5min refresh. The 'conflicts marked on dashboard' claim was demonstrated with one synthetic conflict in the test data. In production, real conflicts span multiple calendars with overlapping (not identical) time ranges, and the dedup logic silently dropped half of them. Caught by user report, not by gates.",
-    noted_at_phase: "POST_ACCEPTANCE",
-    noted_at_gate: "NONE",
-    confidence_at_decision: "MODERATE",
-    alternatives_considered:
-      "(a) Exact-match dedup (chosen, simpler); (b) Time-range overlap dedup; (c) No dedup, surface duplicates to user. Chose (a) because synthetic test data showed exact matches.",
-    oqe_path: true,
-    criteria_passed: [
-      { criterion: "5-min refresh active", evidence_strength: "STRONG" },
-      { criterion: "Events from 3 calendars merged", evidence_strength: "STRONG" },
-      { criterion: "Conflicts marked on dashboard", evidence_strength: "MODERATE" },
+    "id": "LESSON-0006",
+    "job_id": "MULTIDECK-VS-0006",
+    "created_at": "2026-05-04T10:25:00Z",
+    "status": "ratified",
+    "applies_to_tags": [
+      "benchmark",
+      "accumulated-context",
+      "attribution",
+      "test-design",
+      "context-effect"
     ],
-    tenets_broken: [
-      { tenet: 4, how: "Evidence was MODERATE based on synthetic data, but synthetic data didn't represent the real conflict shape — evidence quality was overrated." },
-      { tenet: 1, how: "Problem was framed as 'sync calendar' not 'represent overlapping commitments accurately'. The narrower framing let an incomplete dedup pass." },
+    "matches_worktypes": [
+      "VS",
+      "OQE",
+      "SPEC"
     ],
-    root_cause:
-      "Evidence-from-synthetic-data was tagged MODERATE when it should have been LIMITED. Synthetic test data is a single source by definition — the data was authored by the same engineer who wrote the code, so it inherits all the same blind spots.",
-    applies_to:
-      "Any feature where success is verified against test fixtures the engineer wrote themselves. Data-shape-dependent features in particular (calendars, contacts, addresses, anything with edge cases).",
-    mitigations: [
-      "Self-authored test fixtures are LIMITED evidence by default. STRONG/MODERATE requires real data sample or independently-authored fixture.",
-      "Data-shape features must include at least one criterion verified against production-shape data (sampled, anonymized, or staged).",
-      "Review Gate adds a 'fixture provenance' check — who authored the test data, when, against what real-world spec.",
+    "what_happened": "VS R1/R2: The round tested models sequentially with accumulated context — the second model (Claude) entered after significant context was already established from R1. Claude's 10/10 hard-requirement score may partially reflect context coherence from the first round rather than pure cold-start capability. A clean-context control (R3) was added, where Claude scored 81/90 and OpenCode 42/90 starting from zero context. The R1/R2 result is not invalid but cannot cleanly attribute capability vs. context advantage.",
+    "noted_at_phase": "POST_ACCEPTANCE",
+    "noted_at_gate": "NONE",
+    "confidence_at_decision": "MODERATE",
+    "alternatives_considered": "(a) Accumulated context, sequential (R1/R2 design — some ecological validity, confounded attribution); (b) Clean context per model (R3 design — clean attribution, may underrepresent real-world performance); (c) Counterbalanced order (both models see each round first half the time). (b) is stronger for capability attribution; (a) is stronger for real-workflow realism.",
+    "oqe_path": true,
+    "criteria_passed": [
+      {
+        "criterion": "Clean-context control round conducted (R3)",
+        "evidence_strength": "STRONG"
+      },
+      {
+        "criterion": "R3 result directionally consistent with R1/R2",
+        "evidence_strength": "STRONG"
+      }
     ],
+    "tenets_broken": [
+      {
+        "tenet": 3,
+        "how": "R1/R2 confidence was MODERATE — the confound was acknowledged but the test proceeded at that confidence level. Attribution claims from R1/R2 alone should have been rated LOW."
+      }
+    ],
+    "root_cause": "Accumulated-context benchmarks conflate context coherence with capability. When a model benefits from a detailed prior context window, the test measures 'capability + context' not 'capability'. This is a systematic bias that inflates scores for the model that goes second.",
+    "applies_to": "Any comparative benchmark or VS round that tests models sequentially on the same codebase. Capability attribution in general when test order isn't counterbalanced.",
+    "mitigations": [
+      "Every VS round with accumulated context must have a paired clean-context control round before any capability conclusions are drawn.",
+      "Attribution claims from non-counterbalanced tests are automatically capped at MODERATE confidence.",
+      "VS round design must state explicitly: 'accumulated context' vs 'clean context' and whether ordering is counterbalanced — this goes in the round spec before the test begins."
+    ]
   },
+  {
+    "id": "LESSON-0007",
+    "job_id": "MULTIDECK-VS-0007",
+    "created_at": "2026-05-04T10:30:00Z",
+    "status": "ratified",
+    "applies_to_tags": [
+      "local-model",
+      "tool-calling",
+      "modelfile",
+      "ollama",
+      "context-window",
+      "setup-verification"
+    ],
+    "matches_worktypes": [
+      "VS",
+      "FEAT",
+      "OQE"
+    ],
+    "what_happened": "VS R3 pre-test: qwen3-coder:30b-32k (the extended-context variant) emitted raw XML function call strings instead of structured tool API calls. The Ollama Modelfile for the :32k variant lacked the tool-calling template that the base :30b tag includes. The round had to switch to the base tag before testing could begin. Extended-context variants are not guaranteed to inherit all capabilities of their base.",
+    "noted_at_phase": "O",
+    "noted_at_gate": "CREATION",
+    "confidence_at_decision": "LOW",
+    "alternatives_considered": "(a) Use :32k extended context variant (chosen initially — larger context window desired); (b) Use base :30b tag (fallback, confirmed functional); (c) Manually patch the Modelfile to add tool-calling template to :32k. Chose (b) for speed; (c) is the durable fix.",
+    "oqe_path": false,
+    "criteria_passed": [],
+    "tenets_broken": [
+      {
+        "tenet": 2,
+        "how": "No criterion in the round setup required verification of tool-calling capability before the round began — the capability was assumed from the model family, not confirmed."
+      },
+      {
+        "tenet": 3,
+        "how": "Confidence that :32k would behave identically to :30b was assumed HIGH; the Modelfile difference was not checked."
+      }
+    ],
+    "root_cause": "Local model variant selection based on context window size without verifying that the variant inherits all capabilities (tool-calling, structured output) from its base. Extended-context Ollama variants may be re-quantized or re-templated independently of the base, losing features in the process.",
+    "applies_to": "Any task that selects a local Ollama model variant for an extended capability (context, quantization, instruct suffix). Tool-calling dependent workflows in particular.",
+    "mitigations": [
+      "Model selection for tool-calling workflows must include a capability pre-check: run a minimal tool-call probe before starting the main task. If it fails, fall back to the verified base tag.",
+      "VS round setup criteria must explicitly include 'tool-calling verified on selected model' as a CREATION gate criterion.",
+      "When pulling a non-base Ollama variant, inspect the Modelfile template section before use — verify it includes the tool-calling chat template from the base."
+    ]
+  },
+  {
+    "id": "LESSON-0008",
+    "job_id": "WS-FIX-0001",
+    "created_at": "2026-05-10T10:25:09.319824Z",
+    "status": "draft",
+    "applies_to_tags": [
+      "oqe-citations",
+      "linkable-citations",
+      "runtime-observation",
+      "job-creation",
+      "session-reference",
+      "standing-gate-regex"
+    ],
+    "matches_worktypes": [
+      "FIX",
+      "FEAT",
+      "OQE",
+      "INFRA"
+    ],
+    "what_happened": "When creating WS-FIX-0001 to track a screen-capture MCP bug discovered in-session, the author wrote criteria that cited the live observation context (\"per operator session 2026-05-10\", \"per the actual error output captured\", \"per System.Windows.Forms.Screen.AllScreens enumeration\") instead of citing the source file where the behavior lives or the §N rule that governs the test. Four of six criteria failed the standing-gate citation regex, which requires either a §N reference or a file with extension .md/.ts/.tsx/.js/.cjs/.mjs/.py/.json/.ps1/.bat. The job was caught at the standing gate moments after creation (compliance rate dropped from 94.1% to 92.8%) and patched in-place; without the standing scan it would have shipped uncited and triggered review-gate rejection downstream. The author had drafted the OQE 2.0 prompt block earlier in the same session warning explicitly about this exact pattern, and still missed it on first creation.",
+    "noted_at_phase": "COMPLETION",
+    "noted_at_gate": "STANDING",
+    "confidence_at_decision": "HIGH",
+    "alternatives_considered": "(a) Cite session as evidence (chosen on first pass; rejected by standing gate). (b) Cite source file path of the misbehaving component (chosen on patch — added screen-capture-mcp/dist/index.js to criteria 2, 4, 5). (c) Cite the OQE rule that defines the test grade (chosen on patch — added OQE_DISCIPLINE.md §4 and §11 to criteria 2, 3, 4, 5). The patch applied (b) and (c) together because runtime-observed defects need both: the source location proves WHERE the bug is, the §N reference proves WHY this test grade is the right one.",
+    "oqe_path": true,
+    "criteria_passed": [
+      {
+        "criterion": "WS-FIX-0001 contains 6 criteria with linkable citations after patch",
+        "evidence_strength": "STRONG"
+      },
+      {
+        "criterion": "Standing-gate scan returns workspace board to 0 non-compliant active",
+        "evidence_strength": "STRONG"
+      }
+    ],
+    "tenets_broken": [
+      {
+        "tenet": 5,
+        "how": "Criteria 2, 3, 4, 5 of WS-FIX-0001 referenced standards (\"per the tool's JSONSchema description\", \"per operator session 2026-05-10\", \"per System.Windows.Forms.Screen.AllScreens enumeration\") without naming a linkable file path or §N section. The standing-gate citation regex (CITATION_RX in scripts/oqe-standing-scan.py line 38) requires either §N or a file with a recognized extension; conversational references match neither."
+      }
+    ],
+    "root_cause": "When a criterion is born from a runtime observation made during the same session that creates the job, the author's natural impulse is to cite the observation context (\"per the error I just saw\", \"per the operator session\"). The session is real and verifiable to the author at write time, but it is invisible to every future reader and to the standing-gate regex. This class of mistake is structural: the author is conflating \"obvious to me right now\" with \"linkable from the artifact\". It will happen on any job whose criteria reference behaviors observed in the session that birthed the job, particularly bug-fix and incident-response jobs where the defect was just witnessed.",
+    "applies_to": "Any job (especially FIX and incident-response work) where criteria reference behaviors, errors, or environment facts that the author observed in-session rather than reading from a file. The risk is highest when the bug was just seen, the fix is being scoped quickly, and the author hasn't yet read the offending source.",
+    "mitigations": [
+      "When writing a criterion that references a runtime observation (error message, log line, environmental fact), immediately also cite the source file path where the misbehaving component lives. If you don't know the file path yet, that is itself a signal to read the source before finalizing the criterion. Pattern: \"...per <error signature> and per <file path>:<line> where <component> is constructed...\"",
+      "Every criterion must additionally cite the OQE_DISCIPLINE.md §N rule that defines the test grade for that criterion (e.g. §4 for evidence strength, §11 for evidence-criterion match, §13 for ID format). The §N citation is what tells the reviewer which rule is being applied; without it, the reviewer has to guess.",
+      "Before submitting any newly-created job, run the standing-gate scan (scripts/oqe-standing-scan.py) and check that the board's non-compliant count did not increase. If it did, the new job introduced the violation and must be patched before the job goes to review. This is a 5-second sanity check that catches T5 violations at creation time, not review time.",
+      "If a criterion legitimately cannot point to a file (e.g. the bug is in a closed-source binary or the source is not yet identified), the criterion must explicitly cite gaps_acknowledged with the reason and name the OQE §N rule that says \"insufficient citation\" is acceptable for this specific case. Silent uncited criteria are never acceptable."
+    ]
+  }
 ];
+
+// === Helpers below restored 2026-05-10 — were truncated by sync; required by lessons.js view ===
 
 window.LESSONS_BY_ID = Object.fromEntries(window.LESSONS.map(l => [l.id, l]));
 window.LESSONS_BY_JOB = window.LESSONS.reduce((m, l) => {
   (m[l.job_id] = m[l.job_id] || []).push(l);
   return m;
 }, {});
-
-// Stash mock lessons so the live adapter can swap back to them in mock mode
-// MULTI-FEAT-0067: criterion 4 — sample lessons live in mock mode only.
-window.MOCK_LESSONS = window.LESSONS;
 
 // Tenet break frequency over a set of lessons
 window.computeTenetCounts = function(lessons) {
@@ -352,26 +506,4 @@ window.matchLessonsToJob = function(job, opts) {
     .filter(s => s.score >= minScore)
     .sort((a, b) => b.score - a.score)
     .slice(0, limit);
-};
-
-// MULTI-FEAT-0067 criterion 6: score components must be inspectable for
-// debugging. window.debugMatcher(jobId) prints every lesson's component
-// breakdown for the given job — used from the browser console when a
-// surprising match (or non-match) needs to be explained. Read-only.
-window.debugMatcher = function (jobId) {
-  const job = (window.JOBS || []).find(j => j.id === jobId);
-  if (!job) {
-    console.warn("[matcher] no job found with id", jobId);
-    return [];
-  }
-  // includeAllStatuses + minScore=0 — show everything, including drafts +
-  // zero-score lessons so the operator can see WHY a lesson didn't match.
-  const all = window.matchLessonsToJob(job, { minScore: 0, limit: 9999, includeAllStatuses: true });
-  console.groupCollapsed("[matcher] " + jobId + " — " + all.length + " lessons scored");
-  all.forEach(m => {
-    const breakdown = m.why.map(r => `${r.kind}(+${r.weight})`).join(" + ") || "—";
-    console.log(`${m.lesson.id} score=${m.score.toFixed(2)} status=${m.lesson.status} :: ${breakdown}`);
-  });
-  console.groupEnd();
-  return all;
 };

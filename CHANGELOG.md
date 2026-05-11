@@ -14,6 +14,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.6.0] - 2026-05-11
+
+### Added
+
+- **Browser transport** (`BROWSER`) — fourth launcher transport opens a live Claude session inside the browser. No terminal emulator required. WebSocket bridges browser xterm.js to a host pseudo-TTY spawned via `bash -lc 'script -q /dev/null -c "claude ..."'` on Linux or `wsl.exe -d Ubuntu` on Windows. `dashboard/server.cjs` adds the `WebSocketServer` and the `/terminal/ws` upgrade handler; `dashboard/package.json` declares the `ws` runtime dependency.
+- **Multi-session tab management** — spawn arbitrary number of agents, each gets a tab in the terminal panel header with an independent close. `[ + NEW ]` returns to character select while keeping all sessions alive. `[ − MIN ]` hides the panel; a restore tab shows `[ ◈ N TERMINALS ACTIVE ]`.
+- **Matrix rain panel** — animated character stream beside each terminal, composites all active persona accent colors, persona portraits tile as watermarks. Density scales with session count.
+- **Terminal color theming** — xterm foreground, cursor, and ANSI color slots set to the persona's accent color at session init. The "SECURE CHANNEL ESTABLISHED" banner uses ANSI true-color (`\x1b[38;2;R;G;Bm`).
+- **Persona Builder** (`persona-wizard/`) — interactive CLI plus dashboard UI for authoring new personas. `persona-wizard/scripts/persona-wizard.py` walks through callsign, color, voice, scope, and writes the agent markdown and personas.json entry.
+- **Dashboard route consolidation** — live job board, terminal persistence across reloads, audio products routing, builder.html surface. `dashboard/server.cjs` is the single entry point for all routes; `dashboard/builder.html` provides the persona builder UI in-browser.
+- **`docs/BROWSER_TERMINAL.md`** — transport overview, multi-session tab semantics, matrix rain density formula, Tailscale remote access setup.
+- **Modular launcher** — `dashboard/launcher.html` split into seven JS modules under `dashboard/scripts/` and `dashboard/styles/launcher.css`. Load order preserves all cross-module function calls (globals, no ES module circular-dep risk).
+- **`deploy_string` / `local_deploy_string` / `vs_deploy_string`** fields on every persona in `personas/personas.json` — per-runtime activation prompts that the launcher sends to the spawned session.
+
+### Fixed
+
+- Radar view crash when a job has `null` `assigned_to`.
+- `dashboard/scripts/meeting.js` attendees field must be an array, guards every call site with `Array.isArray`.
+- `DISPATCH_STATE_DIR` is now trimmed to strip trailing whitespace from the env var value.
+- `dashboard/scripts/app.js` syntax error in job board view; `dashboard/data/live.js` normalize fallthrough on incomplete records.
+
+### Changed
+
+- Dashboard server listens on `0.0.0.0:3046` (configurable via `DISPATCH_PORT`) so any device on your Tailscale network can open the launcher. The spawned `claude` process always runs on the host where the dashboard runs.
+
+---
+
 ## [0.5.0] - 2026-05-02
 
 ### Added
