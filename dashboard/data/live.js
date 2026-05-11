@@ -130,7 +130,8 @@
       for (const [pid, board] of Object.entries(state["job-boards"])) {
         if (board && Array.isArray(board.jobs)) boards.push({ id: pid, board });
       }
-    } else if (state && state["job-board"] && Array.isArray(state["job-board"].jobs)) {
+    }
+    if (!boards.length && state && state["job-board"] && Array.isArray(state["job-board"].jobs)) {
       // Single board; infer project id from boundary_rule or fallback to 'workspace'.
       const inferred = inferProjectId(state["job-board"]) || sourceLabel || "workspace";
       boards.push({ id: inferred, board: state["job-board"] });
