@@ -50,15 +50,23 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
       docs/REVIEWER_LOG.md and is reachable from the editor in
       scripts/lessons.js (which already calls validateLesson()).
   -->
+  <script>
+    // The job board always starts in live mode. Any stored "mock" setting is
+    // cleared on load — the tweaks panel can still switch for the current session
+    // but the choice does not persist across page loads.
+    if (localStorage.getItem('mdk-data-mode') !== 'live') {
+      localStorage.setItem('mdk-data-mode', 'live');
+    }
+  </script>
   <script src="/data/jobs.js?v=5"></script>
   <script src="/data/lessons.js?v=3"></script>
   <script src="/scripts/lessons-validate.js?v=1"></script>
-  <script src="/data/live.js?v=3"></script>
+  <script src="/data/live.js?v=9"></script>
   <script src="/scripts/shell.js?v=8"></script>
   <script src="/scripts/views.js?v=8"></script>
   <script src="/scripts/lessons.js?v=3"></script>
   <script src="/scripts/patterns.js?v=2"></script>
   <script src="/scripts/meeting.js?v=1"></script>
-  <script src="/scripts/app.js?v=6"></script>
+  <script src="/scripts/app.js?v=8"></script>
 </body>
 </html>

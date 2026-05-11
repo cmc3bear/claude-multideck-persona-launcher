@@ -14,9 +14,18 @@
 
 (function () {
   const DEFAULTS = {
-    endpoint: localStorage.getItem("mdk-endpoint") || "http://localhost:3045/state.json",
+    endpoint: (() => {
+      const stored = localStorage.getItem("mdk-endpoint");
+      // Migrate stale localhost:3045 endpoint — 3046 is now the source default.
+      // Relative URL is port-agnostic and resolves against the dashboard's own origin.
+      if (stored && /^https?:\/\/localhost:3045\//.test(stored)) {
+        localStorage.removeItem("mdk-endpoint");
+        return "/state.json";
+      }
+      return stored || "/state.json";
+    })(),
     pollSeconds: Number(localStorage.getItem("mdk-poll")) || 15,
-    mode: localStorage.getItem("mdk-data-mode") || "mock",   // "mock" | "live"
+    mode: localStorage.getItem("mdk-data-mode") || "live",   // "mock" | "live"
   };
 
   // Claude API proxy — used by meeting.js rerunLive() to invoke agents server-side.
@@ -61,8 +70,26 @@
   function normalizeJob(raw, projectId) {
     const j = { ...raw };
     j.project = j.project || projectId || "default";
+    // Field aliases — some boards use `title`/`assigned`, the views expect
+    // `subject`/`assigned_to`. Alias before any view touches them.
+    if (!j.subject && j.title) j.subject = j.title;
+    if (!j.assigned_to && j.assigned) j.assigned_to = j.assigned;
+    // Hard defaults so views can't crash on a single malformed record.
+    if (typeof j.subject !== "string") j.subject = "(no subject)";
+    if (typeof j.id !== "string") j.id = String(j.id || "(no id)");
     j.priority = (j.priority || "P2").toUpperCase();
     j.status = (j.status || "open").toLowerCase();
+
+    // Remap external board status vocabularies to the board's canonical set.
+    // OQE JOB_BOARD.json uses: pending, in_progress, completed, cancelled
+    const STATUS_REMAP = {
+      pending:     "open",
+      in_progress: "accepted",
+      completed:   "closed",
+      cancelled:   "closed",
+      obe:         "closed",  // Overtaken By Events — treat as closed
+    };
+    if (STATUS_REMAP[j.status]) j.status = STATUS_REMAP[j.status];
 
     // Map repo schema → our richer schema where possible.
     if (!j.description && j.problem) j.description = j.problem;
@@ -235,15 +262,19 @@
       clearTimeout(timer);
       if (!res.ok) throw new Error("HTTP " + res.status);
       const state = await res.json();
-      const bundle = normalizeStateBundle(state, "live");
-      applyLive(bundle, LiveData.cfg.endpoint);
+      let bundle;
+      try { bundle = normalizeStateBundle(state, "live"); }
+      catch (e) { e.stage = "normalize"; throw e; }
+      try { applyLive(bundle, LiveData.cfg.endpoint); }
+      catch (e) { e.stage = "apply/render"; throw e; }
     } catch (e) {
       // MULTI-FEAT-0067 criterion 4: log a loud warning so silent fallback
       // can be detected in dev tools. Never substitute mock fixtures while
       // the operator is in live mode.
       console.warn(
-        "[live] /state.json fetch failed:", e.message,
-        "— remaining in live mode; explicit operator action required to swap to mock"
+        "[live] /state.json fetch failed [" + (e.stage || "fetch") + "]:", e.message,
+        "\nstack:", e.stack,
+        "\n— remaining in live mode; explicit operator action required to swap to mock"
       );
       if (LiveData.status !== "live") {
         // No prior good data yet — render empty live state with the error.
