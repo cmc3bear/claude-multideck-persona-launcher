@@ -12,7 +12,7 @@ const { renderJobBoardPage } = require('./job-board-page.cjs');
 // ============================================================
 const PORT = Number(process.env.DISPATCH_PORT) || 3046;
 const DISPATCH_ROOT = process.env.DISPATCH_ROOT || path.join(__dirname, '..');
-const STATE_DIR = process.env.DISPATCH_STATE_DIR || path.join(DISPATCH_ROOT, 'state');
+const STATE_DIR = (process.env.DISPATCH_STATE_DIR || path.join(DISPATCH_ROOT, 'state')).trim();
 const TTS_OUTPUT_DIR = process.env.DISPATCH_TTS_OUTPUT || path.join(DISPATCH_ROOT, 'tts-output');
 const PERSONAS_PATH = process.env.DISPATCH_PERSONAS_JSON || path.join(DISPATCH_ROOT, 'personas', 'personas.json');
 const LAUNCHER_HTML = path.join(__dirname, 'launcher.html');
