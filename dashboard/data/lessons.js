@@ -50,9 +50,8 @@ function lt(hoursAgo) {
   return new Date(Date.now() + hoursAgo * 3600e3).toISOString();
 }
 
-// Synced from canonical F:\03-INFRASTRUCTURE\dispatch-framework\state\lessons.json at 2026-05-10T10:44:47.548890Z
-// Source of truth: dispatch-framework/state/lessons.json
-// To re-sync: python F:\tmp\sync-lessons-mock-to-canonical.py
+// Mock data for the public demo dashboard, schema-aligned with state/lessons.json.
+// See docs/OQE_DISCIPLINE.md §11 and docs/REVIEWER_LOG.md §2 for field definitions.
 window.LESSONS = [
   {
     "id": "LESSON-0001",

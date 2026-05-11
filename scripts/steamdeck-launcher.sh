@@ -9,15 +9,18 @@
 #    2. Enter the distrobox container.
 #    3. Start the MultiDeck dashboard server in the background.
 #    4. Wait until the launcher endpoint responds.
-#    5. Open Firefox in kiosk mode pointed at the launcher.
+#    5. Open Chromium in kiosk mode pointed at the launcher.
 #    6. When the browser closes, shut the dashboard down cleanly.
 #
-#  Kiosk mode: Firefox --kiosk fullscreens the launcher. Comment-toggle the
+#  Kiosk mode: Chromium --kiosk fullscreens the launcher. Comment-toggle the
 #  gamescope wrapper at the bottom to integrate into Gaming Mode.
+#
+#  Chromium is used (not Firefox) because the dashboard relies on Web Speech,
+#  MediaRecorder, and Gamepad APIs which are most mature in Chromium.
 #
 #  Usage:
 #    ./scripts/steamdeck-launcher.sh
-#    ./scripts/steamdeck-launcher.sh --no-kiosk    # windowed Firefox
+#    ./scripts/steamdeck-launcher.sh --no-kiosk    # windowed Chromium
 #    ./scripts/steamdeck-launcher.sh --headless    # dashboard only, no browser
 # =====================================================
 
@@ -109,14 +112,41 @@ open_browser() {
   fi
 
   local url="http://localhost:$PORT/launcher"
-  local args=()
+  # Use a per-launch user-data-dir so we never collide with a prior chromium
+  # session and we can wipe state cleanly on next run.
+  local profile_dir="${HOME}/.cache/multideck/chromium-profile"
+  mkdir -p "$profile_dir"
+
+  # Common flags for kiosk-on-Deck:
+  #   --user-data-dir          isolated profile
+  #   --no-first-run           skip welcome flow
+  #   --noerrdialogs           do not show crash dialogs
+  #   --disable-pinch          touch screen, no accidental zoom
+  #   --overscroll-history-navigation=0  no swipe-back nav
+  #   --use-fake-ui-for-media-stream     auto-grant mic for STT
+  #   --autoplay-policy=no-user-gesture-required  audio feed plays without click
+  #   --enable-features=OverlayScrollbar
+  local common_args=(
+    "--user-data-dir=$profile_dir"
+    "--no-first-run"
+    "--noerrdialogs"
+    "--disable-pinch"
+    "--overscroll-history-navigation=0"
+    "--use-fake-ui-for-media-stream"
+    "--autoplay-policy=no-user-gesture-required"
+    "--enable-features=OverlayScrollbar"
+  )
+
+  local mode_args=()
   if [[ "$KIOSK" == true ]]; then
-    args+=(--kiosk)
+    mode_args+=("--kiosk" "--app=$url")
+  else
+    mode_args+=("$url")
   fi
 
-  log "Opening Firefox: $url"
-  # Firefox lives inside the distrobox container (installed by install-steamdeck.sh)
-  in_box "firefox ${args[*]} '$url'"
+  log "Opening Chromium: $url (kiosk=$KIOSK)"
+  # Chromium lives inside the distrobox container (installed by install-steamdeck.sh)
+  in_box "chromium ${common_args[*]} ${mode_args[*]}"
 }
 
 # ---------- main ----------

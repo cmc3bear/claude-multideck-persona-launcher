@@ -41,11 +41,13 @@ The script will:
 
 1. Prompt for your sudo password to install `distrobox` and `podman` via pacman (one-time, with `steamos-readonly disable` and re-enable around it).
 2. Pull the Arch toolbox image and create a container named `multideck-box`.
-3. Install nodejs, npm, tmux, ffmpeg, python, git, firefox, jq inside the container.
+3. Install nodejs, npm, tmux, ffmpeg, python, git, chromium, jq inside the container. Chromium is used (not Firefox) because the dashboard relies on Web Speech, MediaRecorder, and Gamepad APIs which are most mature in Chromium.
 4. Install the Claude Code CLI globally in the container's user-scope npm prefix.
-5. Create the Kokoro venv at `~/.dispatch-kokoro-venv` with the same pinned package versions used by the Windows and WSL deployments.
-6. Write `~/.config/multideck/env` with the framework environment variables.
-7. Generate `~/.local/share/applications/multideck.desktop`.
+5. Run `npm install` for `dashboard/` so the `ws` package powers the browser-terminal WebSocket.
+6. Create the Kokoro venv at `~/.dispatch-kokoro-venv` with the same pinned package versions used by the Windows and WSL deployments.
+7. Build `whisper.cpp` at `~/.dispatch-whisper/` for local mic-to-text. Pinned to a tagged release; CPU-only on Zen 2 cores.
+8. Write `~/.config/multideck/env` with the framework environment variables, including `DISPATCH_WHISPER_BIN` and `DISPATCH_WHISPER_MODEL`.
+9. Generate `~/.local/share/applications/multideck.desktop`.
 
 Re-run anytime, the script is idempotent. Pass `--verify` to fail loudly on drift, `--force` to rebuild the Kokoro venv, `--overlay path/to/overlay.zip` to layer personal content over the clean clone.
 
