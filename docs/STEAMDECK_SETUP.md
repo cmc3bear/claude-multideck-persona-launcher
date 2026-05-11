@@ -157,6 +157,15 @@ The installer adds the PATH export to `~/.bashrc`, so new shells inside the box 
 
 ---
 
+
+## Browser terminal on the deck
+
+The dashboard ships with a browser-terminal transport (`BROWSER` in the launcher). On the deck this gives you a full Claude session inside Firefox itself, no Konsole window needed. Pick `BROWSER` in the launcher, hit DEPLOY, and the session opens as a tab in the dashboard UI.
+
+The installer wires this up automatically: `npm install` inside the container pulls the `ws` package that powers the WebSocket bridge, and the host pty is spawned via `bash -lc 'script -q /dev/null -c "claude ..."'` so xterm.js gets a real pseudo-TTY.
+
+Tailscale users: the dashboard binds `0.0.0.0:3046`, so any device on your Tailscale network can open the launcher and run a browser terminal that executes on the deck. Phone, laptop, tablet, all work.
+
 ## Uninstall
 
 ```bash

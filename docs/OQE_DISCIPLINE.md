@@ -479,19 +479,18 @@ WORKTYPE  Kind of work being done (uppercase, short code)
 
 Examples:
 - `MULTI-OQE-0001` — First OQE work item in MultiDeck
-- `WS-INFRA-0042` — Infrastructure fix #42 in the Dispatch workspace
-- `PLANEX-DOC-0007` — Documentation update in Planex-Core
+- `WS-INFRA-0042` — Infrastructure fix #42 in your workspace
+- `PROJ-DOC-0007` — Documentation update in a connected project
 
 ### PROJECT Codes
 
 | Code | Project |
 |------|---------|
-| `WS` | Workspace / Dispatch infrastructure |
+| `WS` | Workspace / dispatch infrastructure |
 | `MULTI` | MultiDeck |
-| `PLANEX` | Planex-Core |
-| `OQEL` | OQE-Labs signals intelligence platform |
+| `PROJ` | Example placeholder for any connected project |
 
-New projects register a code before their first job. No ad-hoc codes.
+Pick a short uppercase code (2 to 10 chars) per project before its first job. No ad-hoc codes.
 
 ### WORKTYPE Codes
 

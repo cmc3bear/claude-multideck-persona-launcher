@@ -165,6 +165,13 @@ ensure_claude_code() {
   ok "Claude Code CLI installed (run `claude login` inside the box on first use)"
 }
 
+# ---------- step 5b: dashboard npm deps (browser terminal) ----------
+ensure_dashboard_deps() {
+  log "Installing dashboard runtime deps (ws for browser terminal)"
+  in_box "cd '$MULTIDECK_ROOT/dashboard' && npm install --omit=dev"
+  ok "dashboard deps installed"
+}
+
 # ---------- step 6: Kokoro venv ----------
 KOKORO_VENV="${DISPATCH_KOKORO_VENV:-$HOME/.dispatch-kokoro-venv}"
 
@@ -292,6 +299,7 @@ ensure_container_engine
 ensure_box
 ensure_runtime_packages
 ensure_claude_code
+ensure_dashboard_deps
 ensure_kokoro_venv
 write_env_file
 write_desktop_entry
