@@ -52,7 +52,7 @@ function relTime(iso) {
 }
 
 function personaOf(key) {
-  return PERSONAS[key] || { callsign: key, color: "#8B94AE", scope: "" };
+  return PERSONAS[key] || { callsign: key || "??", color: "#8B94AE", scope: "" };
 }
 
 function filteredJobs() {
@@ -102,9 +102,9 @@ function renderTopbar() {
     : `${ld.cfg && ld.cfg.mode === "live" ? "Polling" : "Using mock data"} · ${ld.cfg && ld.cfg.endpoint}\nLast: ${fetchedAgo} ago`;
 
   // Shortcuts → server routes (resolved against current endpoint host if live)
-  const ep = (window.LiveData && window.LiveData.cfg && window.LiveData.cfg.endpoint) || "http://localhost:3045/state.json";
-  let host = "http://localhost:3045";
-  try { const u = new URL(ep); host = u.origin; } catch {}
+  const ep = (window.LiveData && window.LiveData.cfg && window.LiveData.cfg.endpoint) || "/state.json";
+  let host = window.location.origin;
+  try { const u = new URL(ep, window.location.href); host = u.origin; } catch {}
   const shortcuts = [
     { l: "JOBS",      h: host + "/jobs",       active: true },
     { l: "LAUNCHER",  h: host + "/launcher" },
