@@ -8,7 +8,7 @@
 #  What it does:
 #    1. Ensures distrobox + podman are available (one-time pacman if missing).
 #    2. Creates an Arch container named 'multideck-box' with persistent $HOME.
-#    3. Installs nodejs/npm/tmux/ffmpeg/python/git/firefox inside the box.
+#    3. Installs nodejs/npm/tmux/ffmpeg/python/git/chromium inside the box.
 #    4. Installs Claude Code CLI globally inside the box.
 #    5. Creates the Kokoro venv at $DISPATCH_KOKORO_VENV with pinned versions.
 #    6. Writes ~/.config/multideck/env with framework env vars.
@@ -67,6 +67,10 @@ PIN_TORCH="2.11.0"
 PIN_SOUNDFILE="0.13.1"
 PIN_NUMPY="2.4.4"
 PIN_ESPEAKNG_LOADER="0.2.4"
+
+# ---------- pinned whisper.cpp ----------
+PIN_WHISPER_TAG="v1.7.4"
+WHISPER_MODEL="${DISPATCH_WHISPER_MODEL_NAME:-base.en}"
 
 # ---------- helpers ----------
 log()  { printf '\033[1;36m[multideck]\033[0m %s\n' "$*"; }
@@ -141,7 +145,7 @@ ensure_runtime_packages() {
   log "Installing runtime packages inside container"
   in_box 'sudo pacman -Sy --noconfirm --needed \
     nodejs npm tmux ffmpeg python python-pip git base-devel \
-    firefox jq curl wget xdg-utils'
+    chromium jq curl wget xdg-utils'
   ok "runtime packages installed"
 }
 
@@ -163,6 +167,13 @@ ensure_claude_code() {
   in_box 'grep -q "npm-global/bin" ~/.bashrc || echo "export PATH=\$HOME/.npm-global/bin:\$PATH" >> ~/.bashrc'
   in_box 'export PATH=$HOME/.npm-global/bin:$PATH && npm install -g @anthropic-ai/claude-code'
   ok "Claude Code CLI installed (run `claude login` inside the box on first use)"
+}
+
+# ---------- step 5b: dashboard npm deps (browser terminal needs ws) ----------
+ensure_dashboard_deps() {
+  log "Installing dashboard runtime deps (ws for browser terminal)"
+  in_box "cd '$MULTIDECK_ROOT/dashboard' && npm install --omit=dev"
+  ok "dashboard deps installed"
 }
 
 # ---------- step 6: Kokoro venv ----------
@@ -219,11 +230,71 @@ ensure_kokoro_venv() {
   ok "Kokoro venv ready"
 }
 
+# ---------- step 6b: whisper.cpp (local STT for mic input on the Deck) ----------
+WHISPER_ROOT="${DISPATCH_WHISPER_ROOT:-$HOME/.dispatch-whisper}"
+WHISPER_BIN_CANDIDATES=("$WHISPER_ROOT/main" "$WHISPER_ROOT/build/bin/whisper-cli")
+
+resolve_whisper_bin() {
+  for cand in "${WHISPER_BIN_CANDIDATES[@]}"; do
+    if [[ -x "$cand" ]]; then
+      echo "$cand"
+      return 0
+    fi
+  done
+  return 1
+}
+
+verify_whisper() {
+  local bin
+  bin="$(resolve_whisper_bin)" || { echo "  whisper: binary missing"; return 1; }
+  local model="$WHISPER_ROOT/models/ggml-${WHISPER_MODEL}.bin"
+  [[ -f "$model" ]] || { echo "  whisper: model ggml-${WHISPER_MODEL}.bin missing"; return 1; }
+  echo "  whisper: bin=$bin  model=$model"
+}
+
+ensure_whisper() {
+  if [[ -d "$WHISPER_ROOT" && "$FORCE" == false ]]; then
+    log "Verifying existing whisper.cpp at $WHISPER_ROOT"
+    if verify_whisper; then
+      ok "whisper.cpp ready (use --force to rebuild)"
+      return
+    fi
+    warn "whisper.cpp incomplete, repairing"
+  fi
+
+  if [[ "$FORCE" == true && -d "$WHISPER_ROOT" ]]; then
+    log "Removing existing whisper.cpp install"
+    rm -rf "$WHISPER_ROOT"
+  fi
+
+  if [[ ! -d "$WHISPER_ROOT/.git" ]]; then
+    log "Cloning whisper.cpp ($PIN_WHISPER_TAG) to $WHISPER_ROOT"
+    in_box "git clone --depth 1 --branch '$PIN_WHISPER_TAG' \
+      https://github.com/ggerganov/whisper.cpp.git '$WHISPER_ROOT'"
+  fi
+
+  log "Building whisper.cpp (CPU only, Zen 2)"
+  in_box "cd '$WHISPER_ROOT' && make -j\$(nproc) 2>&1 | tail -n 5"
+
+  local model_path="$WHISPER_ROOT/models/ggml-${WHISPER_MODEL}.bin"
+  if [[ ! -f "$model_path" ]]; then
+    log "Downloading whisper model: $WHISPER_MODEL"
+    in_box "cd '$WHISPER_ROOT' && bash ./models/download-ggml-model.sh '$WHISPER_MODEL'"
+  fi
+
+  verify_whisper || fail "whisper.cpp install verification failed"
+  ok "whisper.cpp ready"
+}
+
 # ---------- step 7: env file ----------
 write_env_file() {
   local env_dir="$HOME/.config/multideck"
   local env_file="$env_dir/env"
   mkdir -p "$env_dir"
+
+  local whisper_bin
+  whisper_bin="$(resolve_whisper_bin 2>/dev/null || echo "$WHISPER_ROOT/main")"
+  local whisper_model="$WHISPER_ROOT/models/ggml-${WHISPER_MODEL}.bin"
 
   log "Writing $env_file"
   cat > "$env_file" <<EOF
@@ -232,6 +303,8 @@ write_env_file() {
 export DISPATCH_ROOT="$MULTIDECK_ROOT"
 export DISPATCH_PORT="${DISPATCH_PORT:-3046}"
 export DISPATCH_KOKORO_VENV="$KOKORO_VENV"
+export DISPATCH_WHISPER_BIN="$whisper_bin"
+export DISPATCH_WHISPER_MODEL="$whisper_model"
 export DISPATCH_LAUNCHER_TRANSPORT="tmux"
 export DISPATCH_TMUX_SESSION="multideck"
 export DISPATCH_CLAUDE_BIN="claude"
@@ -262,6 +335,61 @@ EOF
   ok "desktop entry written"
 }
 
+# ---------- step 8b: wire PreToolUse hook into Claude Code settings.json ----------
+# The hook bridges Claude's AskUserQuestion tool to the dashboard's glyph
+# modal. Idempotent: if a hook with matcher "AskUserQuestion" pointing at this
+# script is already present, the script does nothing.
+ensure_claude_hook() {
+  local hook_path="$MULTIDECK_ROOT/hooks/dashboard-question-bridge.py"
+  [[ -f "$hook_path" ]] || fail "hook script missing: $hook_path"
+
+  log "Wiring PreToolUse hook into ~/.claude/settings.json"
+  # Run the Python merge inside the box so it uses the same python3 the hook
+  # itself will use at runtime, and so the home path inside the container
+  # matches the install location.
+  in_box "python3 - <<'PY'
+import json, os
+from pathlib import Path
+
+settings_path = Path.home() / '.claude' / 'settings.json'
+settings_path.parent.mkdir(parents=True, exist_ok=True)
+
+if settings_path.exists():
+    try:
+        data = json.loads(settings_path.read_text() or '{}')
+    except Exception:
+        data = {}
+else:
+    data = {}
+
+hooks = data.setdefault('hooks', {})
+pre = hooks.setdefault('PreToolUse', [])
+
+hook_cmd = 'python3 ${hook_path}'
+already = False
+for entry in pre:
+    if entry.get('matcher') == 'AskUserQuestion':
+        for h in entry.get('hooks', []):
+            if h.get('command') == hook_cmd:
+                already = True
+                break
+        if not already:
+            entry.setdefault('hooks', []).append({'type': 'command', 'command': hook_cmd})
+            already = True
+        break
+
+if not already:
+    pre.append({
+        'matcher': 'AskUserQuestion',
+        'hooks': [{'type': 'command', 'command': hook_cmd}],
+    })
+
+settings_path.write_text(json.dumps(data, indent=2))
+print(f'wrote {settings_path}')
+PY"
+  ok "PreToolUse hook wired"
+}
+
 # ---------- step 9: optional personal overlay ----------
 apply_overlay() {
   [[ -z "$OVERLAY" ]] && return
@@ -282,7 +410,9 @@ if [[ "$VERIFY_ONLY" == true ]]; then
   in_box 'command -v claude >/dev/null 2>&1' || fail "claude CLI missing inside box"
   in_box 'command -v node >/dev/null 2>&1' || fail "node missing inside box"
   in_box 'command -v ffplay >/dev/null 2>&1' || fail "ffplay missing inside box"
+  in_box 'command -v chromium >/dev/null 2>&1' || fail "chromium missing inside box"
   verify_kokoro || fail "Kokoro venv drift"
+  verify_whisper || fail "whisper.cpp not ready"
   ok "All checks passed."
   exit 0
 fi
@@ -292,7 +422,10 @@ ensure_container_engine
 ensure_box
 ensure_runtime_packages
 ensure_claude_code
+ensure_dashboard_deps
 ensure_kokoro_venv
+ensure_whisper
+ensure_claude_hook
 write_env_file
 write_desktop_entry
 apply_overlay

@@ -29,7 +29,7 @@ function escapeHtml(s) {
 
   const tagLike = (j, kw) =>
     (j.tags||[]).some(t => t.toLowerCase().includes(kw)) ||
-    j.subject.toLowerCase().includes(kw);
+    (j.subject||'').toLowerCase().includes(kw);
 
   JOBS.forEach(job => {
     const active = job.status !== "closed";
@@ -180,7 +180,7 @@ function phaseEnteredAt(j) {
 
 function renderRadarView(root) {
   const jobs = filteredJobs();
-  const agents = [...new Set(jobs.map(j => j.assigned_to))]
+  const agents = [...new Set(jobs.map(j => j.assigned_to).filter(Boolean))]
     .sort((a,b) => (JOBS.filter(j=>j.assigned_to===b && j.status!=="closed").length)
                  - (JOBS.filter(j=>j.assigned_to===a && j.status!=="closed").length));
 
@@ -350,7 +350,7 @@ function renderClusterView(root) {
     if (depth[id] !== undefined) return depth[id];
     if (stack.has(id)) return 0; // cycle guard
     stack.add(id);
-    const ins = incoming[id];
+    const ins = incoming[id] || [];
     if (!ins.length) { depth[id] = 0; return 0; }
     let d = 0;
     ins.forEach(b => { d = Math.max(d, computeDepth(b, stack) + 1); });
@@ -374,8 +374,8 @@ function renderClusterView(root) {
   layerKeys.forEach(d => {
     layers[d].sort((a,b) =>
       (prioRank[a.priority]-prioRank[b.priority]) ||
-      (outgoing[b.id].length - outgoing[a.id].length) ||
-      a.id.localeCompare(b.id)
+      ((outgoing[b.id]?.length || 0) - (outgoing[a.id]?.length || 0)) ||
+      String(a.id).localeCompare(String(b.id))
     );
   });
 
@@ -383,7 +383,7 @@ function renderClusterView(root) {
   // out so they don't pollute the "ROOTS" column with meaningless stacks.
   const isolatedSet = new Set();
   layers[0] = (layers[0] || []).filter(j => {
-    if (outgoing[j.id].length === 0) { isolatedSet.add(j.id); return false; }
+    if ((outgoing[j.id]?.length || 0) === 0) { isolatedSet.add(j.id); return false; }
     return true;
   });
   const isolated = jobs.filter(j => isolatedSet.has(j.id));
@@ -539,7 +539,7 @@ function renderClusterView(root) {
         <span class="dn-id">#${j.id}</span>
         <span class="dn-agent" title="${escapeHtml(p.callsign)}" style="background:${p.color}"></span>
       </div>
-      <div class="dn-sub">${j.subject.length>52?escapeHtml(j.subject.slice(0,50))+'…':escapeHtml(j.subject)}</div>
+      <div class="dn-sub">${(j.subject||'').length>52?escapeHtml((j.subject||'').slice(0,50))+'…':escapeHtml(j.subject||'')}</div>
       <div class="dn-foot">
         <span class="dn-status">${statusLabel}</span>
         ${blockedByCount ? `<span class="dn-count blocked-by" title="${blockedByCount} blocker${blockedByCount===1?'':'s'}">◀ ${blockedByCount}</span>` : ''}
@@ -567,7 +567,7 @@ function renderClusterView(root) {
           <span class="dn-id">#${j.id}</span>
           <span class="dn-agent" style="background:${p.color}"></span>
         </div>
-        <div class="dn-sub">${j.subject.length>52?escapeHtml(j.subject.slice(0,50))+'…':escapeHtml(j.subject)}</div>
+        <div class="dn-sub">${(j.subject||'').length>52?escapeHtml((j.subject||'').slice(0,50))+'…':escapeHtml(j.subject||'')}</div>
         <div class="dn-foot"><span class="dn-status">${statusLabel}</span></div>
       `;
       isoGrid.appendChild(el);

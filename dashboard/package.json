@@ -1,6 +1,6 @@
 {
   "name": "multideck-dashboard",
-  "version": "0.1.0",
+  "version": "0.6.0",
   "description": "MultiDeck Framework dashboard server",
   "main": "server.cjs",
   "scripts": {
@@ -8,6 +8,9 @@
   },
   "engines": {
     "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
   },
   "author": "",
   "license": "MIT"

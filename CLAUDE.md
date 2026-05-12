@@ -133,7 +133,7 @@ When you are editing MultiDeck (as opposed to using it for another project), her
 
 **Adding a doc:** new markdown file in `docs/`. Reference it from README.md's "Further reading" or from another doc that groups it. Follow the existing tone — technical but readable, code examples where relevant, no marketing fluff.
 
-**Testing changes locally:** run `node dashboard/server.cjs`. The dashboard serves on port 3045 (configurable via `DISPATCH_PORT`). Visit `http://localhost:3045/launcher` to see the launcher, `/audio-feed` for the audio feed, `/` for the main dashboard.
+**Testing changes locally:** run `node dashboard/server.cjs`. The dashboard serves on port 3046 (configurable via `DISPATCH_PORT`). Visit `http://localhost:3046/launcher` to see the launcher, `/audio-feed` for the audio feed, `/` for the main dashboard.
 
 **Pushing to the public repo:** the repo is `github.com/cmc3bear/claude-multideck-persona-launcher`. Commit with a conventional-commit-style message (`feat:`, `fix:`, `docs:`, `chore:`, etc.). Don't commit runtime state files (`state/*.json` except templates), `tts-output/*.mp3`, `voice-config-*.json`, or anything matching `.internal-*` — those are all in `.gitignore` already.
 
@@ -199,7 +199,7 @@ MultiDeck reads configuration from environment variables to avoid hardcoded path
 
 | Variable | Purpose | Default |
 |---|---|---|
-| `DISPATCH_PORT` | Dashboard HTTP port | `3045` |
+| `DISPATCH_PORT` | Dashboard HTTP port. Default is `3046`. (Port 3045 was the original default but Windows `iphlpsvc` holds it on some hosts; 3046 avoids that conflict.) | `3046` |
 | `DISPATCH_ROOT` | Framework root directory | `..` relative to dashboard/ |
 | `DISPATCH_STATE_DIR` | Runtime state JSON directory | `$DISPATCH_ROOT/state` |
 | `DISPATCH_PERSONAS_JSON` | Path to personas registry | `$DISPATCH_ROOT/personas/personas.json` |

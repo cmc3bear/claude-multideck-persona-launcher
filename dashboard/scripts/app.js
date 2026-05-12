@@ -1,5 +1,19 @@
 // Main app — wires shell, tweaks, drawer, and view switching.
 
+// Local persona registry — populated from /launcher/personas at boot.
+// Used to disable LAUNCH AGENT for jobs assigned to a non-local persona
+// (e.g. external boards like OQE that reference personas this dispatch
+// framework instance doesn't define).
+window.LAUNCHABLE_PERSONAS = window.LAUNCHABLE_PERSONAS || new Set();
+fetch('/launcher/personas')
+  .then(r => r.ok ? r.json() : null)
+  .then(data => {
+    if (data && data.personas) {
+      window.LAUNCHABLE_PERSONAS = new Set(Object.keys(data.personas).map(k => k.toLowerCase()));
+    }
+  })
+  .catch(() => { /* leave empty; LAUNCH AGENT stays disabled until the registry loads */ });
+
 function escapeHtml(s) {
   return String(s || '').replace(/[&<>"']/g, m => ({
     '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
@@ -52,10 +66,19 @@ function openDrawer(id) {
       ${j.progress !== undefined && j.status!=="closed" ? `<dt>Progress</dt><dd>${Math.round(j.progress*100)}%</dd>` : ""}
     </dl>
 
-    ${j.status !== 'closed' ? `<div class="label">ACTIONS</div>
-    <div style="margin-bottom:12px">
-      <button class="drawer-action-btn" data-drawer-meeting="${j.id}">START MEETING</button>
-    </div>` : ''}
+    ${j.status !== 'closed' ? (() => {
+      const personaKey = (j.assigned_to || '').toLowerCase();
+      const launchable = personaKey && window.LAUNCHABLE_PERSONAS && window.LAUNCHABLE_PERSONAS.has(personaKey);
+      const launchBtn = launchable
+        ? `<button class="drawer-action-btn" data-drawer-launch="${escapeHtml(j.id)}" data-persona="${escapeHtml(personaKey)}" title="Spawn ${escapeHtml(p.callsign)} with this job as context">LAUNCH AGENT</button>`
+        : `<button class="drawer-action-btn" disabled title="${personaKey ? "Persona " + escapeHtml(personaKey) + " is not in this instance's personas.json — cannot launch locally" : "No assignee — cannot launch"}" style="opacity:0.45;cursor:not-allowed">LAUNCH AGENT${personaKey ? ' (not local)' : ''}</button>`;
+      return `<div class="label">ACTIONS</div>
+    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+      ${launchBtn}
+      <button class="drawer-action-btn" data-drawer-meeting="${escapeHtml(j.id)}">START MEETING</button>
+    </div>
+    <div id="launch-feedback-${escapeHtml(j.id)}" style="font-size:11px;margin-bottom:8px;display:none"></div>`;
+    })() : ''}
 
     <div class="label">TIMELINE</div>
     <div class="timeline">
@@ -67,6 +90,41 @@ function openDrawer(id) {
   `;
   document.getElementById("drawer").setAttribute("data-on","true");
   document.getElementById("backdrop").setAttribute("data-on","true");
+
+  // Wire Launch Agent button
+  body.querySelectorAll('[data-drawer-launch]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const jid = btn.getAttribute('data-drawer-launch');
+      const personaKey = btn.getAttribute('data-persona');
+      const fb = document.getElementById('launch-feedback-' + jid);
+      const job = JOBS.find(x => x.id === jid);
+      if (!personaKey) return;
+      btn.disabled = true;
+      btn.textContent = 'LAUNCHING...';
+      if (fb) { fb.style.display = 'none'; }
+      try {
+        const prompt = job ? `check tasks (job: ${job.id} — ${job.subject})` : '';
+        const r = await fetch('/launcher/launch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ persona: personaKey, prompt }),
+        });
+        const data = await r.json();
+        if (r.ok && data.ok) {
+          btn.textContent = 'LAUNCHED ✓';
+          if (fb) { fb.style.color = 'var(--pass,#00FFCC)'; fb.textContent = data.callsign + ' deployed'; fb.style.display = 'block'; }
+        } else {
+          btn.textContent = 'LAUNCH AGENT';
+          btn.disabled = false;
+          if (fb) { fb.style.color = 'var(--p0,#FF3B6E)'; fb.textContent = data.error || 'launch failed'; fb.style.display = 'block'; }
+        }
+      } catch (e) {
+        btn.textContent = 'LAUNCH AGENT';
+        btn.disabled = false;
+        if (fb) { fb.style.color = 'var(--p0,#FF3B6E)'; fb.textContent = e.message; fb.style.display = 'block'; }
+      }
+    });
+  });
 
   // Wire Start Meeting button
   body.querySelectorAll('[data-drawer-meeting]').forEach(btn => {
@@ -241,7 +299,7 @@ function renderTweaks() {
     </div>
     <div class="tweak-row tweak-stack">
       <span>ENDPOINT</span>
-      <input id="tweak-endpoint" value="${(window.LiveData&&window.LiveData.cfg.endpoint)||''}" placeholder="http://localhost:3045/state.json" />
+      <input id="tweak-endpoint" value="${(window.LiveData&&window.LiveData.cfg.endpoint)||''}" placeholder="/state.json (relative — port-agnostic)" />
     </div>
     <div class="tweak-row">
       <span>POLL · ${(window.LiveData&&window.LiveData.cfg.pollSeconds)||15}s</span>

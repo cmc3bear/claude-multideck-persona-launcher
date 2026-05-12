@@ -9,8 +9,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Steam Deck support** — `scripts/install-steamdeck.sh` and `scripts/steamdeck-launcher.sh` install MultiDeck into a distrobox Arch container so SteamOS's read-only root is never touched. The launcher script opens the dashboard in Firefox kiosk mode, suitable for adding to Steam as a Non-Steam Game shortcut. Pinned Kokoro versions match `install-wsl-kokoro-venv.sh`. Idempotent; supports `--force`, `--verify`, and `--overlay <zip>` for layering personal personas/state over the clean clone.
-- **`docs/STEAMDECK_SETUP.md`** — install walkthrough, Steam shortcut setup, personal-content overlay protocol, troubleshooting for audio routing, port conflicts, post-SteamOS-update container recovery, and a Gaming Mode integration note.
+- **Steam Deck support** — `scripts/install-steamdeck.sh` and `scripts/steamdeck-launcher.sh` install MultiDeck into a distrobox Arch container so SteamOS's read-only root is never touched. The launcher script opens the dashboard in Chromium kiosk mode (`--kiosk --app=URL` with isolated `--user-data-dir`, `--use-fake-ui-for-media-stream` for STT mic, `--disable-pinch` and `--overscroll-history-navigation=0` for touchscreen), suitable for adding to Steam as a Non-Steam Game shortcut. Pinned Kokoro versions match `install-wsl-kokoro-venv.sh`. Idempotent; supports `--force`, `--verify`, and `--overlay <zip>` for layering personal personas/state over the clean clone.
+- **`docs/STEAMDECK_SETUP.md`** — install walkthrough, Steam shortcut setup, personal-content overlay protocol, troubleshooting for audio routing, port conflicts, post-SteamOS-update container recovery, a Gaming Mode integration note, a Controls table mapping gamepad input to launcher actions, and a Voice Input (STT) section.
+- **Local STT via whisper.cpp** — `install-steamdeck.sh` builds `whisper.cpp` (pinned `v1.7.4`) inside the distrobox container with the `base.en` model and writes `DISPATCH_WHISPER_BIN` + `DISPATCH_WHISPER_MODEL` into the env file. New `POST /stt/transcribe` route on the dashboard accepts a raw audio body (typically `audio/webm;opus` from `MediaRecorder`), transcodes via ffmpeg, and runs whisper.cpp to return `{text}`.
+- **Push-to-talk mic in the terminal panel** — `dashboard/scripts/launcher-stt.js` plus the new `[ ◉ MIC ]` button in the terminal header. Click to toggle, or hold gamepad L1 for push-to-talk. Transcribed text is injected into the active xterm.js session as if typed.
+- **Web Gamepad API input layer** — `dashboard/scripts/launcher-gamepad.js` polls `navigator.getGamepads()` at 60 Hz and dispatches high-level `multideck:gamepad:*` `CustomEvent`s (`nav`, `accept`, `cancel`, `option`, `shoulder`, `ptt-down`, `ptt-up`). Standard mapping; dpad and left stick both emit `nav`; A/B/X/Y emit `option` with index 0–3. PTT latches L1.
+- **AskUserQuestion → glyph modal bridge** — a PreToolUse Claude Code hook at `hooks/dashboard-question-bridge.py` intercepts `AskUserQuestion` tool calls. It writes the question payload to `$DISPATCH_STATE_DIR/pending-questions/<session_id>.json`, polls 200 ms for the answer file (60 s timeout), and returns `permissionDecision=allow` with the operator's answers so Claude never renders its native CLI prompt. On timeout it returns `deny` with a graceful message. The dashboard's new `GET /events/questions` SSE channel notifies any subscribed browser tab; the new `POST /questions/:sessionId/answer` route closes the loop. `dashboard/scripts/launcher-question-modal.js` renders a glyph-mapped modal (A/B/X/Y → option 0/1/2/3 with green/red/blue/yellow glyphs) that walks multi-question payloads, supports multiSelect via R1 confirm, and falls back gracefully to mouse/keyboard for desktop.
+- **Steam Deck CSS pass** — new `@media (max-width: 1280px) and (max-height: 800px)` block in `dashboard/styles/launcher.css` bumps touch targets to ≥44 px, enlarges the terminal font to 16 px for arm's-length reading, and tunes modal padding for the 7" panel.
+- **Installer auto-wires the hook** — `ensure_claude_hook` step in `install-steamdeck.sh` idempotently merges a PreToolUse matcher for `AskUserQuestion` into `~/.claude/settings.json` so the bridge runs out-of-the-box after install.
+
+---
+
+## [0.6.0] - 2026-05-11
+
+### Added
+
+- **Browser transport** (`BROWSER`) — fourth launcher transport opens a live Claude session inside the browser. No terminal emulator required. WebSocket bridges browser xterm.js to a host pseudo-TTY spawned via `bash -lc 'script -q /dev/null -c "claude ..."'` on Linux or `wsl.exe -d Ubuntu` on Windows. `dashboard/server.cjs` adds the `WebSocketServer` and the `/terminal/ws` upgrade handler; `dashboard/package.json` declares the `ws` runtime dependency.
+- **Multi-session tab management** — spawn arbitrary number of agents, each gets a tab in the terminal panel header with an independent close. `[ + NEW ]` returns to character select while keeping all sessions alive. `[ − MIN ]` hides the panel; a restore tab shows `[ ◈ N TERMINALS ACTIVE ]`.
+- **Matrix rain panel** — animated character stream beside each terminal, composites all active persona accent colors, persona portraits tile as watermarks. Density scales with session count.
+- **Terminal color theming** — xterm foreground, cursor, and ANSI color slots set to the persona's accent color at session init. The "SECURE CHANNEL ESTABLISHED" banner uses ANSI true-color (`\x1b[38;2;R;G;Bm`).
+- **Persona Builder** (`persona-wizard/`) — interactive CLI plus dashboard UI for authoring new personas. `persona-wizard/scripts/persona-wizard.py` walks through callsign, color, voice, scope, and writes the agent markdown and personas.json entry.
+- **Dashboard route consolidation** — live job board, terminal persistence across reloads, audio products routing, builder.html surface. `dashboard/server.cjs` is the single entry point for all routes; `dashboard/builder.html` provides the persona builder UI in-browser.
+- **`docs/BROWSER_TERMINAL.md`** — transport overview, multi-session tab semantics, matrix rain density formula, Tailscale remote access setup.
+- **Modular launcher** — `dashboard/launcher.html` split into seven JS modules under `dashboard/scripts/` and `dashboard/styles/launcher.css`. Load order preserves all cross-module function calls (globals, no ES module circular-dep risk).
+- **`deploy_string` / `local_deploy_string` / `vs_deploy_string`** fields on every persona in `personas/personas.json` — per-runtime activation prompts that the launcher sends to the spawned session.
+
+### Fixed
+
+- Radar view crash when a job has `null` `assigned_to`.
+- `dashboard/scripts/meeting.js` attendees field must be an array, guards every call site with `Array.isArray`.
+- `DISPATCH_STATE_DIR` is now trimmed to strip trailing whitespace from the env var value.
+- `dashboard/scripts/app.js` syntax error in job board view; `dashboard/data/live.js` normalize fallthrough on incomplete records.
+
+### Changed
+
+- Dashboard server listens on `0.0.0.0:3046` (configurable via `DISPATCH_PORT`) so any device on your Tailscale network can open the launcher. The spawned `claude` process always runs on the host where the dashboard runs.
 
 ---
 

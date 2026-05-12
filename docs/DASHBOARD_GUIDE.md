@@ -6,7 +6,7 @@ The MultiDeck dashboard is a web application that provides real-time visibility 
 
 ## Routes Overview
 
-All routes are hosted on `http://localhost:3045`:
+All routes are hosted on `http://localhost:3046`:
 
 | Route | Purpose | Audience | Refresh |
 |-------|---------|----------|---------|
@@ -14,8 +14,11 @@ All routes are hosted on `http://localhost:3045`:
 | `/mobile` | Mobile-optimized view (responsive) | Phone/tablet users | Real-time (SSE) |
 | `/briefing` | Morning briefing — agenda, jobs, weather | Everyone | 5 min polling |
 | `/audio-feed` | Listen to agent announcements (SSE stream) | Operators in the loop | Real-time (SSE) |
-| `/launcher` | Agent launcher menu | Desktop users | Static |
+| `/launcher` | Agent launcher + browser terminal | Desktop / remote users | Static |
+| `/terminal/ws` | Browser terminal WebSocket endpoint | launcher.html (internal) | WebSocket |
 | `/state.json` | Raw state dump for debugging | Developers | Real-time |
+
+> **Remote access:** All routes work over Tailscale. See [BROWSER_TERMINAL.md](BROWSER_TERMINAL.md#tailscale-remote-access).
 
 ---
 
@@ -136,7 +139,7 @@ Use for:
 - Exporting data for analysis
 - Validating schema
 
-Access: `curl http://localhost:3045/state.json | jq .`
+Access: `curl http://localhost:3046/state.json | jq .`
 
 ---
 
@@ -242,7 +245,7 @@ app.get("/api/myroute-data", (req, res) => {
 
 3. **Test:**
 ```
-curl http://localhost:3045/myroute
+curl http://localhost:3046/myroute
 ```
 
 ### Adding an SSE Endpoint
@@ -306,7 +309,7 @@ For browsers without SSE, poll `/api/job-board` every 5 seconds instead.
 ## Troubleshooting
 
 **Dashboard won't load:**
-- Check port 3045 in use: `netstat -an | grep 3045`
+- Check port 3046 in use: `netstat -an | grep 3046`
 - Check server logs: `node dashboard/server.cjs` (run in foreground)
 
 **Data not updating:**

@@ -32,6 +32,7 @@ VOICE_MAP = {
     "npc-agent":           {"voice": "am_adam",    "lang": "a", "speed": 1.0,  "callsign": "NPC"},
     "npc":                 {"voice": "am_adam",    "lang": "a", "speed": 1.0,  "callsign": "NPC"},
     "frasier":             {"voice": "bf_emma",   "lang": "b", "speed": 1.05, "callsign": "Frasier"},
+
     "default":             {"voice": "am_puck",   "lang": "a", "speed": 1.05, "callsign": ""},
 }
 
@@ -173,10 +174,11 @@ def main():
     import numpy as np
     import torch
 
-    pipeline = KPipeline(lang_code=lang)
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    pipeline = KPipeline(lang_code=lang, device=device)
 
     if custom_cfg and os.path.exists(custom_cfg["voice_pt"]):
-        voice_tensor = torch.load(custom_cfg["voice_pt"], weights_only=True)
+        voice_tensor = torch.load(custom_cfg["voice_pt"], weights_only=True, map_location=device)
         generator = pipeline(text, voice=voice_tensor, speed=speed)
     else:
         generator = pipeline(text, voice=voice, speed=speed)

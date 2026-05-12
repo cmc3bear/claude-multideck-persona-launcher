@@ -223,7 +223,7 @@
   function renderMeetingCard(m) {
     const typeInfo = MEETING_TYPES[m.type] || { label: m.type.toUpperCase(), desc: "" };
     const job = m.job_id ? (window.JOBS || []).find(j => j.id === m.job_id) : null;
-    const agentCount = (m.attendees || []).length;
+    const agentCount = (Array.isArray(m.attendees) ? m.attendees : []).length;
     const isClosed = m.status === "closed";
     return `
       <article class="mr-meeting-card ${isClosed?'mr-closed':''}" data-mr-open="${m.id}">
@@ -332,7 +332,7 @@
     const typeInfo = MEETING_TYPES[m.type] || { label: m.type.toUpperCase(), desc: "" };
     const job = m.job_id ? (window.JOBS || []).find(j => j.id === m.job_id) : null;
     const positions = m.positions || {};
-    const attendees = m.attendees || Object.keys(positions);
+    const attendees = Array.isArray(m.attendees) ? m.attendees : Object.keys(positions);
     const counts = { RATIFY: 0, "RATIFY-WITH-AMENDMENTS": 0, REJECT: 0, PENDING: 0 };
     attendees.forEach(k => {
       const p = positions[k];
@@ -476,7 +476,7 @@
     banner.className = "mr-live-banner mr-live-running";
     banner.textContent = "INVOKING SUB-AGENTS LIVE — STREAMING RESPONSES…";
 
-    const attendees = m.attendees || [];
+    const attendees = Array.isArray(m.attendees) ? m.attendees : [];
     const docExcerpt = m.type === 'ratification' ? await fetchDocExcerpt() : '';
     const job = m.job_id ? (window.JOBS || []).find(j => j.id === m.job_id) : null;
 
@@ -705,7 +705,7 @@ ${docExcerpt ? `\nPROTOCOL EXCERPT:\n${docExcerpt}` : ''}`;
         m.status = "closed";
         m.closed_at = new Date().toISOString();
         const counts = { RATIFY: 0, "RATIFY-WITH-AMENDMENTS": 0, REJECT: 0 };
-        (m.attendees || []).forEach(k => {
+        (Array.isArray(m.attendees) ? m.attendees : []).forEach(k => {
           const p = (m.positions || {})[k];
           if (p && counts[p.stance] !== undefined) counts[p.stance]++;
         });

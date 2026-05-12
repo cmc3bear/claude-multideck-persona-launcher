@@ -3,15 +3,16 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
+const { WebSocketServer } = require('ws');
 const { renderAudioFeedPage } = require('./audio-feed-page.cjs');
 const { renderJobBoardPage } = require('./job-board-page.cjs');
 
 // ============================================================
 // Configuration via environment variables
 // ============================================================
-const PORT = Number(process.env.DISPATCH_PORT) || 3045;
+const PORT = Number(process.env.DISPATCH_PORT) || 3046;
 const DISPATCH_ROOT = process.env.DISPATCH_ROOT || path.join(__dirname, '..');
-const STATE_DIR = process.env.DISPATCH_STATE_DIR || path.join(DISPATCH_ROOT, 'state');
+const STATE_DIR = (process.env.DISPATCH_STATE_DIR || path.join(DISPATCH_ROOT, 'state')).trim();
 const TTS_OUTPUT_DIR = process.env.DISPATCH_TTS_OUTPUT || path.join(DISPATCH_ROOT, 'tts-output');
 const PERSONAS_PATH = process.env.DISPATCH_PERSONAS_JSON || path.join(DISPATCH_ROOT, 'personas', 'personas.json');
 const LAUNCHER_HTML = path.join(__dirname, 'launcher.html');
@@ -38,6 +39,10 @@ const OPENCODE_CONFIG_PATH = path.join(
 const KOKORO_QUEUE_STATS = path.join(DISPATCH_ROOT, 'hooks', '.kokoro-queue', 'stats.json');
 const KOKORO_QUEUE_ROOT = path.join(DISPATCH_ROOT, 'hooks', '.kokoro-queue');
 const IS_WINDOWS = process.platform === 'win32';
+
+// Browser terminal session state
+const pendingSessions = new Map(); // sessionId → { personaKey, prompt, runtime }
+const activeSessions  = new Map(); // sessionId → { ws, proc }
 
 // Transport selection — wt (Windows Terminal) or tmux (WSL Ubuntu).
 //
@@ -125,6 +130,7 @@ function transportAvailable(xport) {
   if (x === 'wt') return IS_WINDOWS;
   if (x === 'tmux') return IS_WINDOWS && WSL_AVAILABLE;
   if (x === 'sh') return !IS_WINDOWS;
+  if (x === 'browser') return true;
   return false;
 }
 
@@ -173,6 +179,8 @@ function loadState() {
 // (MULTI-FEAT-0067) — exposes a multi-board + lessons bundle
 // for data/live.js to consume via /state.json.
 // ============================================================
+const JOB_BOARD_SOURCES_PATH = path.join(STATE_DIR, 'job-board-sources.json');
+
 function discoverJobBoards() {
   // Pick up every state/job-board*.json (excluding .bak/.backup snapshots)
   // and return them as a {projectKey: {jobs, meta}} map. Project key is
@@ -188,6 +196,7 @@ function discoverJobBoards() {
   for (const file of entries) {
     if (!file.startsWith('job-board') || !file.endsWith('.json')) continue;
     if (/\.bak[-.]/i.test(file) || /\.backup[-.]/i.test(file)) continue;
+    if (file === 'job-board-sources.json') continue;
     let key;
     if (file === 'job-board.json') key = 'workspace';
     else {
@@ -205,6 +214,28 @@ function discoverJobBoards() {
       console.warn('[state] failed to parse', file, e.message);
     }
   }
+
+  // External boards registered in state/job-board-sources.json.
+  // Each entry: { "key": "oqe", "path": "F:/path/to/JOB_BOARD.json" }
+  // Read live on every call so external boards reflect without a push step.
+  try {
+    const sources = JSON.parse(fs.readFileSync(JOB_BOARD_SOURCES_PATH, 'utf8'));
+    for (const src of (sources.sources || [])) {
+      if (!src.key || !src.path) continue;
+      try {
+        const data = JSON.parse(fs.readFileSync(src.path, 'utf8'));
+        out[src.key] = {
+          jobs: Array.isArray(data.jobs) ? data.jobs : [],
+          meta: data.meta || {},
+        };
+      } catch (e) {
+        console.warn('[state] failed to load external board', src.key, e.message);
+      }
+    }
+  } catch {
+    // No sources file — skip silently.
+  }
+
   return out;
 }
 
@@ -553,7 +584,12 @@ function handleLauncher(req, res, url) {
   if (url === '/launcher' || url === '/launcher/') {
     try {
       const html = fs.readFileSync(LAUNCHER_HTML, 'utf8');
-      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.writeHead(200, {
+        'Content-Type': 'text/html; charset=utf-8',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      });
       res.end(html);
     } catch (e) {
       res.writeHead(500, { 'Content-Type': 'text/plain' });
@@ -602,6 +638,7 @@ function handleLauncher(req, res, url) {
     } else {
       available.push('sh');
     }
+    available.push('browser');
     let resolvedDefault = DEFAULT_TRANSPORT;
     if (!available.includes(resolvedDefault)) {
       resolvedDefault = available[0] || 'wt';
@@ -731,12 +768,40 @@ function handleLauncher(req, res, url) {
           wsl_detected: WSL_AVAILABLE,
         });
       }
+      // Prepend runtime-specific deploy string from persona registry.
+      // vs → vs_deploy_string (both runtimes get it), opencode → local_deploy_string, claude → deploy_string.
+      const _persona = registry.personas[personaKey];
+      const _deployStr = runtime === 'vs'
+        ? (_persona.vs_deploy_string || '')
+        : runtime === 'opencode'
+          ? (_persona.local_deploy_string || '')
+          : (_persona.deploy_string || '');
+      const effectivePrompt = _deployStr
+        ? _deployStr + (initialPrompt ? '\n\n' + initialPrompt : '')
+        : initialPrompt;
+      // Browser transport: reserve a session ID, respond with WS URL.
+      // The actual process spawns when the browser WebSocket connects.
+      if (transport === 'browser') {
+        const sessionId = require('crypto').randomBytes(6).toString('hex');
+        const dangerous = body.dangerous === true || body.dangerous === 'true';
+        pendingSessions.set(sessionId, { personaKey, prompt: effectivePrompt, runtime, dangerous });
+        setTimeout(() => pendingSessions.delete(sessionId), 30000);
+        return sendJson(res, 200, {
+          ok: true,
+          transport: 'browser',
+          session_id: sessionId,
+          ws_path: `/terminal/ws?session=${sessionId}`,
+          persona: personaKey,
+          callsign: registry.personas[personaKey].callsign,
+        });
+      }
+
       try {
         // For tmux: open a viewer window only if the session doesn't yet
         // exist. If the operator already has a wt window attached to
         // multideck, this single launch slots in silently.
         const sessionExists = (transport === 'tmux' && runtime === 'claude') ? tmuxSessionExists('multideck') : false;
-        spawnPersona(personaKey, initialPrompt, transport, { sessionExists, runtime, model });
+        spawnPersona(personaKey, effectivePrompt, transport, { sessionExists, runtime, model });
         sendJson(res, 200, {
           ok: true,
           persona: personaKey,
@@ -793,11 +858,21 @@ function handleLauncher(req, res, url) {
       keys.forEach((k, i) => {
         setTimeout(() => {
           try {
+            // Per-member deploy string injection — each persona carries its own mode context.
+            const _mp = registry.personas[k];
+            const _mds = runtime === 'vs'
+              ? (_mp.vs_deploy_string || '')
+              : runtime === 'opencode'
+                ? (_mp.local_deploy_string || '')
+                : (_mp.deploy_string || '');
+            const _mp_prompt = _mds
+              ? _mds + (initialPrompt ? '\n\n' + initialPrompt : '')
+              : initialPrompt;
             const baseOpts = { runtime, model };
             const opts = (transport === 'tmux' && runtime === 'claude')
               ? { ...baseOpts, openViewer: i === 0 && !sessionExistsAtLaunch }
               : baseOpts;
-            spawnPersona(k, initialPrompt, transport, opts);
+            spawnPersona(k, _mp_prompt, transport, opts);
           } catch (e) {
             console.error('team spawn failed for', k, e.message);
           }
@@ -1145,18 +1220,43 @@ const server = http.createServer((req, res) => {
     res.end(JSON.stringify(buildLiveStateBundle(), null, 2));
     return;
   }
-  if (url === '/jobs' || url === '/jobs/') {
+  if ((url === '/jobs' || url === '/jobs/') && req.method === 'GET') {
     // MULTI-FEAT-0067: serve the claude.design Job Board Dashboard
     // (renamed to job-board-dashboard.html). The legacy WS-0011 server-
     // rendered page is preserved at /jobs-classic for backward compat.
     try {
       const html = fs.readFileSync(JOB_BOARD_DASHBOARD_HTML, 'utf8');
-      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.writeHead(200, {
+        'Content-Type': 'text/html; charset=utf-8',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      });
       res.end(html);
     } catch (e) {
       res.writeHead(500, { 'Content-Type': 'text/plain' });
       res.end('job-board-dashboard.html not found: ' + e.message);
     }
+    return;
+  }
+  if ((url === '/jobs' || url === '/jobs/') && req.method === 'POST') {
+    // Accepts a full board sync from an external project (e.g. OQE).
+    // Body: { board: "oqe", jobs: [...], meta: {...} }
+    // Writes to STATE_DIR/job-board-{board}.json so discoverJobBoards() picks it up.
+    readJsonBody(req).then((body) => {
+      const board = String(body.board || 'oqe').toLowerCase().replace(/[^a-z0-9-]/g, '-').slice(0, 64);
+      if (!board) return sendJson(res, 400, { error: 'board key required' });
+      const jobs = Array.isArray(body.jobs) ? body.jobs : [];
+      const meta = (body.meta && typeof body.meta === 'object') ? body.meta : {};
+      const filename = board === 'workspace' ? 'job-board.json' : `job-board-${board}.json`;
+      const fp = path.join(STATE_DIR, filename);
+      try {
+        fs.writeFileSync(fp, JSON.stringify({ meta, jobs }, null, 2));
+        sendJson(res, 200, { ok: true, board, job_count: jobs.length, file: filename });
+      } catch (e) {
+        sendJson(res, 500, { error: 'failed to write board', detail: e.message });
+      }
+    }).catch((e) => sendJson(res, 400, { error: 'bad body', detail: e.message }));
     return;
   }
   if (url === '/jobs-classic' || url === '/jobs-classic/') {
@@ -1209,6 +1309,172 @@ const server = http.createServer((req, res) => {
   }
   if (url === '/api/kokoro/stats') {
     sendJson(res, 200, readKokoroStats());
+    return;
+  }
+
+  // ----------------------------------------------------------
+  // STT — POST /stt/transcribe
+  // Body: raw audio bytes (typically audio/webm from MediaRecorder).
+  // Process: write blob to tmp → ffmpeg transcode to 16kHz mono wav →
+  //          whisper.cpp → return { text }.
+  // Requires DISPATCH_WHISPER_BIN and DISPATCH_WHISPER_MODEL in env.
+  // ----------------------------------------------------------
+  if (url === '/stt/transcribe' && req.method === 'POST') {
+    const whisperBin = process.env.DISPATCH_WHISPER_BIN;
+    const whisperModel = process.env.DISPATCH_WHISPER_MODEL;
+    if (!whisperBin || !whisperModel) {
+      return sendJson(res, 503, { error: 'STT not configured. Set DISPATCH_WHISPER_BIN and DISPATCH_WHISPER_MODEL.' });
+    }
+    if (!fs.existsSync(whisperBin) || !fs.existsSync(whisperModel)) {
+      return sendJson(res, 503, { error: 'whisper bin or model missing on disk' });
+    }
+    const os = require('os');
+    const crypto = require('crypto');
+    const id = crypto.randomBytes(8).toString('hex');
+    const tmpDir = path.join(os.tmpdir(), 'multideck-stt');
+    fs.mkdirSync(tmpDir, { recursive: true });
+    const inputPath = path.join(tmpDir, `${id}.in`);
+    const wavPath = path.join(tmpDir, `${id}.wav`);
+    const cleanup = () => { for (const p of [inputPath, wavPath]) { try { fs.unlinkSync(p); } catch {} } };
+
+    const out = fs.createWriteStream(inputPath);
+    let totalBytes = 0;
+    const MAX_BYTES = 25 * 1024 * 1024; // 25 MB cap for safety
+    req.on('data', (chunk) => {
+      totalBytes += chunk.length;
+      if (totalBytes > MAX_BYTES) {
+        req.destroy();
+        out.destroy();
+        cleanup();
+        sendJson(res, 413, { error: 'audio too large (max 25 MB)' });
+      }
+    });
+    req.pipe(out);
+    out.on('finish', () => {
+      // Stage 1: ffmpeg transcode to 16kHz mono WAV
+      const ff = spawn('ffmpeg', ['-y', '-i', inputPath, '-ar', '16000', '-ac', '1', '-f', 'wav', wavPath], { stdio: ['ignore', 'ignore', 'pipe'] });
+      let ffErr = '';
+      ff.stderr.on('data', (d) => { ffErr += d.toString(); });
+      ff.on('close', (code) => {
+        if (code !== 0 || !fs.existsSync(wavPath)) {
+          cleanup();
+          return sendJson(res, 500, { error: 'ffmpeg transcode failed', detail: ffErr.slice(-500) });
+        }
+        // Stage 2: whisper.cpp → stdout
+        // -nt = no timestamps, -np = no per-segment prints (cleaner stdout)
+        const wp = spawn(whisperBin, ['-m', whisperModel, '-f', wavPath, '-nt', '-np'], { stdio: ['ignore', 'pipe', 'pipe'] });
+        let stdout = '';
+        let stderr = '';
+        wp.stdout.on('data', (d) => { stdout += d.toString(); });
+        wp.stderr.on('data', (d) => { stderr += d.toString(); });
+        wp.on('close', (wcode) => {
+          cleanup();
+          if (wcode !== 0) {
+            return sendJson(res, 500, { error: 'whisper failed', code: wcode, detail: stderr.slice(-500) });
+          }
+          // Whisper prints transcription lines to stdout (with -nt -np that's
+          // just the text). Trim leading whitespace; collapse internal newlines.
+          const text = stdout.replace(/\s+/g, ' ').trim();
+          sendJson(res, 200, { text });
+        });
+      });
+    });
+    out.on('error', (e) => { cleanup(); sendJson(res, 500, { error: 'tmp write failed', detail: e.message }); });
+    req.on('error', (e) => { cleanup(); sendJson(res, 500, { error: 'request stream error', detail: e.message }); });
+    return;
+  }
+
+  // ----------------------------------------------------------
+  // Question bridge — for Steam Deck glyph-button modal.
+  //
+  // Contract with hooks/dashboard-question-bridge.py (PreToolUse hook):
+  //   - Hook writes  $STATE_DIR/pending-questions/<sessionId>.json
+  //   - Dashboard sees it via /events/questions SSE → renders modal
+  //   - User picks → POST /questions/:sessionId/answer { answers }
+  //   - Dashboard writes <sessionId>.answer.json
+  //   - Hook polls for the answer file, reads it, returns to Claude.
+  //
+  // sessionId is restricted to filename-safe chars to prevent traversal.
+  // ----------------------------------------------------------
+  const PENDING_Q_DIR = path.join(STATE_DIR, 'pending-questions');
+  const isSafeSessionId = (s) => typeof s === 'string' && /^[a-zA-Z0-9_-]{1,128}$/.test(s);
+
+  if (url === '/events/questions' && req.method === 'GET') {
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache, no-transform',
+      'Connection': 'keep-alive',
+      'X-Accel-Buffering': 'no',
+    });
+    res.write(': connected\n\n');
+
+    try { fs.mkdirSync(PENDING_Q_DIR, { recursive: true }); } catch {}
+
+    // Initial sweep — emit any already-pending questions so a late-joining
+    // browser tab still sees them.
+    try {
+      for (const name of fs.readdirSync(PENDING_Q_DIR)) {
+        if (!name.endsWith('.json') || name.endsWith('.answer.json')) continue;
+        const sessionId = name.slice(0, -5);
+        if (!isSafeSessionId(sessionId)) continue;
+        try {
+          const body = JSON.parse(fs.readFileSync(path.join(PENDING_Q_DIR, name), 'utf8'));
+          res.write(`event: ask\ndata: ${JSON.stringify({ sessionId, questions: body.questions || [] })}\n\n`);
+        } catch {}
+      }
+    } catch {}
+
+    let watcher = null;
+    try {
+      watcher = fs.watch(PENDING_Q_DIR, (eventType, filename) => {
+        if (!filename || !filename.endsWith('.json')) return;
+        const isAnswer = filename.endsWith('.answer.json');
+        const sessionId = filename.slice(0, isAnswer ? -'.answer.json'.length : -'.json'.length);
+        if (!isSafeSessionId(sessionId)) return;
+        const fullPath = path.join(PENDING_Q_DIR, filename);
+        const exists = fs.existsSync(fullPath);
+        if (!exists && !isAnswer) {
+          res.write(`event: resolved\ndata: ${JSON.stringify({ sessionId })}\n\n`);
+          return;
+        }
+        if (exists && !isAnswer) {
+          try {
+            const body = JSON.parse(fs.readFileSync(fullPath, 'utf8'));
+            res.write(`event: ask\ndata: ${JSON.stringify({ sessionId, questions: body.questions || [] })}\n\n`);
+          } catch {}
+        }
+      });
+    } catch (e) {
+      res.write(`event: error\ndata: ${JSON.stringify({ error: 'watch failed', detail: e.message })}\n\n`);
+    }
+
+    const keepalive = setInterval(() => { try { res.write(': ping\n\n'); } catch {} }, 25000);
+    req.on('close', () => {
+      clearInterval(keepalive);
+      try { if (watcher) watcher.close(); } catch {}
+    });
+    return;
+  }
+
+  if (url.startsWith('/questions/') && url.endsWith('/answer') && req.method === 'POST') {
+    const sessionId = url.slice('/questions/'.length, -'/answer'.length);
+    if (!isSafeSessionId(sessionId)) {
+      return sendJson(res, 400, { error: 'invalid sessionId' });
+    }
+    readJsonBody(req).then((body) => {
+      const answers = body && body.answers;
+      if (!answers || typeof answers !== 'object') {
+        return sendJson(res, 400, { error: 'answers object required' });
+      }
+      try {
+        fs.mkdirSync(PENDING_Q_DIR, { recursive: true });
+        const answerPath = path.join(PENDING_Q_DIR, `${sessionId}.answer.json`);
+        fs.writeFileSync(answerPath, JSON.stringify({ answers, received_at: new Date().toISOString() }, null, 2));
+        sendJson(res, 200, { ok: true });
+      } catch (e) {
+        sendJson(res, 500, { error: 'failed to write answer', detail: e.message });
+      }
+    }).catch((e) => sendJson(res, 400, { error: 'bad body', detail: e.message }));
     return;
   }
 
@@ -1282,6 +1548,91 @@ const server = http.createServer((req, res) => {
   res.end('Not Found. Try / or /launcher or /audio-feed or /briefing or /jobs or /jobs-classic or /builder or /state.json or /api/kokoro/stats');
 });
 
+// ============================================================
+// Browser terminal WebSocket server
+// ============================================================
+const wss = new WebSocketServer({ noServer: true });
+
+server.on('upgrade', (req, socket, head) => {
+  const url = new URL(req.url, `http://localhost`);
+  if (url.pathname === '/terminal/ws') {
+    wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws, req));
+  } else {
+    socket.destroy();
+  }
+});
+
+wss.on('connection', (ws, req) => {
+  const url = new URL(req.url, `http://localhost`);
+  const sessionId = url.searchParams.get('session') || '';
+  const pending = sessionId && pendingSessions.get(sessionId);
+
+  if (!pending) {
+    ws.send(JSON.stringify({ type: 'error', msg: 'unknown or expired session' }));
+    ws.close();
+    return;
+  }
+  pendingSessions.delete(sessionId);
+
+  let proc;
+  try {
+    if (IS_WINDOWS && WSL_AVAILABLE) {
+      // Wrap in `script -q /dev/null -c '...'` to allocate a pseudo-TTY so
+      // claude behaves interactively (colors, no "no stdin data" warning).
+      const safe      = String(pending.prompt || '').replace(/'/g, "'\\''");
+      const dangerArg = pending.dangerous ? ' --dangerously-skip-permissions' : '';
+      const inner     = pending.prompt ? `claude${dangerArg} '${safe}'` : `claude${dangerArg}`;
+      const cmd       = `script -q /dev/null -c '${inner.replace(/'/g, "'\\''")}'`;
+      proc = spawn('wsl.exe', ['-d', 'Ubuntu', '--', 'bash', '-lc', cmd], {
+        stdio: ['pipe', 'pipe', 'pipe'],
+      });
+    } else if (!IS_WINDOWS) {
+      const safe      = String(pending.prompt || '').replace(/'/g, "'\\''");
+      const dangerArg = pending.dangerous ? ' --dangerously-skip-permissions' : '';
+      const inner     = pending.prompt ? `claude${dangerArg} '${safe}'` : `claude${dangerArg}`;
+      const cmd       = `script -q /dev/null -c '${inner.replace(/'/g, "'\\''")}'`;
+      proc = spawn('bash', ['-lc', cmd], { stdio: ['pipe', 'pipe', 'pipe'] });
+    } else {
+      ws.send(JSON.stringify({ type: 'error', msg: 'browser terminal requires WSL on Windows' }));
+      ws.close();
+      return;
+    }
+  } catch (e) {
+    ws.send(JSON.stringify({ type: 'error', msg: 'spawn failed: ' + e.message }));
+    ws.close();
+    return;
+  }
+
+  activeSessions.set(sessionId, { ws, proc });
+  ws.send(JSON.stringify({ type: 'ready', session: sessionId }));
+
+  proc.stdout.on('data', (chunk) => {
+    if (ws.readyState === 1) ws.send(JSON.stringify({ type: 'data', data: chunk.toString() }));
+  });
+  proc.stderr.on('data', (chunk) => {
+    if (ws.readyState === 1) ws.send(JSON.stringify({ type: 'data', data: chunk.toString() }));
+  });
+  proc.on('exit', (code) => {
+    if (ws.readyState === 1) ws.send(JSON.stringify({ type: 'exit', code: code ?? 0 }));
+    activeSessions.delete(sessionId);
+    ws.close();
+  });
+
+  ws.on('message', (raw) => {
+    try {
+      const msg = JSON.parse(raw.toString());
+      if (msg.type === 'input' && proc.stdin && proc.stdin.writable) {
+        proc.stdin.write(msg.data);
+      }
+    } catch { /* ignore malformed messages */ }
+  });
+
+  ws.on('close', () => {
+    if (proc && !proc.killed) proc.kill();
+    activeSessions.delete(sessionId);
+  });
+});
+
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`MultiDeck Dashboard running on http://localhost:${PORT}`);
   console.log(`  /                        Main dashboard`);
@@ -1293,6 +1644,7 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log(`  /state.json              Live state bundle (job-boards + lessons + briefing)`);
   console.log(`  /builder                 Interactive Persona Builder (form UI + pipeline API)`);
   console.log(`  /api/kokoro/stats        Kokoro queue depth + drop counters`);
+  console.log(`  /terminal/ws             Browser terminal WebSocket (use BROWSER transport in launcher)`);
   console.log(``);
   console.log(`  State directory: ${STATE_DIR}`);
   console.log(`  Personas registry: ${PERSONAS_PATH}`);

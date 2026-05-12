@@ -167,10 +167,11 @@ def main():
         lang = custom_cfg['lang']
         speed = custom_cfg['speed']
 
-    pipeline = KPipeline(lang_code=lang)
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    pipeline = KPipeline(lang_code=lang, device=device)
 
     if custom_cfg and os.path.exists(custom_cfg['voice_pt']):
-        voice_tensor = torch.load(custom_cfg['voice_pt'], weights_only=True)
+        voice_tensor = torch.load(custom_cfg['voice_pt'], weights_only=True, map_location=device)
         generator = pipeline(text, voice=voice_tensor, speed=speed)
     else:
         generator = pipeline(text, voice=voice, speed=speed)

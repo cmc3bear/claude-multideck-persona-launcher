@@ -55,14 +55,47 @@ This writes a per-session voice configuration file, so your voice choice doesn't
 node dashboard/server.cjs
 
 # Output:
-# Dashboard running on http://localhost:3045
+# Dashboard running on http://localhost:3046
 # Open in your browser to see the job board, agents, and briefing
 ```
 
 **Dashboard routes:**
-- `http://localhost:3045/` — Main desktop view (job board, agents, calendar)
-- `http://localhost:3045/briefing` — Morning briefing view
-- `http://localhost:3045/audio-feed` — Listen to agent announcements (SSE stream)
+- `http://localhost:3046/` — Main desktop view (job board, agents, calendar)
+- `http://localhost:3046/launcher` — Agent launcher with browser terminal
+- `http://localhost:3046/briefing` — Morning briefing view
+- `http://localhost:3046/audio-feed` — Listen to agent announcements (SSE stream)
+
+---
+
+## Step 3b: Launch an Agent in the Browser Terminal (optional)
+
+The launcher includes a built-in browser terminal — no separate window needed.
+
+1. Open `http://localhost:3046/launcher`
+2. Select a persona from the character grid
+3. In the transport row, select **BROWSER**
+4. Click **LAUNCH**
+
+A cyberpunk terminal panel slides up from the bottom. The agent session runs via WebSocket through a WSL pseudo-TTY. Features:
+
+- **Multi-session tabs** — click `[ + NEW ]` to spawn additional agents; each gets its own tab with `×` to close independently
+- **Minimize / restore** — `[ − MIN ]` hides the panel without killing sessions; a restore tab appears at bottom-right
+- **Matrix rain panel** — 660px character stream to the right of the terminal, colored in the active persona's accent; composites all running persona colors when multiple sessions are active
+- **Portrait watermarks** — each session's persona portrait appears as a tile in the rain at position N (one per session, rest blank)
+- **Dangerous mode** — check `⚠ DANGEROUS` before launching to pass `--dangerously-skip-permissions` to claude
+
+See [docs/BROWSER_TERMINAL.md](BROWSER_TERMINAL.md) for full reference.
+
+### Remote Access via Tailscale
+
+Because the server listens on `0.0.0.0:3046`, any device on your Tailscale network can open the launcher and use the browser terminal — the `claude` session runs on your dev machine:
+
+```
+# On any device in your Tailscale network:
+http://your-machine-name:3046/launcher
+```
+
+Install Tailscale on both the host and the remote device. No port forwarding required. See [BROWSER_TERMINAL.md — Tailscale Remote Access](BROWSER_TERMINAL.md#tailscale-remote-access).
 
 ---
 
@@ -96,7 +129,7 @@ Or post directly to the job board JSON and watch the dashboard update in real-ti
 
 ## Step 6: Assign and Complete
 
-1. Open the dashboard at `http://localhost:3045`
+1. Open the dashboard at `http://localhost:3046`
 2. See your job in the queue
 3. Assign it to an agent (click agent name)
 4. Agent processes the job (in their Claude Code tab)
@@ -120,9 +153,9 @@ Or post directly to the job board JSON and watch the dashboard update in real-ti
 
 **Dashboard won't start:**
 ```bash
-# Check if port 3045 is in use
-netstat -an | grep 3045  # (macOS/Linux)
-netstat -ano | findstr :3045  # (Windows)
+# Check if port 3046 is in use
+netstat -an | grep 3046  # (macOS/Linux)
+netstat -ano | findstr :3046  # (Windows)
 
 # Kill the process and try again
 kill -9 <PID>  # (macOS/Linux)

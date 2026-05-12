@@ -8,11 +8,11 @@ Real-time dashboard server for the MultiDeck framework. Displays state, calendar
 node dashboard/server.cjs
 ```
 
-Then visit `http://localhost:3045` in your browser.
+Then visit `http://localhost:3046` in your browser.
 
 ## Environment Variables
 
-- `DISPATCH_PORT` — Port to listen on (default: 3045)
+- `DISPATCH_PORT` — Port to listen on (default: 3046)
 - `DISPATCH_STATE_DIR` — Path to state directory (default: ./state)
 - `DISPATCH_ROOT` — Framework root (default: parent directory)
 - `DISPATCH_TTS_OUTPUT` — Path to TTS output directory (default: ./tts-output)
