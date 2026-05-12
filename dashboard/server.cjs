@@ -1312,6 +1312,172 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // ----------------------------------------------------------
+  // STT — POST /stt/transcribe
+  // Body: raw audio bytes (typically audio/webm from MediaRecorder).
+  // Process: write blob to tmp → ffmpeg transcode to 16kHz mono wav →
+  //          whisper.cpp → return { text }.
+  // Requires DISPATCH_WHISPER_BIN and DISPATCH_WHISPER_MODEL in env.
+  // ----------------------------------------------------------
+  if (url === '/stt/transcribe' && req.method === 'POST') {
+    const whisperBin = process.env.DISPATCH_WHISPER_BIN;
+    const whisperModel = process.env.DISPATCH_WHISPER_MODEL;
+    if (!whisperBin || !whisperModel) {
+      return sendJson(res, 503, { error: 'STT not configured. Set DISPATCH_WHISPER_BIN and DISPATCH_WHISPER_MODEL.' });
+    }
+    if (!fs.existsSync(whisperBin) || !fs.existsSync(whisperModel)) {
+      return sendJson(res, 503, { error: 'whisper bin or model missing on disk' });
+    }
+    const os = require('os');
+    const crypto = require('crypto');
+    const id = crypto.randomBytes(8).toString('hex');
+    const tmpDir = path.join(os.tmpdir(), 'multideck-stt');
+    fs.mkdirSync(tmpDir, { recursive: true });
+    const inputPath = path.join(tmpDir, `${id}.in`);
+    const wavPath = path.join(tmpDir, `${id}.wav`);
+    const cleanup = () => { for (const p of [inputPath, wavPath]) { try { fs.unlinkSync(p); } catch {} } };
+
+    const out = fs.createWriteStream(inputPath);
+    let totalBytes = 0;
+    const MAX_BYTES = 25 * 1024 * 1024; // 25 MB cap for safety
+    req.on('data', (chunk) => {
+      totalBytes += chunk.length;
+      if (totalBytes > MAX_BYTES) {
+        req.destroy();
+        out.destroy();
+        cleanup();
+        sendJson(res, 413, { error: 'audio too large (max 25 MB)' });
+      }
+    });
+    req.pipe(out);
+    out.on('finish', () => {
+      // Stage 1: ffmpeg transcode to 16kHz mono WAV
+      const ff = spawn('ffmpeg', ['-y', '-i', inputPath, '-ar', '16000', '-ac', '1', '-f', 'wav', wavPath], { stdio: ['ignore', 'ignore', 'pipe'] });
+      let ffErr = '';
+      ff.stderr.on('data', (d) => { ffErr += d.toString(); });
+      ff.on('close', (code) => {
+        if (code !== 0 || !fs.existsSync(wavPath)) {
+          cleanup();
+          return sendJson(res, 500, { error: 'ffmpeg transcode failed', detail: ffErr.slice(-500) });
+        }
+        // Stage 2: whisper.cpp → stdout
+        // -nt = no timestamps, -np = no per-segment prints (cleaner stdout)
+        const wp = spawn(whisperBin, ['-m', whisperModel, '-f', wavPath, '-nt', '-np'], { stdio: ['ignore', 'pipe', 'pipe'] });
+        let stdout = '';
+        let stderr = '';
+        wp.stdout.on('data', (d) => { stdout += d.toString(); });
+        wp.stderr.on('data', (d) => { stderr += d.toString(); });
+        wp.on('close', (wcode) => {
+          cleanup();
+          if (wcode !== 0) {
+            return sendJson(res, 500, { error: 'whisper failed', code: wcode, detail: stderr.slice(-500) });
+          }
+          // Whisper prints transcription lines to stdout (with -nt -np that's
+          // just the text). Trim leading whitespace; collapse internal newlines.
+          const text = stdout.replace(/\s+/g, ' ').trim();
+          sendJson(res, 200, { text });
+        });
+      });
+    });
+    out.on('error', (e) => { cleanup(); sendJson(res, 500, { error: 'tmp write failed', detail: e.message }); });
+    req.on('error', (e) => { cleanup(); sendJson(res, 500, { error: 'request stream error', detail: e.message }); });
+    return;
+  }
+
+  // ----------------------------------------------------------
+  // Question bridge — for Steam Deck glyph-button modal.
+  //
+  // Contract with hooks/dashboard-question-bridge.py (PreToolUse hook):
+  //   - Hook writes  $STATE_DIR/pending-questions/<sessionId>.json
+  //   - Dashboard sees it via /events/questions SSE → renders modal
+  //   - User picks → POST /questions/:sessionId/answer { answers }
+  //   - Dashboard writes <sessionId>.answer.json
+  //   - Hook polls for the answer file, reads it, returns to Claude.
+  //
+  // sessionId is restricted to filename-safe chars to prevent traversal.
+  // ----------------------------------------------------------
+  const PENDING_Q_DIR = path.join(STATE_DIR, 'pending-questions');
+  const isSafeSessionId = (s) => typeof s === 'string' && /^[a-zA-Z0-9_-]{1,128}$/.test(s);
+
+  if (url === '/events/questions' && req.method === 'GET') {
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache, no-transform',
+      'Connection': 'keep-alive',
+      'X-Accel-Buffering': 'no',
+    });
+    res.write(': connected\n\n');
+
+    try { fs.mkdirSync(PENDING_Q_DIR, { recursive: true }); } catch {}
+
+    // Initial sweep — emit any already-pending questions so a late-joining
+    // browser tab still sees them.
+    try {
+      for (const name of fs.readdirSync(PENDING_Q_DIR)) {
+        if (!name.endsWith('.json') || name.endsWith('.answer.json')) continue;
+        const sessionId = name.slice(0, -5);
+        if (!isSafeSessionId(sessionId)) continue;
+        try {
+          const body = JSON.parse(fs.readFileSync(path.join(PENDING_Q_DIR, name), 'utf8'));
+          res.write(`event: ask\ndata: ${JSON.stringify({ sessionId, questions: body.questions || [] })}\n\n`);
+        } catch {}
+      }
+    } catch {}
+
+    let watcher = null;
+    try {
+      watcher = fs.watch(PENDING_Q_DIR, (eventType, filename) => {
+        if (!filename || !filename.endsWith('.json')) return;
+        const isAnswer = filename.endsWith('.answer.json');
+        const sessionId = filename.slice(0, isAnswer ? -'.answer.json'.length : -'.json'.length);
+        if (!isSafeSessionId(sessionId)) return;
+        const fullPath = path.join(PENDING_Q_DIR, filename);
+        const exists = fs.existsSync(fullPath);
+        if (!exists && !isAnswer) {
+          res.write(`event: resolved\ndata: ${JSON.stringify({ sessionId })}\n\n`);
+          return;
+        }
+        if (exists && !isAnswer) {
+          try {
+            const body = JSON.parse(fs.readFileSync(fullPath, 'utf8'));
+            res.write(`event: ask\ndata: ${JSON.stringify({ sessionId, questions: body.questions || [] })}\n\n`);
+          } catch {}
+        }
+      });
+    } catch (e) {
+      res.write(`event: error\ndata: ${JSON.stringify({ error: 'watch failed', detail: e.message })}\n\n`);
+    }
+
+    const keepalive = setInterval(() => { try { res.write(': ping\n\n'); } catch {} }, 25000);
+    req.on('close', () => {
+      clearInterval(keepalive);
+      try { if (watcher) watcher.close(); } catch {}
+    });
+    return;
+  }
+
+  if (url.startsWith('/questions/') && url.endsWith('/answer') && req.method === 'POST') {
+    const sessionId = url.slice('/questions/'.length, -'/answer'.length);
+    if (!isSafeSessionId(sessionId)) {
+      return sendJson(res, 400, { error: 'invalid sessionId' });
+    }
+    readJsonBody(req).then((body) => {
+      const answers = body && body.answers;
+      if (!answers || typeof answers !== 'object') {
+        return sendJson(res, 400, { error: 'answers object required' });
+      }
+      try {
+        fs.mkdirSync(PENDING_Q_DIR, { recursive: true });
+        const answerPath = path.join(PENDING_Q_DIR, `${sessionId}.answer.json`);
+        fs.writeFileSync(answerPath, JSON.stringify({ answers, received_at: new Date().toISOString() }, null, 2));
+        sendJson(res, 200, { ok: true });
+      } catch (e) {
+        sendJson(res, 500, { error: 'failed to write answer', detail: e.message });
+      }
+    }).catch((e) => sendJson(res, 400, { error: 'bad body', detail: e.message }));
+    return;
+  }
+
   if (url === '/api/claude/complete' && req.method === 'POST') {
     readJsonBody(req).then((body) => {
       const prompt = String(body.prompt || '');

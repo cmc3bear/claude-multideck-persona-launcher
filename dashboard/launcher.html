@@ -263,6 +263,7 @@
       <div class="terminal-tabs" id="terminal-tabs"></div>
       <div class="terminal-spacer"></div>
       <div class="terminal-badge" id="terminal-badge">CONNECTING</div>
+      <button class="terminal-mic-btn" id="terminal-mic-btn" title="Push-to-talk (L1 on gamepad)">[ ◉ MIC ]</button>
       <button class="terminal-new-btn" id="terminal-new-btn">[ + NEW ]</button>
       <button class="terminal-min-btn" id="terminal-min-btn">[ &minus; MIN ]</button>
     </div>
@@ -273,6 +274,20 @@
     </div>
   </div>
   <div class="terminal-restore-tab" id="terminal-restore-tab">[ ◈ TERMINAL ACTIVE ]</div>
+
+  <!-- ============ QUESTION MODAL (Steam Deck glyph picker) ============ -->
+  <div class="question-modal" id="question-modal" hidden>
+    <div class="question-modal-card">
+      <div class="question-modal-header">
+        <span class="question-modal-tag" id="question-modal-tag">QUESTION</span>
+        <span class="question-modal-session" id="question-modal-session"></span>
+      </div>
+      <div class="question-modal-body" id="question-modal-body"></div>
+      <div class="question-modal-footer">
+        <span class="question-modal-hint">A select &middot; B cancel &middot; dpad nav &middot; L1 talk</span>
+      </div>
+    </div>
+  </div>
 
   <!-- ============ LAUNCHING OVERLAY ============ -->
   <div class="overlay" id="overlay">
@@ -301,5 +316,8 @@
   <script src="/scripts/launcher-boot.js"></script>
   <script src="/scripts/launcher-terminal.js"></script>
   <script src="/scripts/launcher-chrome.js"></script>
+  <script src="/scripts/launcher-gamepad.js"></script>
+  <script src="/scripts/launcher-stt.js"></script>
+  <script src="/scripts/launcher-question-modal.js"></script>
 </body>
 </html>
