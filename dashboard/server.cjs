@@ -914,6 +914,7 @@ function listAudioFiles() {
 }
 
 function handleAudioFeed(req, res, url) {
+  if (handleAudioStatus(req, res, url)) return true;
   if (url === '/audio-feed' || url === '/audio-feed/') {
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
     res.end(renderAudioFeedPage());
@@ -1634,12 +1635,181 @@ wss.on('connection', (ws, req) => {
   });
 });
 
+// ============================================================
+// Audio autoplay manager (v0.7 - replaces multideck-audio.service)
+//
+// Watches TTS_OUTPUT_DIR for new MP3s and pipes them to ffplay.
+// Disable with DISPATCH_AUDIO_AUTOPLAY=0. Override player with
+// DISPATCH_AUDIO_PLAYER (default ffplay).
+//
+// Lives inside the dashboard process so it shares lifecycle with the server,
+// no systemd-user dependency, no separate process to monitor. Replaces the
+// standalone multideck-audio-daemon.sh + multideck-audio.service installed
+// pre-v0.7. See docs/DEPLOYMENT.md for rationale.
+// ============================================================
+const AUDIO_AUTOPLAY = process.env.DISPATCH_AUDIO_AUTOPLAY !== '0';
+const AUDIO_PLAYER = process.env.DISPATCH_AUDIO_PLAYER || 'ffplay';
+const AUDIO_SEEN_FILE = path.join(
+  process.env.XDG_CACHE_HOME || path.join(process.env.HOME || process.env.USERPROFILE || '', '.cache'),
+  'multideck', 'audio-seen.txt'
+);
+
+const audioState = {
+  enabled: AUDIO_AUTOPLAY,
+  player: AUDIO_PLAYER,
+  seen: new Set(),
+  queue: [],
+  playing: null,
+  lastError: null,
+  totalPlayed: 0,
+  startedAt: null,
+};
+
+function loadAudioSeen() {
+  try {
+    const data = fs.readFileSync(AUDIO_SEEN_FILE, 'utf8');
+    for (const line of data.split(/\r?\n/)) {
+      const f = line.trim();
+      if (f) audioState.seen.add(f);
+    }
+  } catch {}
+}
+
+function persistAudioSeen(filename) {
+  try {
+    fs.mkdirSync(path.dirname(AUDIO_SEEN_FILE), { recursive: true });
+    fs.appendFileSync(AUDIO_SEEN_FILE, filename + '\n');
+  } catch {}
+}
+
+function playNextAudio() {
+  if (audioState.playing || audioState.queue.length === 0) return;
+  const filename = audioState.queue.shift();
+  const full = path.join(TTS_OUTPUT_DIR, filename);
+  if (!fs.existsSync(full)) return playNextAudio();
+
+  const args = audioState.player === 'ffplay'
+    ? ['-nodisp', '-autoexit', '-loglevel', 'quiet', full]
+    : [full];
+
+  let proc;
+  try {
+    proc = spawn(audioState.player, args, { stdio: 'ignore', detached: false });
+  } catch (e) {
+    audioState.lastError = `spawn ${audioState.player} failed: ${e.message}`;
+    console.error(`[audio] ${audioState.lastError}`);
+    return playNextAudio();
+  }
+
+  audioState.playing = { filename, pid: proc.pid, startedAt: Date.now() };
+  console.log(`[audio] playing ${filename} (pid ${proc.pid})`);
+
+  proc.on('exit', (code) => {
+    audioState.totalPlayed += 1;
+    audioState.playing = null;
+    if (code !== 0 && code !== null) {
+      audioState.lastError = `${audioState.player} exited ${code} on ${filename}`;
+    }
+    setTimeout(playNextAudio, 50);
+  });
+  proc.on('error', (e) => {
+    audioState.lastError = `${audioState.player} error: ${e.message}`;
+    console.error(`[audio] ${audioState.lastError}`);
+    audioState.playing = null;
+    setTimeout(playNextAudio, 50);
+  });
+}
+
+function scanAudioDir() {
+  try {
+    if (!fs.existsSync(TTS_OUTPUT_DIR)) return;
+    const files = fs.readdirSync(TTS_OUTPUT_DIR)
+      .filter((f) => f.toLowerCase().endsWith('.mp3'))
+      .map((f) => {
+        try {
+          return { filename: f, mtime: fs.statSync(path.join(TTS_OUTPUT_DIR, f)).mtimeMs };
+        } catch {
+          return null;
+        }
+      })
+      .filter(Boolean)
+      .sort((a, b) => a.mtime - b.mtime);
+
+    for (const { filename } of files) {
+      if (!audioState.seen.has(filename)) {
+        audioState.seen.add(filename);
+        persistAudioSeen(filename);
+        audioState.queue.push(filename);
+      }
+    }
+    if (audioState.queue.length > 0) playNextAudio();
+  } catch (e) {
+    audioState.lastError = `scan failed: ${e.message}`;
+  }
+}
+
+function startAudioAutoplay() {
+  if (!audioState.enabled) {
+    console.log(`[audio] autoplay disabled (DISPATCH_AUDIO_AUTOPLAY=0)`);
+    return;
+  }
+
+  try {
+    const probe = spawn(audioState.player, ['-version'], { stdio: 'ignore' });
+    probe.on('error', () => {
+      console.warn(`[audio] player '${audioState.player}' not found on PATH; autoplay inert`);
+      audioState.enabled = false;
+    });
+  } catch {
+    audioState.enabled = false;
+  }
+  if (!audioState.enabled) return;
+
+  loadAudioSeen();
+
+  // Seed seen set with anything already on disk so we only autoplay files
+  // generated AFTER server start. Prevents replay storm on restart.
+  try {
+    if (fs.existsSync(TTS_OUTPUT_DIR)) {
+      for (const f of fs.readdirSync(TTS_OUTPUT_DIR)) {
+        if (f.toLowerCase().endsWith('.mp3') && !audioState.seen.has(f)) {
+          audioState.seen.add(f);
+          persistAudioSeen(f);
+        }
+      }
+    }
+  } catch {}
+
+  audioState.startedAt = Date.now();
+  console.log(`[audio] autoplay watching ${TTS_OUTPUT_DIR} (player=${audioState.player})`);
+  setInterval(scanAudioDir, 2000);
+}
+
+function handleAudioStatus(req, res, url) {
+  if (url === '/audio-feed/status') {
+    sendJson(res, 200, {
+      enabled: audioState.enabled,
+      player: audioState.player,
+      ttsOutputDir: TTS_OUTPUT_DIR,
+      seenCount: audioState.seen.size,
+      queueLength: audioState.queue.length,
+      nowPlaying: audioState.playing,
+      totalPlayed: audioState.totalPlayed,
+      lastError: audioState.lastError,
+      uptimeSec: audioState.startedAt ? Math.floor((Date.now() - audioState.startedAt) / 1000) : 0,
+    });
+    return true;
+  }
+  return false;
+}
+
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`MultiDeck Dashboard running on http://localhost:${PORT}`);
   console.log(`  /                        Main dashboard`);
   console.log(`  /launcher                MultiDeck launcher (cyberpunk character select)`);
   console.log(`  /briefing                Morning briefing`);
   console.log(`  /audio-feed              Auto-play Kokoro TTS feed`);
+  console.log(`  /audio-feed/status       Audio autoplay diagnostics (v0.7+)`);
   console.log(`  /jobs                    Visual job board dashboard (multi-view, lessons, patterns)`);
   console.log(`  /jobs-classic            Legacy server-rendered job board (WS-0011)`);
   console.log(`  /state.json              Live state bundle (job-boards + lessons + briefing)`);
@@ -1650,4 +1820,15 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log(`  State directory: ${STATE_DIR}`);
   console.log(`  Personas registry: ${PERSONAS_PATH}`);
   console.log(`  TTS output: ${TTS_OUTPUT_DIR}`);
+
+  startAudioAutoplay();
+});
+
+process.on('SIGTERM', () => {
+  if (audioState.playing) { try { process.kill(audioState.playing.pid); } catch {} }
+  process.exit(0);
+});
+process.on('SIGINT', () => {
+  if (audioState.playing) { try { process.kill(audioState.playing.pid); } catch {} }
+  process.exit(0);
 });

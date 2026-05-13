@@ -359,33 +359,23 @@ EOF
   ok "desktop entries written (multideck.desktop + multideck-dashboard.desktop)"
 }
 
-# ---------- step 8c: install + enable audio-feed daemon ----------
-# Background systemd user service. Polls /audio-feed/list every 4s, plays new
-# MP3s via ffplay+PipeWire. Survives Gaming Mode, dashboard restarts, etc.
-# No-op if systemd --user is unavailable (e.g. running under non-systemd init).
-ensure_audio_daemon() {
-  if ! command -v systemctl >/dev/null 2>&1; then
-    warn "systemctl not found on host; skipping audio daemon."
-    return
-  fi
-  local unit_src="$SCRIPT_DIR/multideck-audio.service"
-  local unit_dst="$HOME/.config/systemd/user/multideck-audio.service"
-  local daemon="$SCRIPT_DIR/multideck-audio-daemon.sh"
-
-  [[ -f "$daemon" ]]   || { warn "audio daemon script missing: $daemon"; return; }
-  [[ -f "$unit_src" ]] || { warn "audio service unit missing: $unit_src"; return; }
-  chmod +x "$daemon"
-
-  log "Installing audio-feed daemon at $unit_dst"
-  mkdir -p "$(dirname "$unit_dst")"
-  cp "$unit_src" "$unit_dst"
-
-  systemctl --user daemon-reload
-  systemctl --user enable --now multideck-audio.service 2>&1 | tail -2 || true
-  if systemctl --user is-active --quiet multideck-audio.service; then
-    ok "audio-feed daemon enabled and running"
-  else
-    warn "audio-feed daemon installed but not active; check: systemctl --user status multideck-audio"
+# ---------- step 8c: migrate from legacy audio daemon ----------
+# v0.7 folded the audio autoplay daemon into the Node dashboard server itself.
+# This step removes the old multideck-audio.service if present from a prior
+# install so the two implementations do not double-play.
+#
+# Pre-v0.7 installs ran a standalone systemd user service:
+#   ~/.config/systemd/user/multideck-audio.service -> multideck-audio-daemon.sh
+# v0.7+ runs the same logic inside dashboard/server.cjs via startAudioAutoplay().
+# Disable autoplay with DISPATCH_AUDIO_AUTOPLAY=0. See docs/DEPLOYMENT.md.
+cleanup_legacy_audio_daemon() {
+  if ! command -v systemctl >/dev/null 2>&1; then return; fi
+  if systemctl --user list-unit-files 2>/dev/null | grep -q '^multideck-audio.service'; then
+    log "Removing legacy multideck-audio.service (folded into dashboard server)"
+    systemctl --user disable --now multideck-audio.service 2>/dev/null || true
+    rm -f "$HOME/.config/systemd/user/multideck-audio.service"
+    systemctl --user daemon-reload 2>/dev/null || true
+    ok "legacy audio daemon removed"
   fi
 }
 
@@ -482,7 +472,7 @@ ensure_whisper
 ensure_claude_hook
 write_env_file
 write_desktop_entry
-ensure_audio_daemon
+cleanup_legacy_audio_daemon
 apply_overlay
 
 cat <<EOF
