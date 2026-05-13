@@ -2,9 +2,13 @@
 
 **A multi-agent orchestration framework for Claude Code that looks like a video game title screen. On purpose.**
 
-Multiple AI operatives. Each with their own voice. One launcher. You pick your team from a character-select screen, hit DEPLOY, and real Claude Code sessions spin up in color-coded terminal tabs, each with its own persona, scope, and synthesized voice. A job board tracks the work. A quality gate reviews it. An audio feed plays their reports out loud so you can walk away from the keyboard and just listen.
+Multiple AI operatives. Each with their own voice. One launcher. You pick your team from a character-select screen, hit DEPLOY, and real Claude Code sessions spin up in color-coded terminal tabs or right inside the browser, each with its own persona, scope, and synthesized voice. A job board tracks the work. A quality gate reviews it. An audio feed plays their reports out loud so you can walk away from the keyboard and just listen.
 
-It runs entirely local. Zero API cost with a Claude Code CLI membership. Fork it, add your own operatives, your own voices, your own background music. Make it yours.
+It runs entirely local. Zero API cost with a Claude Code CLI membership. Fork it, add your own operatives, your own voices, your own background music. Run it on Windows, Linux, macOS, or a **Steam Deck in your hands**. Make it yours.
+
+![MultiDeck running on a Steam Deck — browser terminal, matrix rain, Voice-Technician persona, push-to-talk mic](docs/screenshots/steamdeck-voice-tech.jpg)
+
+*Voice-Technician deployed on a Steam Deck. Browser terminal, matrix rain composite, push-to-talk mic in the header. Gamepad navigates the launcher. v0.7.*
 
 ![MultiDeck Boot Sequence](docs/media/boot-sequence.gif)
 
@@ -27,6 +31,14 @@ It runs entirely local. Zero API cost with a Claude Code CLI membership. Fork it
 ---
 
 ## What's New
+
+**v0.7.0** — Steam Deck Native + Gamepad + Voice In
+
+- **Steam Deck install** — `scripts/install-steamdeck.sh` puts MultiDeck inside a distrobox Arch container so SteamOS's read-only root is never touched and the install survives OS updates. `scripts/steamdeck-launcher.sh` opens the dashboard in Chromium kiosk mode, ready to add to Steam as a Non-Steam Game. Walks through gamepad-permission first-press, mic auto-grant, and the 7" Deck CSS pass at `@media (max-width: 1280px) and (max-height: 800px)`. Full guide in [STEAMDECK_SETUP.md](docs/STEAMDECK_SETUP.md).
+- **Web Gamepad API input layer** — `dashboard/scripts/launcher-gamepad.js` polls `navigator.getGamepads()` at 60 Hz and dispatches `multideck:gamepad:*` events. Dpad and left stick both emit `nav`. A/B/X/Y emit `option` with index 0–3. L1 latches push-to-talk. The launcher and modals are fully navigable without touching the keyboard.
+- **Push-to-talk mic** — `[ ◉ MIC ]` button in the terminal header, or hold L1 on the gamepad. Whisper.cpp runs locally inside the container (pinned `v1.7.4`, `base.en` model). Transcribed text is injected into the active xterm.js session as if typed. New `POST /stt/transcribe` route on the dashboard.
+- **AskUserQuestion glyph modal** — when Claude calls its `AskUserQuestion` tool, a PreToolUse hook (`hooks/dashboard-question-bridge.py`) intercepts, writes the payload to `state/pending-questions/`, and the dashboard's new `GET /events/questions` SSE channel pushes it to a glyph-mapped modal. A/B/X/Y map to options 0/1/2/3 with green/red/blue/yellow glyphs. Multi-select via R1. Claude never renders its native CLI prompt; the operator answers with one button-press.
+- **Installer auto-wires the hook** — `ensure_claude_hook` in `install-steamdeck.sh` idempotently merges the PreToolUse matcher into `~/.claude/settings.json` so the bridge works out-of-the-box.
 
 **v0.6.0** — Browser Terminal + Remote Access
 
@@ -99,6 +111,8 @@ It runs entirely local. Zero API cost with a Claude Code CLI membership. Fork it
 
 - **Work gets tracked and reviewed automatically.** Per-project job boards with priority, assignment, submission, and a Reviewer quality gate. No work closes without passing review. One fix attempt, then escalate. No infinite loops.
 
+- **Runs on a Steam Deck.** Add MultiDeck to your library as a Non-Steam Game. Browser-terminal transport means there is no terminal emulator to fight with in Gaming Mode. Gamepad navigates the launcher, A/B/X/Y answer questions, L1 holds push-to-talk for voice input. Local Whisper transcription means no cloud, no API cost, no waiting.
+
 ---
 
 ## Screenshots
@@ -137,6 +151,11 @@ It runs entirely local. Zero API cost with a Claude Code CLI membership. Fork it
 ### Audio feed. Leave this tab open. Every operative report plays automatically.
 ![Audio Feed](docs/screenshots/audio-feed.png)
 
+### Browser terminal. BROWSER transport runs Claude inside the launcher itself — no separate terminal window.
+![Browser Terminal](docs/screenshots/browser-terminal.png)
+
+*Matrix rain composites all active persona colors. Each tab is an independent agent session. Works over Tailscale from any device on your network.*
+
 ---
 
 ## Requirements
@@ -144,9 +163,10 @@ It runs entirely local. Zero API cost with a Claude Code CLI membership. Fork it
 - **Claude Code CLI** — [claude.ai/code](https://claude.ai/code). MultiDeck orchestrates Claude Code sessions. A CLI membership gives you unlimited agent runs at zero marginal cost.
 - **Python 3.10+** — Required for Kokoro TTS hooks, job board CLI, and agent management scripts.
 - **Node.js 18+** — Required for the dashboard server.
-- **Windows Terminal** (Windows) or any terminal emulator (Linux/macOS) — The launcher opens color-coded tabs per operative.
-- **Tailscale** (recommended) — [tailscale.com](https://tailscale.com). Tailscale creates a private mesh network between your devices. With it, you can open the audio feed (`/audio-feed`) or mobile dashboard (`/mobile`) on your phone from anywhere, not just your local network. This is what enables "operator mode," where you walk away from the desk and listen to your agents work from another room or another building. Without Tailscale, the dashboard is only accessible on localhost or your LAN.
+- **Windows Terminal** (Windows), any terminal emulator (Linux/macOS), or **Chromium** in the distrobox container (Steam Deck). The launcher opens color-coded tabs per operative, or hosts the session in-browser via `BROWSER` transport.
+- **Tailscale** (recommended) — [tailscale.com](https://tailscale.com). Tailscale creates a private mesh network between your devices. With it, you can open the audio feed (`/audio-feed`), the launcher (`/launcher`), or the job board (`/jobs`) on your phone from anywhere, not just your local network. This is what enables "operator mode," where you walk away from the desk and listen to your agents work from another room or another building. Without Tailscale, the dashboard is only accessible on localhost or your LAN.
 - **ffplay** (optional) — Part of FFmpeg. Required for Kokoro TTS audio playback. Install FFmpeg and ensure `ffplay` is on your PATH.
+- **Steam Deck** (optional, for the Deck install path) — SteamOS 3 (Holo). `scripts/install-steamdeck.sh` bootstraps distrobox + podman, an Arch toolbox container, nodejs/npm/tmux/ffmpeg/chromium, the Claude Code CLI, the Kokoro venv, and a `whisper.cpp` build for local STT. See [STEAMDECK_SETUP.md](docs/STEAMDECK_SETUP.md).
 
 ---
 
@@ -166,6 +186,19 @@ bash scripts/init-dispatch-framework.sh
 
 The init script sets up your environment, creates runtime directories, and installs the Kokoro TTS venv.
 
+### Steam Deck
+
+In Desktop Mode, open Konsole and run:
+
+```bash
+git clone https://github.com/cmc3bear/claude-multideck-persona-launcher.git ~/multideck
+cd ~/multideck
+chmod +x scripts/install-steamdeck.sh scripts/steamdeck-launcher.sh
+./scripts/install-steamdeck.sh
+```
+
+That one script installs distrobox + podman (one-time with `steamos-readonly disable`), creates an Arch toolbox container, installs nodejs / npm / tmux / ffmpeg / chromium / python / git, the Claude Code CLI, the Kokoro venv, builds `whisper.cpp` for local mic-to-text, generates `~/.local/share/applications/multideck.desktop`, and wires the `AskUserQuestion` PreToolUse hook into `~/.claude/settings.json`. Then add the `.desktop` file as a Non-Steam Game and launch from Gaming Mode. Full walkthrough in [STEAMDECK_SETUP.md](docs/STEAMDECK_SETUP.md).
+
 ### Launch an operative
 
 ```powershell
@@ -184,24 +217,28 @@ A new terminal tab opens with the persona color, the persona markdown loaded int
 node dashboard/server.cjs
 ```
 
-Visit `http://localhost:3045`. Key routes:
+Visit `http://localhost:3046`. Key routes:
 
 | Route | What it serves |
 |---|---|
 | `/` | Main ops dashboard (actions, schedule, escalations) |
-| `/launcher` | Cyberpunk character-select launcher |
+| `/launcher` | Cyberpunk character-select launcher, browser terminal, gamepad nav, MIC + glyph modal |
+| `/terminal/ws` | WebSocket upgrade for browser-terminal pty sessions (`BROWSER` transport) |
 | `/jobs` | Visual job board dashboard (multi-view, live state) |
-| `/jobs-classic` | Legacy server-rendered job board (WS-0011 backward compat) |
+| `/jobs-classic` | Legacy server-rendered job board (backward compat) |
 | `/briefing` | Morning briefing view |
 | `/audio-feed` | Auto-play Kokoro TTS feed |
 | `/state.json` | Live state bundle (job-boards + lessons + meetings + briefing keys) |
 | `/api/kokoro/stats` | Kokoro queue depth and drop counters |
+| `/stt/transcribe` | POST audio body, get back `{text}` (whisper.cpp local STT, v0.7+) |
+| `/events/questions` | SSE channel that pushes AskUserQuestion payloads to the glyph modal (v0.7+) |
+| `/questions/:sessionId/answer` | POST the operator's answers back to the PreToolUse bridge (v0.7+) |
 
 ---
 
 ## The Deck
 
-MultiDeck ships with twelve operatives out of the box. Each one has a callsign, a terminal tab color, a Kokoro voice, and a defined scope of work.
+MultiDeck ships with twelve operatives out of the box: nine canonical agents plus three project-scoped examples. Each one has a callsign, a terminal tab color, a Kokoro voice, and a defined scope of work.
 
 | Callsign | Voice | Role |
 |---|---|---|
@@ -214,8 +251,11 @@ MultiDeck ships with twelve operatives out of the box. Each one has a callsign, 
 | **Voice-Technician** | af_nova | Kokoro TTS hooks, voice config, audio pipeline, voice quality. |
 | **Persona-Author** | af_heart | Persona design, agent markdown authoring, roster management. |
 | **Commercial-Producer** | bm_fable | Demo video production. Script, audio, video, review gate, final. |
+| **Dungeon-Master** | dm | Example project persona. D&D 5e DM with server-authoritative dice. Project-scoped to `dnd-campaign`. |
+| **NPC** | npc | Example project persona. In-character NPC spawned with identity and secret. |
+| **Frasier** | frasier | Example project persona. CBT-style wellness chat. Therapeutic frame, no diagnosis. |
 
-Operatives are defined in `personas/personas.json`. Each entry maps a callsign to a color, voice, working directory, and agent markdown file that defines behavior and scope.
+The three example personas illustrate project-scoped use cases. Fork them, swap them for your own, or delete them. Operatives are defined in `personas/personas.json`. Each entry maps a callsign to a color, voice, working directory, and agent markdown file that defines behavior and scope.
 
 ### Adding your own operatives
 
@@ -246,6 +286,18 @@ This is the core of what MultiDeck calls "operator mode." A laptop or phone with
 ### Background music
 
 Eleven cyberpunk BGM tracks ship with the launcher. The title screen and character select play ambient music automatically. Toggle with the MUSIC button in the corner.
+
+### Voice in (v0.7)
+
+Press the `[ ◉ MIC ]` button in the terminal header, or hold L1 on a connected gamepad, and speak. `whisper.cpp` running locally inside the container transcribes via the `POST /stt/transcribe` route and injects the text into the active xterm.js session as if typed. No cloud, no API key, no per-second charge. The Steam Deck install pins `v1.7.4` of whisper.cpp with the `base.en` model; bigger models are a config swap if you have the disk.
+
+### Gamepad input (v0.7)
+
+The launcher polls `navigator.getGamepads()` at 60 Hz and dispatches `multideck:gamepad:*` `CustomEvent`s. Standard mapping: dpad and left stick emit `nav`, A/B/X/Y emit `option` with index 0–3, L1 latches push-to-talk, R1 confirms multi-select. The launcher and every modal are navigable without touching the keyboard. The same code path runs on a desktop with any USB or Bluetooth gamepad plugged in.
+
+### AskUserQuestion glyph modal (v0.7)
+
+When Claude calls its `AskUserQuestion` tool, a PreToolUse hook (`hooks/dashboard-question-bridge.py`) intercepts before Claude renders its CLI prompt. The hook writes the question payload to `state/pending-questions/<session>.json`. The dashboard's `GET /events/questions` SSE channel pushes it to a glyph-mapped modal (A/B/X/Y → option 0/1/2/3 with green/red/blue/yellow glyphs). Multi-question payloads walk one at a time; multiSelect questions confirm with R1. On answer, the hook returns `permissionDecision=allow` with the operator's selection so Claude proceeds as if it asked normally. On 60-second timeout the hook returns `deny` with a graceful message. Desktop fallback uses mouse and keyboard.
 
 ---
 
@@ -279,7 +331,7 @@ Jobs are scoped per-project. Multiple projects can run their own boards without 
 The job board has a dedicated visual dashboard at `/jobs`. It is a single-page app served by the dashboard server and wired live to `/state.json`.
 
 ```
-http://localhost:3045/jobs
+http://localhost:3046/jobs
 ```
 
 ### View modes
@@ -411,7 +463,7 @@ Key environment variables:
 
 | Variable | Purpose | Default |
 |---|---|---|
-| `DISPATCH_PORT` | Dashboard HTTP port | `3045` |
+| `DISPATCH_PORT` | Dashboard HTTP port | `3046` |
 | `DISPATCH_ROOT` | Framework root directory | auto-detected |
 | `DISPATCH_STATE_DIR` | Runtime state JSON directory | `./state` |
 | `DISPATCH_PERSONAS_JSON` | Path to personas registry | `$DISPATCH_ROOT/personas/personas.json` |
@@ -420,9 +472,16 @@ Key environment variables:
 | `DISPATCH_LAUNCHER_ASSETS` | Portraits, intros, music | `./dashboard/launcher-assets` |
 | `DISPATCH_TEAM_PRESETS` | Team preset definitions | `./dashboard/team-presets.json` |
 | `DISPATCH_WORKSPACE_ROOT` | Workspace root for state context | `$DISPATCH_ROOT` |
+| `DISPATCH_LAUNCHER_TRANSPORT` | Persona spawn transport: `wt`, `tmux`, `sh`, or `BROWSER`. Auto-detected from host. | auto-detect |
+| `DISPATCH_KOKORO_VENV` | Linux/WSL Kokoro venv path (tmux transport) | `~/.dispatch-kokoro-venv` |
+| `DISPATCH_TMUX_SESSION` | tmux session name for tiled persona panes | `multideck` |
+| `DISPATCH_CLAUDE_BIN` | Override `claude` binary path | `claude` |
+| `DISPATCH_WHISPER_BIN` | whisper.cpp CLI binary (v0.7 push-to-talk) | `~/.dispatch-whisper/build/bin/whisper-cli` |
+| `DISPATCH_WHISPER_MODEL` | whisper.cpp model file | `~/.dispatch-whisper/models/ggml-base.en.bin` |
 | `DISPATCH_OPENCODE_MODEL` | Ollama model used by OpenCode runtime | `ollama/qwen3-coder:30b-32k` |
 | `DISPATCH_OPENCODE_AGENTS_DIR` | Output directory for converted OpenCode agent files | `~/.config/opencode/agents` |
 | `DISPATCH_DM_VOICE_PT` | Path to a custom Kokoro `.pt` voice tensor for the `dm` voice key | unset (standard voice used) |
+| `MULTIDECK_BOX` | distrobox container name (Steam Deck install) | `multideck-box` |
 
 The job board dashboard reads additional state files from `DISPATCH_STATE_DIR` automatically:
 
