@@ -7,7 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Browser-terminal spawn on Linux** — `dashboard/server.cjs` was using BSD `script` syntax (`script -q /dev/null -c '...'`) which fails on util-linux with "unexpected number of arguments". Patched both spawn branches to use the util-linux form (`script -q -c '...' /dev/null`). Without this fix, every BROWSER-transport persona on Linux/SteamOS exited immediately with exit code 1.
+- **`claude` not found in non-interactive shells** on the Steam Deck install. `install-steamdeck.sh` added the npm-global PATH export to `~/.bashrc`, but the launcher's spawn uses `bash -lc 'script -q -c claude ...'` and on Arch the default `.bashrc` short-circuits for non-interactive shells before the export runs. Fixed by symlinking `$HOME/.npm-global/bin/claude` into `/usr/local/bin/claude` inside the container during `ensure_claude_code`. Matches the pattern documented in `docs/WSL_SETUP.md`.
+
 ### Added
+
+- **Audio-feed daemon (`scripts/multideck-audio-daemon.sh` + `scripts/multideck-audio.service`)** — background systemd user service that polls `/audio-feed/list` every 4s and plays new Kokoro MP3s via `ffplay` + PipeWire. Survives Gaming Mode, dashboard restarts, and operator-window-closed states. Installed and enabled automatically by `install-steamdeck.sh` (new `ensure_audio_daemon` step). Logs at `~/.cache/multideck/audio-daemon.log`.
+- **Windowed dashboard shortcut (`scripts/steamdeck-dashboard.sh` + `multideck-dashboard.desktop`)** — second Non-Steam Game entry that opens the dashboard in Chromium app-mode (NOT kiosk) pointed at `/`. Pairs with the audio daemon so MP3 playback continues even when the dashboard window isn't focused. `install-steamdeck.sh` `write_desktop_entry` now writes both `.desktop` files.
+- **`docs/STEAMDECK_SETUP.md`** documents the two-shortcut model and the audio daemon, with `systemctl --user status multideck-audio` commands for verifying the daemon.
 
 - **Steam Deck support** — `scripts/install-steamdeck.sh` and `scripts/steamdeck-launcher.sh` install MultiDeck into a distrobox Arch container so SteamOS's read-only root is never touched. The launcher script opens the dashboard in Chromium kiosk mode (`--kiosk --app=URL` with isolated `--user-data-dir`, `--use-fake-ui-for-media-stream` for STT mic, `--disable-pinch` and `--overscroll-history-navigation=0` for touchscreen), suitable for adding to Steam as a Non-Steam Game shortcut. Pinned Kokoro versions match `install-wsl-kokoro-venv.sh`. Idempotent; supports `--force`, `--verify`, and `--overlay <zip>` for layering personal personas/state over the clean clone.
 - **`docs/STEAMDECK_SETUP.md`** — install walkthrough, Steam shortcut setup, personal-content overlay protocol, troubleshooting for audio routing, port conflicts, post-SteamOS-update container recovery, a Gaming Mode integration note, a Controls table mapping gamepad input to launcher actions, and a Voice Input (STT) section.

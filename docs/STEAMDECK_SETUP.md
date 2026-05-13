@@ -68,15 +68,37 @@ This caches your credentials at `~/.claude/` (which is shared between host and c
 
 ---
 
-## Steam shortcut
+## Steam shortcuts
 
-From Desktop Mode:
+The installer generates **two** `.desktop` entries. Add either or both as Non-Steam Games.
 
-1. Open Steam.
-2. Top menu → Games → Add a Non-Steam Game to My Library.
-3. Click Browse. Navigate to `~/.local/share/applications/multideck.desktop` (you may need to type the path into the file dialog since `.local` is hidden by default).
-4. Confirm. Steam will pick up the name "MultiDeck" and the icon from the desktop entry.
-5. Switch back to Gaming Mode. MultiDeck appears in your Non-Steam library.
+### Option A — Kiosk launcher (`multideck.desktop`)
+
+The cyberpunk character-select launcher in Chromium kiosk mode. What v0.7's Gaming Mode experience was designed around.
+
+1. Desktop Mode → Steam → Games → Add a Non-Steam Game to My Library.
+2. Browse to `~/.local/share/applications/multideck.desktop` (`.local` is hidden by default — you may need to type the path).
+3. Confirm. Steam picks up the name "MultiDeck" and the icon.
+
+### Option B — Windowed dashboard (`multideck-dashboard.desktop`)
+
+Opens the dashboard in a normal Chromium window (no kiosk chrome stripped), pointed at `/`. Pairs with the **audio daemon** (below) so MP3 playback continues even when the dashboard window isn't focused or you switch into a real Steam game.
+
+Same flow as Option A, but browse to `~/.local/share/applications/multideck-dashboard.desktop`.
+
+### Audio daemon
+
+`install-steamdeck.sh` also installs a systemd user service (`multideck-audio.service`) that runs `multideck-audio-daemon.sh` in the background. The daemon polls `/audio-feed/list` every 4 seconds and plays new MP3s via `ffplay` + PipeWire. It runs whether or not any dashboard window is open, and it auto-starts on every login.
+
+Check it:
+```bash
+systemctl --user status multideck-audio
+journalctl --user -u multideck-audio -f
+```
+
+Logs at `~/.cache/multideck/audio-daemon.log`. Files-seen list at `~/.cache/multideck/audio-seen.txt`.
+
+After adding both shortcuts, switch back to Gaming Mode and both appear in your Non-Steam library.
 
 ---
 

@@ -1577,12 +1577,13 @@ wss.on('connection', (ws, req) => {
   let proc;
   try {
     if (IS_WINDOWS && WSL_AVAILABLE) {
-      // Wrap in `script -q /dev/null -c '...'` to allocate a pseudo-TTY so
+      // Wrap in `script -q -c '...' /dev/null` to allocate a pseudo-TTY so
       // claude behaves interactively (colors, no "no stdin data" warning).
+      // Note: util-linux script requires the output file as the LAST positional arg.
       const safe      = String(pending.prompt || '').replace(/'/g, "'\\''");
       const dangerArg = pending.dangerous ? ' --dangerously-skip-permissions' : '';
       const inner     = pending.prompt ? `claude${dangerArg} '${safe}'` : `claude${dangerArg}`;
-      const cmd       = `script -q /dev/null -c '${inner.replace(/'/g, "'\\''")}'`;
+      const cmd       = `script -q -c '${inner.replace(/'/g, "'\\''")}' /dev/null`;
       proc = spawn('wsl.exe', ['-d', 'Ubuntu', '--', 'bash', '-lc', cmd], {
         stdio: ['pipe', 'pipe', 'pipe'],
       });
@@ -1590,7 +1591,7 @@ wss.on('connection', (ws, req) => {
       const safe      = String(pending.prompt || '').replace(/'/g, "'\\''");
       const dangerArg = pending.dangerous ? ' --dangerously-skip-permissions' : '';
       const inner     = pending.prompt ? `claude${dangerArg} '${safe}'` : `claude${dangerArg}`;
-      const cmd       = `script -q /dev/null -c '${inner.replace(/'/g, "'\\''")}'`;
+      const cmd       = `script -q -c '${inner.replace(/'/g, "'\\''")}' /dev/null`;
       proc = spawn('bash', ['-lc', cmd], { stdio: ['pipe', 'pipe', 'pipe'] });
     } else {
       ws.send(JSON.stringify({ type: 'error', msg: 'browser terminal requires WSL on Windows' }));
