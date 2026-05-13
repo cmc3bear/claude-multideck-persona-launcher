@@ -12,6 +12,30 @@ It runs entirely local. Zero API cost with a Claude Code CLI membership. Fork it
 
 ![MultiDeck Boot Sequence](docs/media/boot-sequence.gif)
 
+### Watch: Boot to deck in twelve seconds
+
+<video src="docs/media/boot-sequence.mp4" controls width="720"></video>
+
+[Watch boot-sequence.mp4 (~12s, 0.4 MB)](docs/media/boot-sequence.mp4)
+
+*Studio splash, title flicker, PRESS START, menu reveal. Headless capture, no audio.*
+
+### Watch: Character select walkthrough
+
+<video src="docs/media/character-select-flow.mp4" controls width="720"></video>
+
+[Watch character-select-flow.mp4 (~12s, 0.5 MB)](docs/media/character-select-flow.mp4)
+
+*Menu, LOAD, project pick, CHOOSE YOUR MODE, character grid. Twelve operatives, one click each from boot.*
+
+### Watch: Job board view modes
+
+<video src="docs/media/job-board-views.mp4" controls width="720"></video>
+
+[Watch job-board-views.mp4 (~16s, 0.3 MB)](docs/media/job-board-views.mp4)
+
+*Board, Dispatch Radar, Constellation, Reviewer Log, Pattern Detector, Meeting Room. Same data, six lenses.*
+
 ### Watch: How Do You Claude?
 
 ![How Do You Claude?](docs/media/how-do-you-claude-preview.gif)
@@ -136,13 +160,22 @@ It runs entirely local. Zero API cost with a Claude Code CLI membership. Fork it
 | **OPTIONS** | Access dashboard routes — main ops view, briefing, job board, audio feed. |
 | **QUIT** | Shutdown sequence. Scanlines out. |
 
-### The operative deck. Select your runner. Stats, scope, voice, danger toggle.
+### Target node. Pick the project to deploy under. Each project can scope its own roster.
+![Target Node](docs/screenshots/launcher-projects.png)
+
+### Spin up node. NEW GAME initialises a fresh project, path resolved from `$DISPATCH_PROJECTS_DIR`.
+![New Project](docs/screenshots/launcher-new-project.png)
+
+### Choose your mode. LOCAL runs on an Ollama model. CO-OP runs on Claude Code. VS runs both side-by-side for the comparator.
+![Mode Select](docs/screenshots/launcher-mode-select.png)
+
+### The operative deck. Twelve operatives in the v0.7 roster. Stats, scope, voice, danger toggle.
 ![Character Select](docs/screenshots/launcher-select.png)
 
 ### Operative dossier. Researcher selected. Investigation, evidence grading, source citation.
 ![Persona Detail](docs/screenshots/launcher-persona-detail.png)
 
-### Team deploy. Multiple operatives selected, dangerous mode armed, one click launches the squad.
+### Team deploy. Preset squads of operatives launched together. Full Roster, Build Team, Investigation, or your own.
 ![Team Mode](docs/screenshots/launcher-team-mode.png)
 
 ### Operations dashboard. Actions, schedule, escalations, state. All JSON-backed, all live.
@@ -153,6 +186,15 @@ It runs entirely local. Zero API cost with a Claude Code CLI membership. Fork it
 
 ### Browser terminal. BROWSER transport runs Claude inside the launcher itself — no separate terminal window.
 ![Browser Terminal](docs/screenshots/browser-terminal.png)
+
+### Job board. Kanban columns by status, multi-project nav rail, six view modes.
+![Job Board](docs/screenshots/job-board.png)
+
+### Job board — Pattern Detector. Cross-job tenet-break trends, lifecycle phase chart, worktype × tenet matrix, open-job coverage gaps.
+![Pattern Detector](docs/screenshots/job-board-pattern-detector.png)
+
+### Persona Builder. Interactive form to author a new operative. Identity, color, voice, scope, working directory.
+![Persona Builder](docs/screenshots/persona-builder.png)
 
 *Matrix rain composites all active persona colors. Each tab is an independent agent session. Works over Tailscale from any device on your network.*
 
