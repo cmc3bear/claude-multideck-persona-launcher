@@ -121,49 +121,49 @@ Boot to deployment in twelve seconds. Studio splash, title gate, menu, project p
   <tr>
     <td align="center" width="33%">
       <a href="docs/screenshots/launcher-boot.png"><img src="docs/screenshots/thumbs/launcher-boot.png" alt="Boot sequence"></a>
-      <br><sub><b>Boot.</b> Scanlines. Synth. Vibe locked.</sub>
+      <br><h3><b>BOOT.</b> SCANLINES. SYNTH. VIBE LOCKED.</h3>
     </td>
     <td align="center" width="33%">
       <a href="docs/screenshots/launcher-title.png"><img src="docs/screenshots/thumbs/launcher-title.png" alt="Title gate"></a>
-      <br><sub><b>Title gate.</b> Press start.</sub>
+      <br><h3><b>TITLE GATE.</b> PRESS START.</h3>
     </td>
     <td align="center" width="33%">
       <a href="docs/screenshots/launcher-menu.png"><img src="docs/screenshots/thumbs/launcher-menu.png" alt="Main menu"></a>
-      <br><sub><b>Menu.</b> Seven ways in.</sub>
+      <br><h3><b>MENU.</b> SEVEN WAYS IN.</h3>
     </td>
   </tr>
   <tr>
     <td align="center" width="33%">
       <a href="docs/screenshots/launcher-projects.png"><img src="docs/screenshots/thumbs/launcher-projects.png" alt="Target node"></a>
-      <br><sub><b>Target node.</b> Pick the deck.</sub>
+      <br><h3><b>TARGET NODE.</b> PICK THE DECK.</h3>
     </td>
     <td align="center" width="33%">
       <a href="docs/screenshots/launcher-new-project.png"><img src="docs/screenshots/thumbs/launcher-new-project.png" alt="Spin up node"></a>
-      <br><sub><b>Spin up node.</b> New project. Zero friction.</sub>
+      <br><h3><b>SPIN UP NODE.</b> NEW PROJECT. ZERO FRICTION.</h3>
     </td>
     <td align="center" width="33%">
       <a href="docs/screenshots/launcher-mode-select.png"><img src="docs/screenshots/thumbs/launcher-mode-select.png" alt="Mode select"></a>
-      <br><sub><b>Choose your mode.</b> Local. Co-op. Versus.</sub>
+      <br><h3><b>CHOOSE YOUR MODE.</b> LOCAL. CO-OP. VERSUS.</h3>
     </td>
   </tr>
   <tr>
     <td align="center" width="33%">
       <a href="docs/screenshots/launcher-select.png"><img src="docs/screenshots/thumbs/launcher-select.png" alt="Character select"></a>
-      <br><sub><b>The deck.</b> Twelve operatives. One launcher.</sub>
+      <br><h3><b>THE DECK.</b> TWELVE OPERATIVES. ONE LAUNCHER.</h3>
     </td>
     <td align="center" width="33%">
       <a href="docs/screenshots/launcher-persona-detail.png"><img src="docs/screenshots/thumbs/launcher-persona-detail.png" alt="Persona dossier"></a>
-      <br><sub><b>Dossier.</b> Know your runner.</sub>
+      <br><h3><b>DOSSIER.</b> KNOW YOUR RUNNER.</h3>
     </td>
     <td align="center" width="33%">
       <a href="docs/screenshots/launcher-team-mode.png"><img src="docs/screenshots/thumbs/launcher-team-mode.png" alt="Team presets"></a>
-      <br><sub><b>Team presets.</b> Squad up.</sub>
+      <br><h3><b>TEAM PRESETS.</b> SQUAD UP.</h3>
     </td>
   </tr>
   <tr>
     <td align="center" width="33%">
       <a href="docs/screenshots/launcher-jacking-in.png"><img src="docs/screenshots/thumbs/launcher-jacking-in.png" alt="Jacking in"></a>
-      <br><sub><b>Jacking in.</b> Cyber on.</sub>
+      <br><h3><b>JACKING IN.</b> CYBER ON.</h3>
     </td>
     <td align="center" width="33%">&nbsp;</td>
     <td align="center" width="33%">&nbsp;</td>
