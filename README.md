@@ -156,6 +156,14 @@ Boot to deployment in twelve seconds. Studio splash, title gate, menu, project p
       <br><sub><b>Team presets.</b> Full Roster, Build Team, Investigation.</sub>
     </td>
   </tr>
+  <tr>
+    <td align="center" width="33%">
+      <a href="docs/screenshots/launcher-jacking-in.png"><img src="docs/screenshots/thumbs/launcher-jacking-in.png" alt="Jacking in"></a>
+      <br><sub><b>Jacking in.</b> Hit DEPLOY. Pixel-art launch sequence, progress bar, opening browser terminal.</sub>
+    </td>
+    <td align="center" width="33%">&nbsp;</td>
+    <td align="center" width="33%">&nbsp;</td>
+  </tr>
 </table>
 
 The menu options:
