@@ -18,14 +18,6 @@ It runs entirely local. Zero API cost with a Claude Code CLI membership. Fork it
 
 *Vanilla Claude Code vs Claude Code inside MultiDeck. Same tool, different deck.*
 
-### Watch: Every Operation Needs a Deck
-
-![Hero Spot](docs/media/hero-60s-preview.gif)
-
-[Watch the full 60-second hero spot](https://github.com/cmc3bear/claude-multideck-persona-launcher/raw/main/docs/media/hero-60s.mp4)
-
-*Boot sequence to deployment. Your operatives. One deck. And you.*
-
 ---
 
 ## What's New
