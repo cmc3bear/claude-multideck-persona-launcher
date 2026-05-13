@@ -10,6 +10,10 @@ It runs entirely local. Zero API cost with a Claude Code CLI membership. Fork it
 
 *Voice-Technician deployed on a Steam Deck. Browser terminal, matrix rain composite, push-to-talk mic in the header. Gamepad navigates the launcher. v0.7.*
 
+![Live multi-session browser terminal — five operatives spawned, Dispatch active, matrix rain composites their accent colors with persona portraits as watermarks](docs/screenshots/browser-terminal.png)
+
+*Five operatives spawned at once. Dispatch active on the terminal panel, the others holding state in their own tabs. Matrix rain composites every active persona's accent color and tiles their portraits as watermarks. Works locally and over Tailscale from any device on your network.*
+
 ### Watch: How Do You Claude?
 
 ![How Do You Claude?](docs/media/how-do-you-claude-preview.gif)
