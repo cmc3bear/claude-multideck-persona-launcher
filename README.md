@@ -141,14 +141,58 @@ It runs entirely local. Zero API cost with a Claude Code CLI membership. Fork it
 
 ## Screenshots
 
-### Boot sequence. Scanlines. Music. The vibe is immediate.
-![Boot](docs/screenshots/launcher-boot.png)
+Click any thumbnail for the full-resolution image.
 
-### Title screen. PRESS START, then choose your path.
-![Title Screen](docs/screenshots/launcher-title.png)
+### Launcher flow
 
-### Main menu. Seven options, each a different way into the deck.
-![Title Menu](docs/screenshots/launcher-menu.png)
+Boot to deployment in twelve seconds. Studio splash, title gate, menu, project pick, mode pick, character select, dossier, team deploy.
+
+<table>
+  <tr>
+    <td align="center" width="33%">
+      <a href="docs/screenshots/launcher-boot.png"><img src="docs/screenshots/thumbs/launcher-boot.png" alt="Boot sequence"></a>
+      <br><sub><b>Boot.</b> Studio splash, scanlines, the vibe is immediate.</sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="docs/screenshots/launcher-title.png"><img src="docs/screenshots/thumbs/launcher-title.png" alt="Title gate"></a>
+      <br><sub><b>Title gate.</b> PRESS START, awaiting input.</sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="docs/screenshots/launcher-menu.png"><img src="docs/screenshots/thumbs/launcher-menu.png" alt="Main menu"></a>
+      <br><sub><b>Menu.</b> Seven options, each a way into the deck.</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="33%">
+      <a href="docs/screenshots/launcher-projects.png"><img src="docs/screenshots/thumbs/launcher-projects.png" alt="Target node"></a>
+      <br><sub><b>Target node.</b> Pick the project to deploy under.</sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="docs/screenshots/launcher-new-project.png"><img src="docs/screenshots/thumbs/launcher-new-project.png" alt="Spin up node"></a>
+      <br><sub><b>Spin up node.</b> NEW GAME initialises a fresh project.</sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="docs/screenshots/launcher-mode-select.png"><img src="docs/screenshots/thumbs/launcher-mode-select.png" alt="Mode select"></a>
+      <br><sub><b>Choose your mode.</b> LOCAL, CO-OP, or VS comparator.</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="33%">
+      <a href="docs/screenshots/launcher-select.png"><img src="docs/screenshots/thumbs/launcher-select.png" alt="Character select"></a>
+      <br><sub><b>The deck.</b> Twelve operatives in the v0.7 roster.</sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="docs/screenshots/launcher-persona-detail.png"><img src="docs/screenshots/thumbs/launcher-persona-detail.png" alt="Persona dossier"></a>
+      <br><sub><b>Dossier.</b> Researcher selected, evidence grading scope.</sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="docs/screenshots/launcher-team-mode.png"><img src="docs/screenshots/thumbs/launcher-team-mode.png" alt="Team presets"></a>
+      <br><sub><b>Team presets.</b> Full Roster, Build Team, Investigation.</sub>
+    </td>
+  </tr>
+</table>
+
+The menu options:
 
 | Option | What it does |
 |---|---|
@@ -160,43 +204,67 @@ It runs entirely local. Zero API cost with a Claude Code CLI membership. Fork it
 | **OPTIONS** | Access dashboard routes — main ops view, briefing, job board, audio feed. |
 | **QUIT** | Shutdown sequence. Scanlines out. |
 
-### Target node. Pick the project to deploy under. Each project can scope its own roster.
-![Target Node](docs/screenshots/launcher-projects.png)
+### Operator tools
 
-### Spin up node. NEW GAME initialises a fresh project, path resolved from `$DISPATCH_PROJECTS_DIR`.
-![New Project](docs/screenshots/launcher-new-project.png)
+The dashboard, the audio feed, the browser terminal, the persona builder. Where work actually happens.
 
-### Choose your mode. LOCAL runs on an Ollama model. CO-OP runs on Claude Code. VS runs both side-by-side for the comparator.
-![Mode Select](docs/screenshots/launcher-mode-select.png)
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <a href="docs/screenshots/dashboard-main.png"><img src="docs/screenshots/thumbs/dashboard-main.png" alt="Operations dashboard"></a>
+      <br><sub><b>Operations dashboard.</b> Actions, schedule, escalations. JSON-backed, live.</sub>
+    </td>
+    <td align="center" width="50%">
+      <a href="docs/screenshots/audio-feed.png"><img src="docs/screenshots/thumbs/audio-feed.png" alt="Audio feed"></a>
+      <br><sub><b>Audio feed.</b> Leave this tab open. Every report plays automatically.</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <a href="docs/screenshots/browser-terminal.png"><img src="docs/screenshots/thumbs/browser-terminal.png" alt="Browser terminal"></a>
+      <br><sub><b>Browser terminal.</b> BROWSER transport runs Claude inside the launcher. Matrix rain composites all active persona colors.</sub>
+    </td>
+    <td align="center" width="50%">
+      <a href="docs/screenshots/persona-builder.png"><img src="docs/screenshots/thumbs/persona-builder.png" alt="Persona Builder"></a>
+      <br><sub><b>Persona Builder.</b> Interactive form to author a new operative. Identity, color, voice, scope, working directory.</sub>
+    </td>
+  </tr>
+</table>
 
-### The operative deck. Twelve operatives in the v0.7 roster. Stats, scope, voice, danger toggle.
-![Character Select](docs/screenshots/launcher-select.png)
+### Job board views
 
-### Operative dossier. Researcher selected. Investigation, evidence grading, source citation.
-![Persona Detail](docs/screenshots/launcher-persona-detail.png)
+One job board, six view modes. Switch via the segmented bar in the top-right.
 
-### Team deploy. Preset squads of operatives launched together. Full Roster, Build Team, Investigation, or your own.
-![Team Mode](docs/screenshots/launcher-team-mode.png)
-
-### Operations dashboard. Actions, schedule, escalations, state. All JSON-backed, all live.
-![Dashboard](docs/screenshots/dashboard-main.png)
-
-### Audio feed. Leave this tab open. Every operative report plays automatically.
-![Audio Feed](docs/screenshots/audio-feed.png)
-
-### Browser terminal. BROWSER transport runs Claude inside the launcher itself — no separate terminal window.
-![Browser Terminal](docs/screenshots/browser-terminal.png)
-
-### Job board. Kanban columns by status, multi-project nav rail, six view modes.
-![Job Board](docs/screenshots/job-board.png)
-
-### Job board — Pattern Detector. Cross-job tenet-break trends, lifecycle phase chart, worktype × tenet matrix, open-job coverage gaps.
-![Pattern Detector](docs/screenshots/job-board-pattern-detector.png)
-
-### Persona Builder. Interactive form to author a new operative. Identity, color, voice, scope, working directory.
-![Persona Builder](docs/screenshots/persona-builder.png)
-
-*Matrix rain composites all active persona colors. Each tab is an independent agent session. Works over Tailscale from any device on your network.*
+<table>
+  <tr>
+    <td align="center" width="33%">
+      <a href="docs/screenshots/job-board.png"><img src="docs/screenshots/thumbs/job-board.png" alt="Board view"></a>
+      <br><sub><b>Board.</b> Kanban columns by status. Click for detail drawer.</sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="docs/screenshots/job-board-radar.png"><img src="docs/screenshots/thumbs/job-board-radar.png" alt="Dispatch Radar"></a>
+      <br><sub><b>Dispatch Radar.</b> Agent workload, cross-project assignment.</sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="docs/screenshots/job-board-cluster.png"><img src="docs/screenshots/thumbs/job-board-cluster.png" alt="Constellation"></a>
+      <br><sub><b>Constellation.</b> Cluster by tags, project, operative.</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="33%">
+      <a href="docs/screenshots/job-board-reviewer-log.png"><img src="docs/screenshots/thumbs/job-board-reviewer-log.png" alt="Reviewer Log"></a>
+      <br><sub><b>Reviewer Log.</b> Lesson browser, six tenets, ratification.</sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="docs/screenshots/job-board-pattern-detector.png"><img src="docs/screenshots/thumbs/job-board-pattern-detector.png" alt="Pattern Detector"></a>
+      <br><sub><b>Pattern Detector.</b> Tenet-break trends, phase chart, worktype × tenet matrix.</sub>
+    </td>
+    <td align="center" width="33%">
+      <!-- Sixth view (Meeting Room) is dynamic; see /jobs?view=meeting-room live. -->
+      &nbsp;
+    </td>
+  </tr>
+</table>
 
 ---
 
