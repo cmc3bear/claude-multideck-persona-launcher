@@ -166,7 +166,13 @@ ensure_claude_code() {
   in_box 'mkdir -p ~/.npm-global && npm config set prefix ~/.npm-global'
   in_box 'grep -q "npm-global/bin" ~/.bashrc || echo "export PATH=\$HOME/.npm-global/bin:\$PATH" >> ~/.bashrc'
   in_box 'export PATH=$HOME/.npm-global/bin:$PATH && npm install -g @anthropic-ai/claude-code'
-  ok "Claude Code CLI installed (run `claude login` inside the box on first use)"
+  # Symlink into /usr/local/bin so non-interactive non-login shells find it
+  # (the launcher's BROWSER transport spawns `bash -lc 'script -q -c claude ...'`
+  # which is a login shell, but .bashrc has the standard non-interactive
+  # short-circuit and the npm-global PATH never gets exported there).
+  # Matches the pattern documented in docs/WSL_SETUP.md.
+  in_box 'sudo ln -sf $HOME/.npm-global/bin/claude /usr/local/bin/claude'
+  ok "Claude Code CLI installed and symlinked. Run `claude login` inside the box on first use."
 }
 
 # ---------- step 5b: dashboard npm deps (browser terminal needs ws) ----------
@@ -313,12 +319,13 @@ EOF
   ok "env file written"
 }
 
-# ---------- step 8: desktop entry ----------
+# ---------- step 8: desktop entries ----------
 write_desktop_entry() {
   local apps_dir="$HOME/.local/share/applications"
-  local desktop_file="$apps_dir/multideck.desktop"
   mkdir -p "$apps_dir"
 
+  # Kiosk launcher entry (the cyberpunk character select, full-screen)
+  local desktop_file="$apps_dir/multideck.desktop"
   log "Writing $desktop_file"
   cat > "$desktop_file" <<EOF
 [Desktop Entry]
@@ -332,7 +339,54 @@ Categories=Development;
 StartupNotify=false
 EOF
   chmod +x "$desktop_file"
-  ok "desktop entry written"
+
+  # Windowed dashboard entry — pairs with the audio daemon for headless audio
+  local dashboard_desktop="$apps_dir/multideck-dashboard.desktop"
+  log "Writing $dashboard_desktop"
+  cat > "$dashboard_desktop" <<EOF
+[Desktop Entry]
+Type=Application
+Name=MultiDeck Dashboard
+Comment=MultiDeck ops dashboard, windowed. Background audio handled separately.
+Exec=$SCRIPT_DIR/steamdeck-dashboard.sh
+Icon=$MULTIDECK_ROOT/dashboard/launcher-assets/icon.png
+Terminal=false
+Categories=Development;
+StartupNotify=false
+EOF
+  chmod +x "$dashboard_desktop"
+
+  ok "desktop entries written (multideck.desktop + multideck-dashboard.desktop)"
+}
+
+# ---------- step 8c: install + enable audio-feed daemon ----------
+# Background systemd user service. Polls /audio-feed/list every 4s, plays new
+# MP3s via ffplay+PipeWire. Survives Gaming Mode, dashboard restarts, etc.
+# No-op if systemd --user is unavailable (e.g. running under non-systemd init).
+ensure_audio_daemon() {
+  if ! command -v systemctl >/dev/null 2>&1; then
+    warn "systemctl not found on host; skipping audio daemon."
+    return
+  fi
+  local unit_src="$SCRIPT_DIR/multideck-audio.service"
+  local unit_dst="$HOME/.config/systemd/user/multideck-audio.service"
+  local daemon="$SCRIPT_DIR/multideck-audio-daemon.sh"
+
+  [[ -f "$daemon" ]]   || { warn "audio daemon script missing: $daemon"; return; }
+  [[ -f "$unit_src" ]] || { warn "audio service unit missing: $unit_src"; return; }
+  chmod +x "$daemon"
+
+  log "Installing audio-feed daemon at $unit_dst"
+  mkdir -p "$(dirname "$unit_dst")"
+  cp "$unit_src" "$unit_dst"
+
+  systemctl --user daemon-reload
+  systemctl --user enable --now multideck-audio.service 2>&1 | tail -2 || true
+  if systemctl --user is-active --quiet multideck-audio.service; then
+    ok "audio-feed daemon enabled and running"
+  else
+    warn "audio-feed daemon installed but not active; check: systemctl --user status multideck-audio"
+  fi
 }
 
 # ---------- step 8b: wire PreToolUse hook into Claude Code settings.json ----------
@@ -428,6 +482,7 @@ ensure_whisper
 ensure_claude_hook
 write_env_file
 write_desktop_entry
+ensure_audio_daemon
 apply_overlay
 
 cat <<EOF

@@ -1,0 +1,14 @@
+[Unit]
+Description=MultiDeck audio-feed daemon (background TTS playback)
+After=pipewire.service
+
+[Service]
+Type=simple
+ExecStart=%h/multideck/scripts/multideck-audio-daemon.sh
+Restart=on-failure
+RestartSec=4
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target
