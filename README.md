@@ -121,49 +121,49 @@ Boot to deployment in twelve seconds. Studio splash, title gate, menu, project p
   <tr>
     <td align="center" width="33%">
       <a href="docs/screenshots/launcher-boot.png"><img src="docs/screenshots/thumbs/launcher-boot.png" alt="Boot sequence"></a>
-      <br><sub><b>Boot.</b> Studio splash, scanlines, the vibe is immediate.</sub>
+      <br><sub><b>Boot.</b> Scanlines. Synth. Vibe locked.</sub>
     </td>
     <td align="center" width="33%">
       <a href="docs/screenshots/launcher-title.png"><img src="docs/screenshots/thumbs/launcher-title.png" alt="Title gate"></a>
-      <br><sub><b>Title gate.</b> PRESS START, awaiting input.</sub>
+      <br><sub><b>Title gate.</b> Press start.</sub>
     </td>
     <td align="center" width="33%">
       <a href="docs/screenshots/launcher-menu.png"><img src="docs/screenshots/thumbs/launcher-menu.png" alt="Main menu"></a>
-      <br><sub><b>Menu.</b> Seven options, each a way into the deck.</sub>
+      <br><sub><b>Menu.</b> Seven ways in.</sub>
     </td>
   </tr>
   <tr>
     <td align="center" width="33%">
       <a href="docs/screenshots/launcher-projects.png"><img src="docs/screenshots/thumbs/launcher-projects.png" alt="Target node"></a>
-      <br><sub><b>Target node.</b> Pick the project to deploy under.</sub>
+      <br><sub><b>Target node.</b> Pick the deck.</sub>
     </td>
     <td align="center" width="33%">
       <a href="docs/screenshots/launcher-new-project.png"><img src="docs/screenshots/thumbs/launcher-new-project.png" alt="Spin up node"></a>
-      <br><sub><b>Spin up node.</b> NEW GAME initialises a fresh project.</sub>
+      <br><sub><b>Spin up node.</b> New project. Zero friction.</sub>
     </td>
     <td align="center" width="33%">
       <a href="docs/screenshots/launcher-mode-select.png"><img src="docs/screenshots/thumbs/launcher-mode-select.png" alt="Mode select"></a>
-      <br><sub><b>Choose your mode.</b> LOCAL, CO-OP, or VS comparator.</sub>
+      <br><sub><b>Choose your mode.</b> Local. Co-op. Versus.</sub>
     </td>
   </tr>
   <tr>
     <td align="center" width="33%">
       <a href="docs/screenshots/launcher-select.png"><img src="docs/screenshots/thumbs/launcher-select.png" alt="Character select"></a>
-      <br><sub><b>The deck.</b> Twelve operatives in the v0.7 roster.</sub>
+      <br><sub><b>The deck.</b> Twelve operatives. One launcher.</sub>
     </td>
     <td align="center" width="33%">
       <a href="docs/screenshots/launcher-persona-detail.png"><img src="docs/screenshots/thumbs/launcher-persona-detail.png" alt="Persona dossier"></a>
-      <br><sub><b>Dossier.</b> Researcher selected, evidence grading scope.</sub>
+      <br><sub><b>Dossier.</b> Know your runner.</sub>
     </td>
     <td align="center" width="33%">
       <a href="docs/screenshots/launcher-team-mode.png"><img src="docs/screenshots/thumbs/launcher-team-mode.png" alt="Team presets"></a>
-      <br><sub><b>Team presets.</b> Full Roster, Build Team, Investigation.</sub>
+      <br><sub><b>Team presets.</b> Squad up.</sub>
     </td>
   </tr>
   <tr>
     <td align="center" width="33%">
       <a href="docs/screenshots/launcher-jacking-in.png"><img src="docs/screenshots/thumbs/launcher-jacking-in.png" alt="Jacking in"></a>
-      <br><sub><b>Jacking in.</b> Hit DEPLOY. Pixel-art launch sequence, progress bar, opening browser terminal.</sub>
+      <br><sub><b>Jacking in.</b> Cyber on.</sub>
     </td>
     <td align="center" width="33%">&nbsp;</td>
     <td align="center" width="33%">&nbsp;</td>
