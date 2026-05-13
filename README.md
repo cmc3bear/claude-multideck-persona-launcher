@@ -190,21 +190,21 @@ The dashboard, the audio feed, the browser terminal, the persona builder. Where 
   <tr>
     <td align="center" width="50%">
       <a href="docs/screenshots/dashboard-main.png"><img src="docs/screenshots/thumbs/dashboard-main.png" alt="Operations dashboard"></a>
-      <br><sub><b>Operations dashboard.</b> Actions, schedule, escalations. JSON-backed, live.</sub>
+      <br><h3><b>DASHBOARD.</b> ACTIONS. SCHEDULE. LIVE.</h3>
     </td>
     <td align="center" width="50%">
       <a href="docs/screenshots/audio-feed.png"><img src="docs/screenshots/thumbs/audio-feed.png" alt="Audio feed"></a>
-      <br><sub><b>Audio feed.</b> Leave this tab open. Every report plays automatically.</sub>
+      <br><h3><b>AUDIO FEED.</b> HEAR IT FROM ANOTHER ROOM.</h3>
     </td>
   </tr>
   <tr>
     <td align="center" width="50%">
       <a href="docs/screenshots/browser-terminal.png"><img src="docs/screenshots/thumbs/browser-terminal.png" alt="Browser terminal"></a>
-      <br><sub><b>Browser terminal.</b> BROWSER transport runs Claude inside the launcher. Matrix rain composites all active persona colors.</sub>
+      <br><h3><b>BROWSER TERMINAL.</b> CLAUDE INSIDE THE BROWSER.</h3>
     </td>
     <td align="center" width="50%">
       <a href="docs/screenshots/persona-builder.png"><img src="docs/screenshots/thumbs/persona-builder.png" alt="Persona Builder"></a>
-      <br><sub><b>Persona Builder.</b> Interactive form to author a new operative. Identity, color, voice, scope, working directory.</sub>
+      <br><h3><b>PERSONA BUILDER.</b> ROLL YOUR OWN.</h3>
     </td>
   </tr>
 </table>
@@ -217,25 +217,25 @@ One job board, six view modes. Switch via the segmented bar in the top-right.
   <tr>
     <td align="center" width="33%">
       <a href="docs/screenshots/job-board.png"><img src="docs/screenshots/thumbs/job-board.png" alt="Board view"></a>
-      <br><sub><b>Board.</b> Kanban columns by status. Click for detail drawer.</sub>
+      <br><h3><b>BOARD.</b> KANBAN BY STATUS.</h3>
     </td>
     <td align="center" width="33%">
       <a href="docs/screenshots/job-board-radar.png"><img src="docs/screenshots/thumbs/job-board-radar.png" alt="Dispatch Radar"></a>
-      <br><sub><b>Dispatch Radar.</b> Agent workload, cross-project assignment.</sub>
+      <br><h3><b>DISPATCH RADAR.</b> WHO IS ON WHAT.</h3>
     </td>
     <td align="center" width="33%">
       <a href="docs/screenshots/job-board-cluster.png"><img src="docs/screenshots/thumbs/job-board-cluster.png" alt="Constellation"></a>
-      <br><sub><b>Constellation.</b> Cluster by tags, project, operative.</sub>
+      <br><h3><b>CONSTELLATION.</b> CLUSTER BY TAG.</h3>
     </td>
   </tr>
   <tr>
     <td align="center" width="33%">
       <a href="docs/screenshots/job-board-reviewer-log.png"><img src="docs/screenshots/thumbs/job-board-reviewer-log.png" alt="Reviewer Log"></a>
-      <br><sub><b>Reviewer Log.</b> Lesson browser, six tenets, ratification.</sub>
+      <br><h3><b>REVIEWER LOG.</b> LESSONS, INDEXED.</h3>
     </td>
     <td align="center" width="33%">
       <a href="docs/screenshots/job-board-pattern-detector.png"><img src="docs/screenshots/thumbs/job-board-pattern-detector.png" alt="Pattern Detector"></a>
-      <br><sub><b>Pattern Detector.</b> Tenet-break trends, phase chart, worktype × tenet matrix.</sub>
+      <br><h3><b>PATTERN DETECTOR.</b> TRENDS OVER TIME.</h3>
     </td>
     <td align="center" width="33%">
       <!-- Sixth view (Meeting Room) is dynamic; see /jobs?view=meeting-room live. -->
@@ -252,21 +252,21 @@ Short animated captures of the launcher and job board in motion. Headless puppet
   <tr>
     <td align="center" width="50%">
       <img src="docs/media/boot-sequence.gif" alt="Boot sequence loop">
-      <br><sub><b>Boot sequence.</b> Studio splash, title flicker, PRESS START, menu reveal. ~12s.</sub>
+      <br><h3><b>BOOT SEQUENCE.</b> START TO MENU IN TWELVE.</h3>
     </td>
     <td align="center" width="50%">
       <img src="docs/media/character-select-flow.gif" alt="Character select walkthrough">
-      <br><sub><b>Character select walkthrough.</b> Menu → LOAD → project → mode → 12-persona grid. ~12s.</sub>
+      <br><h3><b>CHARACTER SELECT.</b> TWO CLICKS TO CREW.</h3>
     </td>
   </tr>
   <tr>
     <td align="center" width="50%">
       <img src="docs/media/menu-flythrough.gif" alt="Menu flythrough">
-      <br><sub><b>Menu flythrough.</b> Selection arrow walks all seven menu items. ~8s.</sub>
+      <br><h3><b>MENU FLYTHROUGH.</b> ALL SEVEN, IN ONE BREATH.</h3>
     </td>
     <td align="center" width="50%">
       <img src="docs/media/job-board-views.gif" alt="Job board view modes">
-      <br><sub><b>Job board view modes.</b> Board, Radar, Constellation, Reviewer Log, Pattern Detector, Meeting Room. Same data, six lenses. ~16s.</sub>
+      <br><h3><b>JOB BOARD VIEWS.</b> SAME DATA, SIX LENSES.</h3>
     </td>
   </tr>
 </table>
