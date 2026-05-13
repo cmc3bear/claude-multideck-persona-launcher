@@ -24,9 +24,23 @@ It runs entirely local. Zero API cost with a Claude Code CLI membership. Fork it
 
 ---
 
+## Why MultiDeck
+
+- **Character-select for AI agents is a better UX than config files.** The cyberpunk launcher is not decoration. It is the interface. Click an operative, see their stats, deploy them. Intuitive, memorable, and fast.
+
+- **Your agents have voices.** Kokoro TTS gives each operative a distinct synthesized voice. Dispatch sounds different from Engineer sounds different from Researcher. They announce themselves by callsign. You learn who is talking without looking at a screen.
+
+- **You can listen to your agents work from another room.** The audio feed auto-plays every TTS update in a browser tab. Open it on your phone over Tailscale. Go make coffee. Your deck keeps running and you hear it.
+
+- **Work gets tracked and reviewed automatically.** Per-project job boards with priority, assignment, submission, and a Reviewer quality gate. No work closes without passing review. One fix attempt, then escalate. No infinite loops.
+
+- **Runs on a Steam Deck.** Add MultiDeck to your library as a Non-Steam Game. Browser-terminal transport means there is no terminal emulator to fight with in Gaming Mode. Gamepad navigates the launcher, A/B/X/Y answer questions, L1 holds push-to-talk for voice input. Local Whisper transcription means no cloud, no API cost, no waiting.
+
+---
+
 ## What's New
 
-**v0.7.0** — Steam Deck Native + Gamepad + Voice In
+# V0.7.0 — STEAM DECK NATIVE + GAMEPAD + VOICE IN
 
 - **Steam Deck install** — `scripts/install-steamdeck.sh` puts MultiDeck inside a distrobox Arch container so SteamOS's read-only root is never touched and the install survives OS updates. `scripts/steamdeck-launcher.sh` opens the dashboard in Chromium kiosk mode, ready to add to Steam as a Non-Steam Game. Walks through gamepad-permission first-press, mic auto-grant, and the 7" Deck CSS pass at `@media (max-width: 1280px) and (max-height: 800px)`. Full guide in [STEAMDECK_SETUP.md](docs/STEAMDECK_SETUP.md).
 - **Web Gamepad API input layer** — `dashboard/scripts/launcher-gamepad.js` polls `navigator.getGamepads()` at 60 Hz and dispatches `multideck:gamepad:*` events. Dpad and left stick both emit `nav`. A/B/X/Y emit `option` with index 0–3. L1 latches push-to-talk. The launcher and modals are fully navigable without touching the keyboard.
@@ -34,7 +48,7 @@ It runs entirely local. Zero API cost with a Claude Code CLI membership. Fork it
 - **AskUserQuestion glyph modal** — when Claude calls its `AskUserQuestion` tool, a PreToolUse hook (`hooks/dashboard-question-bridge.py`) intercepts, writes the payload to `state/pending-questions/`, and the dashboard's new `GET /events/questions` SSE channel pushes it to a glyph-mapped modal. A/B/X/Y map to options 0/1/2/3 with green/red/blue/yellow glyphs. Multi-select via R1. Claude never renders its native CLI prompt; the operator answers with one button-press.
 - **Installer auto-wires the hook** — `ensure_claude_hook` in `install-steamdeck.sh` idempotently merges the PreToolUse matcher into `~/.claude/settings.json` so the bridge works out-of-the-box.
 
-**v0.6.0** — Browser Terminal + Remote Access
+# V0.6.0 — BROWSER TERMINAL + REMOTE ACCESS
 
 - **Browser transport** — fourth launcher transport option (`BROWSER`) opens a live Claude session inside the browser itself. No terminal emulator required. Runs via WebSocket to a host pseudo-TTY; the `claude` process has full local filesystem access.
 - **Multi-session tab management** — spawn as many agents as you want; each gets its own tab in the terminal panel header with an independent `×` close. `[ + NEW ]` returns to character select while keeping all sessions alive. `[ − MIN ]` hides the panel without killing anything; a restore tab shows `[ ◈ N TERMINALS ACTIVE ]`.
@@ -42,7 +56,7 @@ It runs entirely local. Zero API cost with a Claude Code CLI membership. Fork it
 - **Terminal color theming** — xterm foreground, cursor, and ANSI color slots are set to the persona's accent color at session init. The "SECURE CHANNEL ESTABLISHED" banner uses ANSI true-color to match exactly.
 - **Tailscale remote access** — because the server listens on `0.0.0.0:3046`, any device on your Tailscale network can open the launcher and run a full browser terminal session. The spawned `claude` process runs on your dev machine. Access your local agents from a phone, laptop, or tablet from anywhere.
 
-**v0.5.0** — OpenCode + Local Models
+# V0.5.0 — OPENCODE + LOCAL MODELS
 - Run any persona on a local Ollama model instead of Claude Code. New `[ LOCAL ]` mode in the launcher sets runtime to OpenCode; HUD shows active runtime in color (gold = Claude, cyan = OpenCode, purple = VS)
 - `scripts/launch-persona-opencode.ps1` — spawn a persona under OpenCode with a configurable Ollama model (default: `qwen3-coder:30b-32k`); honors `DISPATCH_OPENCODE_MODEL` env var
 - `scripts/convert-personas-to-opencode.py` — converts all personas to OpenCode agent files at `~/.config/opencode/agents/<key>.md`; re-run after editing personas to regenerate
@@ -51,7 +65,7 @@ It runs entirely local. Zero API cost with a Claude Code CLI membership. Fork it
 - Three new example personas: **Dungeon-Master** (D&D 5e with server-authoritative dice API), **NPC-Agent** (in-character NPC spawned with identity and secret), **Frasier** (CBT-style wellness chat)
 - `DISPATCH_DM_VOICE_PT` env var for custom Kokoro voice tensor — no hardcoded paths in the distributed hooks
 
-**v0.4.0** — Job Board Dashboard + OQE 2.0 Self-Improvement Loop
+# V0.4.0 — JOB BOARD DASHBOARD + OQE 2.0 SELF-IMPROVEMENT LOOP
 - Visual job board at `/jobs` replaces the old server-rendered page (legacy preserved at `/jobs-classic`)
 - Six view modes: Board, Dispatch Radar, Constellation, Reviewer Log, Pattern Detector, Meeting Room
 - Live data mode pulls `/state.json` from the dashboard server; mock mode ships usable sample fixtures
@@ -65,7 +79,7 @@ It runs entirely local. Zero API cost with a Claude Code CLI membership. Fork it
 - New static routes: `/scripts/*`, `/styles/*`, `/data/*` — sandboxed, path-traversal-safe
 - OQE 2.0 six-tenet short form (T1–T6) added to `docs/OQE_DISCIPLINE.md`; Reviewer Log & Lesson Capture Protocol cross-referenced
 
-**v0.3.0** — OQE Criteria Enforcement
+# V0.3.0 — OQE CRITERIA ENFORCEMENT
 - Objectives now require a minimum of 5 testable success criteria functioning as a test plan
 - Criteria must be specific (independently verifiable), observable (not subjective), and traceable to evidence
 - Vague criteria — "works correctly", "looks good", "covers the important stuff" — are explicitly rejected and flagged by Reviewer
@@ -74,7 +88,7 @@ It runs entirely local. Zero API cost with a Claude Code CLI membership. Fork it
 - Evidence now maps 1:1 to criteria — every criterion needs STRONG or MODERATE evidence before closing
 - New Completion Gate phase: restate each criterion with evidence citation before declaring done
 
-**v0.2.0** — Workspace Governance + Extended Roster
+# V0.2.0 — WORKSPACE GOVERNANCE + EXTENDED ROSTER
 - Workspace governance doc with 9 coordination standards and boundary enforcement
 - Push denial escalation protocol (5-step mandatory response)
 - Job board `alternatives_considered` field now required on close
@@ -82,7 +96,7 @@ It runs entirely local. Zero API cost with a Claude Code CLI membership. Fork it
 - Hero 60-second commercial spot and GIF previews in README
 - Team mode, distinct persona screenshots
 
-**v0.1.0** — Initial Release
+# V0.1.0 — INITIAL RELEASE
 - 9 default personas: Dispatch, Architect, Engineer, Reviewer, Researcher, Launcher-Engineer, Voice-Technician, Persona-Author, Commercial-Producer
 - Cyberpunk character-select launcher at `/launcher` with portraits, music, danger mode, and team deploy
 - Dashboard server with briefing, state, mobile, and audio feed routes
@@ -92,20 +106,6 @@ It runs entirely local. Zero API cost with a Claude Code CLI membership. Fork it
 - Audio feed auto-play browser page for operator mode (hands-free agent monitoring)
 - Cross-platform persona launcher (Windows PowerShell + Linux/macOS bash)
 - `dispatch-agent.py add/remove` for dynamic roster management
-
----
-
-## Why MultiDeck
-
-- **Character-select for AI agents is a better UX than config files.** The cyberpunk launcher is not decoration. It is the interface. Click an operative, see their stats, deploy them. Intuitive, memorable, and fast.
-
-- **Your agents have voices.** Kokoro TTS gives each operative a distinct synthesized voice. Dispatch sounds different from Engineer sounds different from Researcher. They announce themselves by callsign. You learn who is talking without looking at a screen.
-
-- **You can listen to your agents work from another room.** The audio feed auto-plays every TTS update in a browser tab. Open it on your phone over Tailscale. Go make coffee. Your deck keeps running and you hear it.
-
-- **Work gets tracked and reviewed automatically.** Per-project job boards with priority, assignment, submission, and a Reviewer quality gate. No work closes without passing review. One fix attempt, then escalate. No infinite loops.
-
-- **Runs on a Steam Deck.** Add MultiDeck to your library as a Non-Steam Game. Browser-terminal transport means there is no terminal emulator to fight with in Gaming Mode. Gamepad navigates the launcher, A/B/X/Y answer questions, L1 holds push-to-talk for voice input. Local Whisper transcription means no cloud, no API cost, no waiting.
 
 ---
 
