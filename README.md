@@ -10,32 +10,6 @@ It runs entirely local. Zero API cost with a Claude Code CLI membership. Fork it
 
 *Voice-Technician deployed on a Steam Deck. Browser terminal, matrix rain composite, push-to-talk mic in the header. Gamepad navigates the launcher. v0.7.*
 
-![MultiDeck Boot Sequence](docs/media/boot-sequence.gif)
-
-### Watch: Boot to deck in twelve seconds
-
-<video src="docs/media/boot-sequence.mp4" controls width="720"></video>
-
-[Watch boot-sequence.mp4 (~12s, 0.4 MB)](docs/media/boot-sequence.mp4)
-
-*Studio splash, title flicker, PRESS START, menu reveal. Headless capture, no audio.*
-
-### Watch: Character select walkthrough
-
-<video src="docs/media/character-select-flow.mp4" controls width="720"></video>
-
-[Watch character-select-flow.mp4 (~12s, 0.5 MB)](docs/media/character-select-flow.mp4)
-
-*Menu, LOAD, project pick, CHOOSE YOUR MODE, character grid. Twelve operatives, one click each from boot.*
-
-### Watch: Job board view modes
-
-<video src="docs/media/job-board-views.mp4" controls width="720"></video>
-
-[Watch job-board-views.mp4 (~16s, 0.3 MB)](docs/media/job-board-views.mp4)
-
-*Board, Dispatch Radar, Constellation, Reviewer Log, Pattern Detector, Meeting Room. Same data, six lenses.*
-
 ### Watch: How Do You Claude?
 
 ![How Do You Claude?](docs/media/how-do-you-claude-preview.gif)
@@ -262,6 +236,33 @@ One job board, six view modes. Switch via the segmented bar in the top-right.
     <td align="center" width="33%">
       <!-- Sixth view (Meeting Room) is dynamic; see /jobs?view=meeting-room live. -->
       &nbsp;
+    </td>
+  </tr>
+</table>
+
+### Loops
+
+Short animated captures of the launcher and job board in motion. Headless puppeteer renders at 1600x900, downscaled to 800px for GIF; no audio.
+
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <img src="docs/media/boot-sequence.gif" alt="Boot sequence loop">
+      <br><sub><b>Boot sequence.</b> Studio splash, title flicker, PRESS START, menu reveal. ~12s.</sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="docs/media/character-select-flow.gif" alt="Character select walkthrough">
+      <br><sub><b>Character select walkthrough.</b> Menu → LOAD → project → mode → 12-persona grid. ~12s.</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <img src="docs/media/menu-flythrough.gif" alt="Menu flythrough">
+      <br><sub><b>Menu flythrough.</b> Selection arrow walks all seven menu items. ~8s.</sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="docs/media/job-board-views.gif" alt="Job board view modes">
+      <br><sub><b>Job board view modes.</b> Board, Radar, Constellation, Reviewer Log, Pattern Detector, Meeting Room. Same data, six lenses. ~16s.</sub>
     </td>
   </tr>
 </table>
