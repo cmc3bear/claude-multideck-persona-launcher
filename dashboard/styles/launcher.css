@@ -1383,7 +1383,10 @@
   .terminal-panel {
     position: fixed;
     bottom: 0; left: 0; right: 0;
-    height: 62vh;
+    /* Full viewport height. The terminal panel slides in and covers the
+       launcher behind it; user can still get back via [+ NEW] (spawn
+       another session) or by closing the active session. */
+    height: 100vh;
     background: rgba(3, 4, 14, 0.98);
     border-top: 2px solid var(--neon-cyan);
     box-shadow:
