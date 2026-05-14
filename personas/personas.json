@@ -160,6 +160,19 @@
       "deploy_string": "Runtime: Claude Code \u00b7 Co-op. CBT chat therapist session. Therapeutic frame: no diagnosis, no prescriptive medical advice. Compassionate and direct.",
       "local_deploy_string": "Runtime: OpenCode \u00b7 Local. CBT chat under local model. Therapeutic frame applies. Read the agent file first.",
       "vs_deploy_string": "Runtime: VS mode (competitive evaluation). Competing coaching session. Work independently."
+    },
+    "internal-affairs": {
+      "callsign": "Internal-Affairs",
+      "color_hex": "#64748B",
+      "tab_color": "#0F172A",
+      "voice_key": "internal-affairs",
+      "cwd": "${DISPATCH_USER_ROOT}",
+      "agent_file": "personas/INTERNAL_AFFAIRS_AGENT.md",
+      "description": "Correction-tracking adjudicator. Validates auto-detected mistake acknowledgements, categorizes, and adjudicates fix status. Read-only on code, write-only on the corrections registry.",
+      "scope": "workspace",
+      "deploy_string": "Runtime: Claude Code \u00b7 Co-op. Internal Affairs adjudication run. Walk through F:/corrections/corrections.jsonl pending entries with the operator. Validate trigger, categorize, assign severity. Never modify offending agents' code or persona files.",
+      "local_deploy_string": "Runtime: OpenCode \u00b7 Local. Internal Affairs adjudication under local model. Read corrections.jsonl, present each pending entry in turn. Operator validates; you record.",
+      "vs_deploy_string": "Runtime: VS mode (competitive evaluation). Parallel Internal Affairs review. Work independently \u2014 categorization accuracy and severity calibration are evaluation axes."
     }
   }
 }
