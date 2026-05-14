@@ -1,0 +1,26 @@
+# MultiDeck STT dictionary template.
+#
+# Copy this file to $XDG_CONFIG_HOME/multideck/dictionary.txt
+# (typically ~/.config/multideck/dictionary.txt) and add the
+# acronyms, product names, and proper nouns you want whisper to
+# recognize correctly. One term or phrase per line.
+#
+# Whisper uses this as a soft bias, not a hard dictionary. It
+# helps the model prefer your spellings when it hears something
+# acoustically close. The total list is truncated at whisper's
+# ~224-token prompt limit (about 150 words), so prioritize the
+# terms whisper most often mishears.
+#
+# Lines starting with # are comments and ignored.
+# Blank lines are ignored.
+#
+# Example entries (delete these and add your own):
+
+MultiDeck
+distrobox
+Kokoro
+whisper.cpp
+Steamworks
+Flatpak
+Tailscale
+xterm
