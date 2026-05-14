@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-05-13
+
 ### Added
 
 - **Warm `whisper-server` for STT (`dashboard/server.cjs`)** — `whisper.cpp` ships a long-running HTTP server binary alongside `whisper-cli`. The dashboard now lazy-spawns it on first `/stt/transcribe` request, keeps the 150 MB `base.en` model resident in RAM, and routes subsequent transcriptions over local HTTP at `POST /inference`. Eliminates the per-request model mmap penalty that made `base.en` run roughly one second per word on Steam Deck (Zen 2) when other processes evicted model pages between calls. Measured on deck: 16.5 s cold drops to 1.07 s warm for a 1.5 s input, 15x speedup. Falls back to `whisper-cli` if the server binary is missing. Disable with `DISPATCH_WHISPER_WARM=0`. Override port with `DISPATCH_WHISPER_PORT` (default 8780). Diagnostic at `GET /stt/status`. Readiness is detected by TCP port-probe since `whisper-server` binds silently.
