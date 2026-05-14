@@ -1816,15 +1816,19 @@
      - Keep header rail compact so terminal body keeps real estate
      ============================================================ */
   @media (max-width: 1280px) and (max-height: 800px) {
+    /* Terminal header buttons sized for finger touch on the Deck's 7"
+       handheld screen. Prior 44px min-height was about 1/3 too small
+       in real handheld use. Bumped to 56px and 16px font for arm's
+       length legibility. */
     .terminal-mic-btn,
     .terminal-new-btn,
     .terminal-min-btn {
-      font-size: 11px;
-      padding: 9px 12px;
-      min-height: 44px;
+      font-size: 16px;
+      padding: 14px 18px;
+      min-height: 56px;
     }
-    .terminal-tab { min-height: 40px; padding: 6px 10px; }
-    .tab-close { padding: 8px; min-width: 28px; }
+    .terminal-tab { min-height: 48px; padding: 8px 12px; font-size: 13px; }
+    .tab-close { padding: 12px; min-width: 40px; font-size: 18px; }
 
     .question-modal-card {
       width: min(960px, 96vw);
@@ -1841,6 +1845,9 @@
       font-size: 18px;
     }
     .question-modal-hint { font-size: 9px; }
-    /* xterm.js default 14px → 16px for Deck arm's length */
-    .xterm .xterm-rows { font-size: 16px !important; }
+
+    /* xterm font size is set in launcher-terminal.js based on the same
+       media query (canvas renderer ignores CSS font-size). Don't override
+       .xterm-rows here -- the cell width would mismatch the cols xterm
+       reports to the PTY, causing claude to wrap at the wrong column. */
   }
