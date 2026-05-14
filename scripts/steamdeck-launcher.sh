@@ -171,7 +171,11 @@ open_browser() {
     while sleep 3600; do :; done
   fi
 
-  local url="http://localhost:$PORT/launcher"
+  # ?deck=1 tells the launcher JS to set deck mode, which makes the
+  # /launcher/launch endpoint append a 10-line-cap constraint to the
+  # persona prompt. Reading area on the Deck is constrained at the
+  # 28px xterm font, so verbose persona output is unreadable.
+  local url="http://localhost:$PORT/launcher?deck=1"
   local profile_dir="${HOME:-/home/deck}/.cache/multideck/chromium-profile"
   mkdir -p "$profile_dir"
 
