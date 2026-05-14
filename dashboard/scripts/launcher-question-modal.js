@@ -221,6 +221,35 @@
     }
   });
 
+  // ----- voice answer (L2 trigger inside the modal) -----
+  // Captures one mic burst via MultideckSTT.captureOnce, then submits the
+  // transcribed text as the answer to the current question. Skips the glyph
+  // option list entirely — useful for open-ended prompts where none of A/B/X/Y
+  // is right, or when the operator can speak faster than they can read.
+  // No-op outside the modal; the gamepad layer also emits 'shoulder' for L2
+  // so other modules that care about triggers still work.
+  let voiceAnswerInFlight = false;
+  window.addEventListener('multideck:gamepad:voice-answer', async () => {
+    if (modal.hidden) return;
+    if (voiceAnswerInFlight) return;
+    const q = cur && cur.questions[qIndex];
+    if (!q) return;
+    if (!window.MultideckSTT || typeof window.MultideckSTT.captureOnce !== 'function') return;
+
+    voiceAnswerInFlight = true;
+    tag.textContent = 'LISTENING';
+    try {
+      const text = await window.MultideckSTT.captureOnce();
+      if (!text) { tag.textContent = (q.header || 'QUESTION').toString().toUpperCase().slice(0, 12); return; }
+      answers[q.question] = text;
+      qIndex += 1;
+      if (qIndex >= cur.questions.length) submit();
+      else render();
+    } finally {
+      voiceAnswerInFlight = false;
+    }
+  });
+
   // Keyboard fallback (desktop browsers, accessibility)
   window.addEventListener('keydown', (e) => {
     if (modal.hidden) return;

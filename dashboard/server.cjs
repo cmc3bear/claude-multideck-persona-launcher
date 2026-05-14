@@ -1512,7 +1512,18 @@ const server = http.createServer((req, res) => {
       try {
         fs.mkdirSync(PENDING_Q_DIR, { recursive: true });
         const answerPath = path.join(PENDING_Q_DIR, `${sessionId}.answer.json`);
-        fs.writeFileSync(answerPath, JSON.stringify({ answers, received_at: new Date().toISOString() }, null, 2));
+        const receivedAt = new Date().toISOString();
+        fs.writeFileSync(answerPath, JSON.stringify({ answers, received_at: receivedAt }, null, 2));
+        // v0.7.4: append a one-line audit record to state/glyph-responses.jsonl
+        // so the operator can review every glyph-modal answer chronologically.
+        // Best-effort: log failures don't fail the answer write.
+        try {
+          fs.mkdirSync(STATE_DIR, { recursive: true });
+          const logPath = path.join(STATE_DIR, 'glyph-responses.jsonl');
+          fs.appendFileSync(logPath, JSON.stringify({ ts: receivedAt, sessionId, answers }) + '\n');
+        } catch (logErr) {
+          console.warn('[questions] glyph-response log append failed:', logErr.message);
+        }
         sendJson(res, 200, { ok: true });
       } catch (e) {
         sendJson(res, 500, { error: 'failed to write answer', detail: e.message });

@@ -128,7 +128,7 @@ Treat the overlay as private. Do not commit it back to the public repo.
 
 ### Voice input not transcribing
 
-Push-and-hold L1 (or click the mic button) and speak. If nothing lands in the terminal, check in order:
+Press X (or click the mic button) to start recording, then press again to stop and transcribe. If nothing lands in the terminal, check in order:
 
 1. **Mic permission.** Chromium kiosk runs with `--use-fake-ui-for-media-stream` so it auto-grants the request, but the OS-level mic mute toggle on the Deck overrides this. Press the Steam button → quick settings → Mic to confirm input is not muted.
 
@@ -266,18 +266,21 @@ The launcher is fully controller-driven on Deck. Touch and mouse still work for 
 |---|---|
 | **A** | Confirm highlighted choice / select option 1 |
 | **B** | Cancel modal / back / select option 2 |
-| **X** | Select option 3 |
+| **X** | Select option 3 (in modal) / toggle mic (outside modal) |
 | **Y** | Select option 4 |
 | **D-Pad** or **Left Stick** | Navigate options / focus next-prev tab |
-| **L1** (hold) | Push-to-talk into the active terminal (Whisper STT) |
-| **R1** | Confirm multi-select questions |
+| **L1** | Previous terminal session (cycle backwards through active tabs) |
+| **R1** | Next terminal session / confirm multi-select question |
+| **L2** | Voice-answer (inside glyph modal: record, transcribe, submit as answer) |
 | **Steam button + R-trackpad** | OS-level mouse (fallback) |
 
-When Claude calls `AskUserQuestion`, the PreToolUse hook intercepts the call, the dashboard renders a glyph-mapped modal, and Claude never displays its native CLI prompt. Pick with A/B/X/Y for direct selection, or D-Pad + A to highlight-and-confirm. The 60-second operator-timeout reverts to a "proceed with best judgment" deny so Claude does not stall forever if the Deck is unattended.
+When Claude calls `AskUserQuestion`, the PreToolUse hook intercepts the call, the dashboard renders a glyph-mapped modal, and Claude never displays its native CLI prompt. Pick with A/B/X/Y for direct selection, or D-Pad + A to highlight-and-confirm. Press L2 for an open-ended voice answer when none of the four glyphs fit. The 60-second operator-timeout reverts to a "proceed with best judgment" deny so Claude does not stall forever if the Deck is unattended.
 
 ## Voice input (STT)
 
-Push-and-hold L1 anywhere in the launcher to record voice into the currently active terminal. Audio is captured by the browser (`MediaRecorder` at `audio/webm;opus`), POSTed to `/stt/transcribe` on the dashboard, transcoded to 16 kHz mono WAV via ffmpeg, and fed through `whisper.cpp` with the `base.en` model. The resulting text is injected directly into the persona's PTY as if you typed it, with a trailing newline.
+Press **X** anywhere in the launcher (outside the glyph modal) to toggle the mic. Press once to start recording, press again to stop and transcribe; the result is injected into the active terminal as if you typed it, with a trailing newline. Audio is captured by the browser (`MediaRecorder` at `audio/webm;opus`), POSTed to `/stt/transcribe` on the dashboard, transcoded to 16 kHz mono WAV via ffmpeg, and fed through `whisper.cpp` with the `base.en` model (or the remote whisper-server when `DISPATCH_WHISPER_REMOTE` is set).
+
+Inside the glyph modal, **L2** captures one mic burst (auto-cuts at 6 seconds) and submits the transcribed text as the answer to the current question, bypassing the A/B/X/Y glyph picker. Useful for open-ended prompts.
 
 The mic button in the terminal header also works as click-to-toggle for users without a controller.
 

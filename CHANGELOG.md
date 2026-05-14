@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Gamepad rebinding for Steam Deck handheld use.** The Web Gamepad input layer in `dashboard/scripts/launcher-gamepad.js` now emits three new high-level events: `multideck:gamepad:mic` on X press (toggles STT, supersedes the old L1-hold push-to-talk), `multideck:gamepad:tab-next` on R1 and `multideck:gamepad:tab-prev` on L1 (cycles through active terminal sessions like a tab strip), and `multideck:gamepad:voice-answer` on L2 (modal-context voice answer; see below). Standard mapping per Web Gamepad API spec; binding rationale and event table documented at the top of `launcher-gamepad.js`. X retains its `option { index: 2 }` emission for glyph-modal option picks; the STT mic listener checks `#question-modal` visibility and bails when the modal is open, so X-as-option-2 still works inside a question.
+- **L2 voice-answer in glyph modal.** Inside the glyph picker, pressing L2 captures one mic burst via `MultideckSTT.captureOnce()`, transcribes via the existing `/stt/transcribe` route, and submits the result as the answer to the current question. Useful for open-ended prompts where none of A/B/X/Y is the right pick, or when the operator can speak the answer faster than they can read. Tag in the modal header flips to `LISTENING` while capture is active. Auto-cuts at 6 seconds to keep the operator unblocked.
+- **Glyph response audit log.** The `/questions/:sessionId/answer` POST handler now appends a one-line JSONL record (`{ts, sessionId, answers}`) to `state/glyph-responses.jsonl` alongside writing the per-session `<sessionId>.answer.json` file. Operator can `tail -f` the log to review every glyph-modal answer chronologically. Log append failures don't fail the answer write.
+
+### Changed
+
+- **PTT removed.** The prior L1-hold push-to-talk semantics are gone. L1 is now `tab-prev`. Mic is X (toggle).
+- **Terminal cycle-via-bumpers wiring.** `window.MultideckTerminal.cycleSession(dir)` cycles forward (+1) or back (-1) through `terminalSessions` keys with wraparound. R1/L1 listeners gate on (a) terminal panel must be open and not minimized, (b) glyph modal must not be visible, (c) at least 2 sessions exist; otherwise the press silently no-ops so it doesn't fight the modal A/B/X/Y picker or steal focus from a single session.
+- **Mic button tooltip updated.** `[ ◉ MIC ]` button title changed from "Push-to-talk (L1 on gamepad)" to "Press X (gamepad) or click to toggle mic" to reflect the new binding.
+
 ## [0.7.3] - 2026-05-13
 
 Driven by real handheld testing on a docked Steam Deck. Big Picture / Gaming Mode launch was failing several distinct ways; the kiosk Chromium crashed on missing display/auth env; touch targets and terminal font were unreadable at arm's length; the Kokoro TTS pipeline silently failed on Linux. Each ships as its own commit; together they make the Steam Deck path actually usable.

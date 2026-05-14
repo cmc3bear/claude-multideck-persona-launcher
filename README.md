@@ -6,9 +6,9 @@ Multiple AI operatives. Each with their own voice. One launcher. You pick your t
 
 It runs entirely local. Zero API cost with a Claude Code CLI membership. Fork it, add your own operatives, your own voices, your own background music. Run it on Windows, Linux, macOS, or a **Steam Deck in your hands**. Make it yours.
 
-![MultiDeck running on a Steam Deck — browser terminal, matrix rain, Voice-Technician persona, push-to-talk mic](docs/screenshots/steamdeck-voice-tech.jpg)
+![MultiDeck running on a Steam Deck — browser terminal, matrix rain, Voice-Technician persona, toggle mic](docs/screenshots/steamdeck-voice-tech.jpg)
 
-*Voice-Technician deployed on a Steam Deck. Browser terminal, matrix rain composite, push-to-talk mic in the header. Gamepad navigates the launcher. v0.7.*
+*Voice-Technician deployed on a Steam Deck. Browser terminal, matrix rain composite, toggle mic in the header. Gamepad navigates the launcher. v0.7.*
 
 ![Live multi-session browser terminal — five operatives spawned, Dispatch active, matrix rain composites their accent colors with persona portraits as watermarks](docs/screenshots/browser-terminal.png)
 
@@ -34,7 +34,7 @@ It runs entirely local. Zero API cost with a Claude Code CLI membership. Fork it
 
 - **Work gets tracked and reviewed automatically.** Per-project job boards with priority, assignment, submission, and a Reviewer quality gate. No work closes without passing review. One fix attempt, then escalate. No infinite loops.
 
-- **Runs on a Steam Deck.** Add MultiDeck to your library as a Non-Steam Game. Browser-terminal transport means there is no terminal emulator to fight with in Gaming Mode. Gamepad navigates the launcher, A/B/X/Y answer questions, L1 holds push-to-talk for voice input. Local Whisper transcription means no cloud, no API cost, no waiting.
+- **Runs on a Steam Deck.** Add MultiDeck to your library as a Non-Steam Game. Browser-terminal transport means there is no terminal emulator to fight with in Gaming Mode. Gamepad navigates the launcher, A/B/X/Y answer questions, X toggles the mic, R1/L1 cycle terminal sessions, L2 voice-answers open-ended modal prompts. Local Whisper transcription means no cloud, no API cost, no waiting.
 
 ---
 
@@ -43,8 +43,8 @@ It runs entirely local. Zero API cost with a Claude Code CLI membership. Fork it
 # V0.7.0 — STEAM DECK NATIVE + GAMEPAD + VOICE IN
 
 - **Steam Deck install** — `scripts/install-steamdeck.sh` puts MultiDeck inside a distrobox Arch container so SteamOS's read-only root is never touched and the install survives OS updates. `scripts/steamdeck-launcher.sh` opens the dashboard in Chromium kiosk mode, ready to add to Steam as a Non-Steam Game. Walks through gamepad-permission first-press, mic auto-grant, and the 7" Deck CSS pass at `@media (max-width: 1280px) and (max-height: 800px)`. Full guide in [STEAMDECK_SETUP.md](docs/STEAMDECK_SETUP.md).
-- **Web Gamepad API input layer** — `dashboard/scripts/launcher-gamepad.js` polls `navigator.getGamepads()` at 60 Hz and dispatches `multideck:gamepad:*` events. Dpad and left stick both emit `nav`. A/B/X/Y emit `option` with index 0–3. L1 latches push-to-talk. The launcher and modals are fully navigable without touching the keyboard.
-- **Push-to-talk mic** — `[ ◉ MIC ]` button in the terminal header, or hold L1 on the gamepad. Whisper.cpp runs locally inside the container (pinned `v1.7.4`, `base.en` model). Transcribed text is injected into the active xterm.js session as if typed. New `POST /stt/transcribe` route on the dashboard.
+- **Web Gamepad API input layer** — `dashboard/scripts/launcher-gamepad.js` polls `navigator.getGamepads()` at 60 Hz and dispatches `multideck:gamepad:*` events. Dpad and left stick both emit `nav`. A/B/X/Y emit `option` with index 0–3. X toggles the STT mic, R1/L1 cycle terminal sessions, L2 voice-answers in the glyph modal. The launcher and modals are fully navigable without touching the keyboard.
+- **Toggle-to-talk mic** — `[ ◉ MIC ]` button in the terminal header, or press X on the gamepad outside the glyph modal. Press once to start, press again to stop and transcribe. Whisper.cpp runs locally inside the container (pinned `v1.7.4`, `base.en` model) or via remote whisper-server when `DISPATCH_WHISPER_REMOTE` is set. Transcribed text is injected into the active xterm.js session as if typed. `POST /stt/transcribe` route on the dashboard.
 - **AskUserQuestion glyph modal** — when Claude calls its `AskUserQuestion` tool, a PreToolUse hook (`hooks/dashboard-question-bridge.py`) intercepts, writes the payload to `state/pending-questions/`, and the dashboard's new `GET /events/questions` SSE channel pushes it to a glyph-mapped modal. A/B/X/Y map to options 0/1/2/3 with green/red/blue/yellow glyphs. Multi-select via R1. Claude never renders its native CLI prompt; the operator answers with one button-press.
 - **Installer auto-wires the hook** — `ensure_claude_hook` in `install-steamdeck.sh` idempotently merges the PreToolUse matcher into `~/.claude/settings.json` so the bridge works out-of-the-box.
 
@@ -404,11 +404,11 @@ Eleven cyberpunk BGM tracks ship with the launcher. The title screen and charact
 
 ### Voice in (v0.7)
 
-Press the `[ ◉ MIC ]` button in the terminal header, or hold L1 on a connected gamepad, and speak. `whisper.cpp` running locally inside the container transcribes via the `POST /stt/transcribe` route and injects the text into the active xterm.js session as if typed. No cloud, no API key, no per-second charge. The Steam Deck install pins `v1.7.4` of whisper.cpp with the `base.en` model; bigger models are a config swap if you have the disk.
+Press the `[ ◉ MIC ]` button in the terminal header, or press X on a connected gamepad (outside the glyph modal), to toggle the mic. Press once to start recording, press again to stop and transcribe. `whisper.cpp` running locally inside the container transcribes via the `POST /stt/transcribe` route and injects the text into the active xterm.js session as if typed. No cloud, no API key, no per-second charge. The Steam Deck install pins `v1.7.4` of whisper.cpp with the `base.en` model; bigger models are a config swap if you have the disk.
 
 ### Gamepad input (v0.7)
 
-The launcher polls `navigator.getGamepads()` at 60 Hz and dispatches `multideck:gamepad:*` `CustomEvent`s. Standard mapping: dpad and left stick emit `nav`, A/B/X/Y emit `option` with index 0–3, L1 latches push-to-talk, R1 confirms multi-select. The launcher and every modal are navigable without touching the keyboard. The same code path runs on a desktop with any USB or Bluetooth gamepad plugged in.
+The launcher polls `navigator.getGamepads()` at 60 Hz and dispatches `multideck:gamepad:*` `CustomEvent`s. Standard mapping: dpad and left stick emit `nav`; A/B/X/Y emit `option` with index 0–3; X also fires `mic` (toggle STT outside the glyph modal); R1/L1 emit `tab-next`/`tab-prev` to cycle terminal sessions and R1 doubles as confirm for multi-select; L2 emits `voice-answer` for an open-ended voice answer inside the glyph modal. The launcher and every modal are navigable without touching the keyboard. The same code path runs on a desktop with any USB or Bluetooth gamepad plugged in.
 
 ### AskUserQuestion glyph modal (v0.7)
 
