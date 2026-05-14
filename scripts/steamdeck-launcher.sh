@@ -68,6 +68,29 @@ ROOT="${DISPATCH_ROOT:?DISPATCH_ROOT not set in $ENV_FILE}"
 # attempt can race with chromium's GPU init.
 unset LD_PRELOAD
 
+# Steam Big Picture / Gaming Mode launches non-Steam shortcuts with a
+# stripped environment that often lacks DISPLAY and XAUTHORITY. Without
+# them Chromium dies in under a second with "Missing X server or
+# $DISPLAY" and the user sees a launcher "flash" with no window.
+# Default to :0 + autodetected Xauth file so kiosk works regardless of
+# launch context (Steam, desktop double-click, SSH with X-forward, etc.).
+export DISPLAY="${DISPLAY:-:0}"
+if [[ -z "${XAUTHORITY:-}" ]]; then
+  for xauth in "/run/user/$(id -u)"/xauth_* "$HOME/.Xauthority"; do
+    if [[ -f "$xauth" ]]; then
+      export XAUTHORITY="$xauth"
+      break
+    fi
+  done
+fi
+
+# Diagnostic launcher log. Future "flash" symptoms grep this first.
+LAUNCHER_LOG_DIR="$HOME/.cache/multideck"
+mkdir -p "$LAUNCHER_LOG_DIR"
+printf '[%s] launcher start: DISPLAY=%s XAUTHORITY=%s\n' \
+  "$(date -Iseconds)" "$DISPLAY" "${XAUTHORITY:-unset}" \
+  >> "$LAUNCHER_LOG_DIR/launcher.log"
+
 # ---------- helpers ----------
 log()  { printf '\033[1;36m[multideck]\033[0m %s\n' "$*"; }
 fail() { printf '\033[1;31m[fail]\033[0m %s\n' "$*" >&2; exit 1; }
