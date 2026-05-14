@@ -6,22 +6,29 @@
 #
 #  Sequence:
 #    1. Source ~/.config/multideck/env (written by install-steamdeck.sh).
-#    2. Enter the distrobox container.
-#    3. Start the MultiDeck dashboard server in the background.
-#    4. Wait until the launcher endpoint responds.
-#    5. Open Chromium in kiosk mode pointed at the launcher.
-#    6. When the browser closes, shut the dashboard down cleanly.
+#    2. If dashboard not responding on $DISPATCH_PORT, start it in the
+#       distrobox container as a detached background process.
+#    3. Wait until /launcher responds.
+#    4. Strip Steam's LD_PRELOAD overlay (32-bit, breaks our 64-bit Chromium).
+#    5. exec Chromium kiosk so when the browser exits, the script exits
+#       cleanly. Steam Big Picture treats the script lifetime as the "game"
+#       lifetime, so exec'ing Chromium keeps the indicator correct.
 #
-#  Kiosk mode: Chromium --kiosk fullscreens the launcher. Comment-toggle the
-#  gamescope wrapper at the bottom to integrate into Gaming Mode.
+#  Dashboard lifecycle:
+#    The dashboard is intentionally NOT killed when this script exits.
+#    The launcher script is a one-shot bringup; the dashboard is a long-
+#    running service that survives multiple launcher invocations. This lets
+#    you close the launcher and reopen it without losing audio feed state,
+#    pending question modal, or warm whisper-server.
 #
-#  Chromium is used (not Firefox) because the dashboard relies on Web Speech,
-#  MediaRecorder, and Gamepad APIs which are most mature in Chromium.
+#  To clean up the dashboard manually:
+#    pkill -f 'node dashboard/server.cjs'
 #
 #  Usage:
 #    ./scripts/steamdeck-launcher.sh
 #    ./scripts/steamdeck-launcher.sh --no-kiosk    # windowed Chromium
 #    ./scripts/steamdeck-launcher.sh --headless    # dashboard only, no browser
+#    ./scripts/steamdeck-launcher.sh --restart-dashboard   # force-restart
 # =====================================================
 
 set -euo pipefail
@@ -29,10 +36,12 @@ set -euo pipefail
 # ---------- flags ----------
 KIOSK=true
 HEADLESS=false
+RESTART_DASHBOARD=false
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --no-kiosk)  KIOSK=false; shift ;;
-    --headless)  HEADLESS=true; shift ;;
+    --no-kiosk)          KIOSK=false; shift ;;
+    --headless)          HEADLESS=true; shift ;;
+    --restart-dashboard) RESTART_DASHBOARD=true; shift ;;
     -h|--help)
       sed -n '2,/^# =====/p' "${BASH_SOURCE[0]}" | sed 's/^#\s\?//'
       exit 0 ;;
@@ -53,6 +62,12 @@ BOX="${MULTIDECK_BOX:-multideck-box}"
 PORT="${DISPATCH_PORT:-3046}"
 ROOT="${DISPATCH_ROOT:?DISPATCH_ROOT not set in $ENV_FILE}"
 
+# Strip Steam game overlay LD_PRELOAD. Steam injects gameoverlayrenderer.so
+# (32-bit on Steam Deck) which can't be loaded into our 64-bit Chromium and
+# produces noisy stderr warnings, but more importantly the broken inject
+# attempt can race with chromium's GPU init.
+unset LD_PRELOAD
+
 # ---------- helpers ----------
 log()  { printf '\033[1;36m[multideck]\033[0m %s\n' "$*"; }
 fail() { printf '\033[1;31m[fail]\033[0m %s\n' "$*" >&2; exit 1; }
@@ -61,59 +76,54 @@ in_box() {
   distrobox enter "$BOX" -- bash -lc "$*"
 }
 
-# ---------- step 1: start dashboard ----------
-DASHBOARD_PID=""
 LOG_DIR="$HOME/.cache/multideck"
 mkdir -p "$LOG_DIR"
 DASHBOARD_LOG="$LOG_DIR/dashboard.log"
 
-start_dashboard() {
-  log "Starting dashboard server on port $PORT (logs: $DASHBOARD_LOG)"
-  # nohup + & inside distrobox keeps the process alive after the enter call returns
-  in_box "cd '$ROOT' && nohup env DISPATCH_PORT='$PORT' DISPATCH_ROOT='$ROOT' \
-    DISPATCH_KOKORO_VENV='$DISPATCH_KOKORO_VENV' \
-    DISPATCH_LAUNCHER_TRANSPORT='$DISPATCH_LAUNCHER_TRANSPORT' \
-    node dashboard/server.cjs > '$DASHBOARD_LOG' 2>&1 &
-    echo \$!" > "$LOG_DIR/dashboard.pid"
-  DASHBOARD_PID="$(cat "$LOG_DIR/dashboard.pid" || true)"
-  log "Dashboard PID: $DASHBOARD_PID"
+# ---------- step 1: ensure dashboard ----------
+dashboard_responds() {
+  curl -fsS --max-time 2 "http://localhost:$PORT/launcher" >/dev/null 2>&1
 }
 
-wait_for_dashboard() {
-  log "Waiting for /launcher to respond on http://localhost:$PORT/launcher"
+ensure_dashboard() {
+  if dashboard_responds && [[ "$RESTART_DASHBOARD" != true ]]; then
+    log "Dashboard already responding on http://localhost:$PORT (reusing)"
+    return
+  fi
+
+  if [[ "$RESTART_DASHBOARD" == true ]]; then
+    log "Restarting dashboard (was: $(pgrep -f 'node dashboard/server.cjs' | head -1 || echo none))"
+    pkill -f 'node dashboard/server.cjs' 2>/dev/null || true
+    sleep 1
+  fi
+
+  log "Starting dashboard server in container (logs: $DASHBOARD_LOG)"
+  # setsid + nohup so the dashboard survives this script exiting and
+  # detaches from our process group (no SIGHUP propagation from Steam).
+  in_box "cd '$ROOT' && setsid nohup node dashboard/server.cjs > '$DASHBOARD_LOG' 2>&1 < /dev/null &"
+
+  # Wait up to 30s for the dashboard to come up
   local tries=0
-  until curl -fsS "http://localhost:$PORT/launcher" >/dev/null 2>&1; do
+  until dashboard_responds; do
     tries=$((tries+1))
-    if [[ $tries -gt 60 ]]; then
-      tail -n 40 "$DASHBOARD_LOG" >&2 || true
-      fail "Dashboard did not start within 60s"
+    if [[ $tries -gt 30 ]]; then
+      tail -n 30 "$DASHBOARD_LOG" >&2 || true
+      fail "Dashboard did not start within 30s"
     fi
     sleep 1
   done
-  log "Dashboard is up."
+  log "Dashboard is up on http://localhost:$PORT"
 }
-
-stop_dashboard() {
-  if [[ -n "${DASHBOARD_PID:-}" ]]; then
-    log "Stopping dashboard (PID $DASHBOARD_PID)"
-    in_box "kill $DASHBOARD_PID 2>/dev/null || true"
-  fi
-  # Also try killing anything else listening on the port inside the box
-  in_box "fuser -k ${PORT}/tcp 2>/dev/null || true" >/dev/null 2>&1 || true
-}
-trap stop_dashboard EXIT
 
 # ---------- step 2: open browser ----------
 open_browser() {
   if [[ "$HEADLESS" == true ]]; then
     log "Headless mode. Dashboard at http://localhost:$PORT/launcher"
-    log "Press Ctrl-C to stop."
+    log "Press Ctrl-C to stop (dashboard keeps running)."
     while sleep 3600; do :; done
   fi
 
   local url="http://localhost:$PORT/launcher"
-  # Use a per-launch user-data-dir so we never collide with a prior chromium
-  # session and we can wipe state cleanly on next run.
   local profile_dir="${HOME}/.cache/multideck/chromium-profile"
   mkdir -p "$profile_dir"
 
@@ -125,7 +135,6 @@ open_browser() {
   #   --overscroll-history-navigation=0  no swipe-back nav
   #   --use-fake-ui-for-media-stream     auto-grant mic for STT
   #   --autoplay-policy=no-user-gesture-required  audio feed plays without click
-  #   --enable-features=OverlayScrollbar
   local common_args=(
     "--user-data-dir=$profile_dir"
     "--no-first-run"
@@ -145,15 +154,17 @@ open_browser() {
   fi
 
   log "Opening Chromium: $url (kiosk=$KIOSK)"
-  # Chromium lives inside the distrobox container (installed by install-steamdeck.sh)
-  in_box "chromium ${common_args[*]} ${mode_args[*]}"
+  # exec replaces this shell with chromium. When chromium exits, the
+  # script exits with chromium's exit code. Steam Big Picture sees that
+  # as the "game" ending and switches back to its UI cleanly.
+  #
+  # IMPORTANT: distrobox enter spawns a wrapper shell that handles
+  # podman exec. We exec into that wrapper, which then exec's chromium
+  # inside the container. Net effect: this PID becomes the chromium
+  # session's parent for Steam's accounting purposes.
+  exec distrobox enter "$BOX" -- bash -lc "exec chromium ${common_args[*]} ${mode_args[*]}"
 }
 
 # ---------- main ----------
-start_dashboard
-wait_for_dashboard
-
-# To wrap the browser in gamescope for Gaming Mode integration, uncomment:
-# exec gamescope -e -W 1280 -H 800 -- bash -c "$(declare -f log fail in_box open_browser); open_browser"
-
+ensure_dashboard
 open_browser
