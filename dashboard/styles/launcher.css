@@ -1598,7 +1598,10 @@
   }
   .terminal-session.active { display: block; }
   .matrix-rain-wrapper {
-    width: 660px;
+    /* Halved from 660px to give the terminal panel more horizontal real
+       estate. With xterm font doubled to 28px on Deck, the larger column
+       count makes a bigger difference now. */
+    width: 330px;
     flex-shrink: 0;
     height: 100%;
     position: relative;
