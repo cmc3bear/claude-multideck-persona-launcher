@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **`steamdeck-launcher.sh` lifecycle and Big Picture compat**. Three bugs were preventing the launcher from working when launched as a Non-Steam Game from Steam Big Picture / Gaming Mode:
+  1. `trap stop_dashboard EXIT` killed the dashboard whenever the script ended, including when Chromium daemonized or detached. Subsequent launches saw the port still bound by a different process and the launcher died confused.
+  2. The script unconditionally tried to spawn a fresh dashboard inside the container, but the systemd-user dashboard service (introduced in v0.7.1) was already bound to the port. The new spawn failed silently.
+  3. Chromium was run via plain command, not `exec`. The launcher script exited before Chromium fully attached, and Steam Big Picture treated that as "game ended" while a half-attached Chromium was still trying to come up.
+  Rewrite of `scripts/steamdeck-launcher.sh` now: probes for an existing dashboard and reuses it; spawns one with `setsid nohup` + `< /dev/null` so it detaches cleanly from the script's process group; strips Steam's 32-bit `LD_PRELOAD` overlay that conflicts with our 64-bit Chromium in the container; and `exec`s Chromium so Steam sees the launcher script's PID as the live Chromium session. `--restart-dashboard` flag for forcing a fresh dashboard.
+- **`steamdeck-dashboard.sh` (windowed shortcut)** has the same lifecycle fixes plus removal of the legacy `multideck-audio.service` dependency (audio is in-server since v0.7.0).
+
 ## [0.7.2] - 2026-05-13
 
 ### Added
