@@ -62,10 +62,32 @@ WHISPER_MODEL="${MULTIDECK_WHISPER_MODEL:-base.en}"
 NODE_VERSION="22.11.0"
 
 # ---------- detect version ----------
+# Resolution order:
+#   1. --version flag (already populated)
+#   2. VERSION file at repo root (canonical, lands when we tag a release)
+#   3. CHANGELOG ## [Unreleased] -> use latest-released-version + "-dev" suffix
+#      so unreleased builds are obviously not the same artifact as a tagged
+#      release. (Older code grabbed the latest tagged version which silently
+#      shipped pre-release builds as that version.)
+#   4. CHANGELOG latest tagged version, when no Unreleased section exists
+#   5. fallback "0.0.0-dev"
 if [[ -z "$VERSION" ]]; then
-  if [[ -f "$MULTIDECK_ROOT/CHANGELOG.md" ]]; then
-    # Find latest version header like ## [X.Y.Z]
-    VERSION=$(grep -oE '^## \[[0-9]+\.[0-9]+\.[0-9]+\]' "$MULTIDECK_ROOT/CHANGELOG.md" | head -1 | sed 's/[^0-9.]//g')
+  if [[ -f "$MULTIDECK_ROOT/VERSION" ]]; then
+    VERSION=$(tr -d '[:space:]' < "$MULTIDECK_ROOT/VERSION")
+  elif [[ -f "$MULTIDECK_ROOT/CHANGELOG.md" ]]; then
+    if grep -q '^## \[Unreleased\]' "$MULTIDECK_ROOT/CHANGELOG.md"; then
+      latest_released=$(grep -oE '^## \[[0-9]+\.[0-9]+\.[0-9]+\]' "$MULTIDECK_ROOT/CHANGELOG.md" \
+        | head -1 | sed 's/[^0-9.]//g')
+      if [[ -n "$latest_released" ]]; then
+        # Bump minor for the dev tag so 0.6.0 -> 0.7.0-dev signals "next release"
+        IFS=. read -r major minor patch <<<"$latest_released"
+        VERSION="${major}.$((minor + 1)).0-dev"
+      fi
+    fi
+    if [[ -z "$VERSION" ]]; then
+      VERSION=$(grep -oE '^## \[[0-9]+\.[0-9]+\.[0-9]+\]' "$MULTIDECK_ROOT/CHANGELOG.md" \
+        | head -1 | sed 's/[^0-9.]//g')
+    fi
   fi
   VERSION="${VERSION:-0.0.0-dev}"
 fi
