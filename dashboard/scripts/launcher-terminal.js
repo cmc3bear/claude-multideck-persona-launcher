@@ -122,7 +122,13 @@ function initXtermSession(sessionId) {
       brightCyan:          c,
     },
     fontFamily: '"JetBrains Mono", "Fira Code", Consolas, monospace',
-    fontSize: 14, lineHeight: 1.4,
+    // Deck (max 1280x800) doubles the font for arm's-length readability.
+    // This must be set in JS, not CSS: xterm.js uses canvas/webgl renderer
+    // by default and computes cell-width from this option directly, ignoring
+    // CSS. If we only set CSS font-size, xterm reports more cols to the PTY
+    // than actually fit visually, and claude wraps mid-screen.
+    fontSize: window.matchMedia('(max-width: 1280px) and (max-height: 800px)').matches ? 28 : 14,
+    lineHeight: 1.3,
     cursorBlink: true, cursorStyle: 'block',
     scrollback: 5000, convertEol: true,
   });
@@ -468,7 +474,13 @@ const MatrixRain = (() => {
     else for (let c = 0; c < colColors.length; c++) colColors[c] = pickColor();
   }
   function setImages(urls) {
-    rainImages = (urls || []).map(url => {
+    // Cap watermark portraits at MAX_RAIN_IMAGES to keep the rain readable
+    // on the 7" Deck screen. Above 4 the tiled portraits overlap and the
+    // launcher feels cluttered. Newest sessions take precedence; older
+    // portraits drop out of the rain (but their sessions stay active).
+    const MAX_RAIN_IMAGES = 4;
+    const capped = (urls || []).slice(-MAX_RAIN_IMAGES);
+    rainImages = capped.map(url => {
       const img = new Image();
       img.src = url;
       return img;
