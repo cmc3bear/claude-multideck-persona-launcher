@@ -1,0 +1,30 @@
+// MultiDeck Steamworks depot manifest TEMPLATE.
+// Copy to depot.vdf and fill in DepotID before uploading.
+// See https://partner.steamgames.com/doc/sdk/uploading for full reference.
+
+"DepotBuildConfig"
+{
+	// Set this to the DepotID assigned by Steamworks (different from AppID).
+	"DepotID" "REPLACE_WITH_DEPOT_ID"
+
+	// Local path to the staged tarball-extracted tree.
+	// stage-steamworks-build.sh extracts the depot tarball into this dir.
+	"ContentRoot" "../build-staging/depot/"
+
+	"FileMapping"
+	{
+		// Map everything from the staging root recursively.
+		"LocalPath" "*"
+		"DepotPath" "."
+		"recursive" "1"
+	}
+
+	// Files to exclude from the depot (development cruft).
+	"FileExclusion" "*.bak"
+	"FileExclusion" "*.swp"
+	"FileExclusion" "*~"
+	"FileExclusion" "__pycache__/*"
+	"FileExclusion" ".git/*"
+	"FileExclusion" ".gitignore"
+	"FileExclusion" ".gitattributes"
+}
