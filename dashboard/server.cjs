@@ -1684,6 +1684,42 @@ wss.on('connection', (ws, req) => {
 const WHISPER_WARM = process.env.DISPATCH_WHISPER_WARM !== '0';
 const WHISPER_PORT = Number(process.env.DISPATCH_WHISPER_PORT) || 8780;
 
+// v0.7.2: optionally proxy to a remote whisper-server (e.g. PC over Tailscale).
+// When DISPATCH_WHISPER_REMOTE is set, the deck dashboard skips spawning a local
+// whisper-server entirely and forwards every POST /stt/transcribe to the remote.
+// Format: "http://host:port" or "host:port" (scheme defaults to http). MagicDNS
+// hostnames are fine, e.g. "http://my-pc.tail-abc123.ts.net:8780".
+const WHISPER_REMOTE_RAW = (process.env.DISPATCH_WHISPER_REMOTE || '').trim();
+const WHISPER_REMOTE = WHISPER_REMOTE_RAW
+  ? (WHISPER_REMOTE_RAW.match(/^https?:\/\//) ? WHISPER_REMOTE_RAW : `http://${WHISPER_REMOTE_RAW}`)
+  : '';
+
+// v0.7.2: optional dictionary biases whisper's transcription toward your
+// vocabulary (acronyms, project names, proper nouns). One term or phrase per
+// line. Up to ~150 words; whisper truncates at its ~224-token prompt limit.
+// Path: $XDG_CONFIG_HOME/multideck/dictionary.txt (defaults to ~/.config/...)
+const WHISPER_DICT_PATH = path.join(
+  process.env.XDG_CONFIG_HOME || path.join(process.env.HOME || process.env.USERPROFILE || '', '.config'),
+  'multideck', 'dictionary.txt'
+);
+
+function loadDictionaryPrompt() {
+  try {
+    if (!fs.existsSync(WHISPER_DICT_PATH)) return '';
+    const lines = fs.readFileSync(WHISPER_DICT_PATH, 'utf8')
+      .split(/\r?\n/)
+      .map((s) => s.trim())
+      .filter((s) => s && !s.startsWith('#'));
+    if (!lines.length) return '';
+    // Comma-join terms into a single context sentence. Whisper interprets the
+    // prompt as preceding context, so a flat list of nouns works well in
+    // practice (per whisper.cpp issue threads on prompt biasing).
+    return lines.join(', ');
+  } catch {
+    return '';
+  }
+}
+
 const whisperServer = (() => {
   let proc = null;
   let starting = null; // Promise<void> while spawning
@@ -1700,6 +1736,11 @@ const whisperServer = (() => {
   }
 
   async function ensureRunning() {
+    // Remote mode short-circuits local spawn entirely.
+    if (WHISPER_REMOTE) {
+      ready = true; // best-effort flag; real liveness is checked per-request
+      return;
+    }
     if (!WHISPER_WARM) throw new Error('warm mode disabled (DISPATCH_WHISPER_WARM=0)');
     if (proc && ready) return;
     if (starting) return starting;
@@ -1788,28 +1829,58 @@ const whisperServer = (() => {
   async function transcribe(wavPath) {
     await ensureRunning();
 
-    // Read WAV into memory, build multipart body manually. Node has no
-    // built-in FormData/Blob for ~Node 22, but we want zero deps so a
-    // hand-rolled multipart is fine for this single endpoint.
+    // Build the multipart body. Node 22 has no built-in FormData/Blob and we
+    // want zero runtime deps so we hand-roll it.
     const wav = fs.readFileSync(wavPath);
     const boundary = '----multideck-' + Math.random().toString(36).slice(2);
-    const head = Buffer.from(
+
+    const parts = [];
+    parts.push(Buffer.from(
       `--${boundary}\r\n` +
       `Content-Disposition: form-data; name="file"; filename="audio.wav"\r\n` +
       `Content-Type: audio/wav\r\n\r\n`
-    );
-    const fmt = Buffer.from(
+    ));
+    parts.push(wav);
+    parts.push(Buffer.from(
       `\r\n--${boundary}\r\n` +
       `Content-Disposition: form-data; name="response_format"\r\n\r\n` +
-      `json` +
-      `\r\n--${boundary}--\r\n`
-    );
-    const body = Buffer.concat([head, wav, fmt]);
+      `json`
+    ));
+
+    // Inject the dictionary as the whisper `prompt` if present. whisper.cpp
+    // accepts a `prompt` form field and biases decoding toward terms in it.
+    // ~224 token limit; long dictionaries truncate from the right.
+    const dictPrompt = loadDictionaryPrompt();
+    if (dictPrompt) {
+      parts.push(Buffer.from(
+        `\r\n--${boundary}\r\n` +
+        `Content-Disposition: form-data; name="prompt"\r\n\r\n` +
+        dictPrompt
+      ));
+    }
+
+    parts.push(Buffer.from(`\r\n--${boundary}--\r\n`));
+    const body = Buffer.concat(parts);
+
+    // Resolve target host/port: remote URL wins; otherwise local warm server.
+    let targetHost, targetPort, targetProto;
+    if (WHISPER_REMOTE) {
+      const u = new URL(WHISPER_REMOTE);
+      targetHost = u.hostname;
+      targetPort = Number(u.port) || (u.protocol === 'https:' ? 443 : 80);
+      targetProto = u.protocol === 'https:' ? 'https' : 'http';
+    } else {
+      targetHost = '127.0.0.1';
+      targetPort = WHISPER_PORT;
+      targetProto = 'http';
+    }
+
+    const driver = targetProto === 'https' ? https : http;
 
     return await new Promise((resolve, reject) => {
       const opts = {
-        hostname: '127.0.0.1',
-        port: WHISPER_PORT,
+        hostname: targetHost,
+        port: targetPort,
         path: '/inference',
         method: 'POST',
         headers: {
@@ -1817,31 +1888,34 @@ const whisperServer = (() => {
           'Content-Length': body.length,
         },
       };
-      const req2 = http.request(opts, (res2) => {
+      const req2 = driver.request(opts, (res2) => {
         let data = '';
         res2.on('data', (c) => { data += c.toString(); });
         res2.on('end', () => {
           if (res2.statusCode !== 200) {
-            return reject(new Error(`whisper-server HTTP ${res2.statusCode}: ${data.slice(0, 300)}`));
+            return reject(new Error(`whisper HTTP ${res2.statusCode}: ${data.slice(0, 300)}`));
           }
           try {
             const parsed = JSON.parse(data);
             const text = (parsed.text || '').replace(/\s+/g, ' ').trim();
             resolve(text);
           } catch (e) {
-            reject(new Error(`whisper-server response not JSON: ${data.slice(0, 200)}`));
+            reject(new Error(`whisper response not JSON: ${data.slice(0, 200)}`));
           }
         });
       });
       req2.on('error', reject);
-      req2.setTimeout(60000, () => req2.destroy(new Error('whisper-server timeout (60s)')));
+      req2.setTimeout(60000, () => req2.destroy(new Error('whisper timeout (60s)')));
       req2.write(body);
       req2.end();
     });
   }
 
   function status() {
+    const dictPrompt = loadDictionaryPrompt();
     return {
+      mode: WHISPER_REMOTE ? 'remote' : (WHISPER_WARM ? 'local-warm' : 'local-fallback'),
+      remoteUrl: WHISPER_REMOTE || null,
       warmEnabled: WHISPER_WARM,
       port: WHISPER_PORT,
       ready,
@@ -1849,6 +1923,9 @@ const whisperServer = (() => {
       restarts,
       lastError,
       serverBin: resolveServerBin(),
+      dictionaryPath: WHISPER_DICT_PATH,
+      dictionaryLoaded: !!dictPrompt,
+      dictionaryTerms: dictPrompt ? dictPrompt.split(',').length : 0,
     };
   }
 
