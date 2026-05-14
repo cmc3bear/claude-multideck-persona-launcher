@@ -535,4 +535,47 @@ window.MultideckTerminal = {
   getActiveSessionId() {
     return activeTerminalId;
   },
+  // v0.7.4: R1/L1 bumpers cycle through active terminal sessions like a
+  // tab strip. dir = +1 (next) or -1 (prev). Wraps at both ends. Returns
+  // false when fewer than 2 sessions exist so callers can no-op cleanly.
+  cycleSession(dir) {
+    const ids = [...terminalSessions.keys()];
+    if (ids.length < 2) return false;
+    const i = activeTerminalId ? ids.indexOf(activeTerminalId) : -1;
+    const next = ids[((i + dir) % ids.length + ids.length) % ids.length];
+    switchSession(next);
+    triggerTabSwellForActive();
+    return true;
+  },
 };
+
+function triggerTabSwellForActive() {
+  if (!activeTerminalId) return;
+  const s = terminalSessions.get(activeTerminalId);
+  if (!s) return;
+  MatrixRain.triggerSwell(0, s.color || '#00FFCC');
+}
+
+// Gamepad bumper bindings — only fire when the terminal panel is the
+// active visual context. We gate on (a) panel must be open and not
+// minimized, (b) glyph modal must not be eating input, (c) at least two
+// sessions to cycle through. Otherwise R1/L1 silently no-op so they don't
+// fight the modal A/B/X/Y picker or steal focus from a single session.
+(function wireGamepadTabCycling() {
+  function modalEatingInput() {
+    const m = document.getElementById('question-modal');
+    return !!(m && !m.hidden);
+  }
+  function panelActive() {
+    const panel = document.getElementById('terminal-panel');
+    return !!(panel && panel.classList.contains('open') && !terminalMinimized);
+  }
+  window.addEventListener('multideck:gamepad:tab-next', () => {
+    if (modalEatingInput() || !panelActive()) return;
+    window.MultideckTerminal.cycleSession(+1);
+  });
+  window.addEventListener('multideck:gamepad:tab-prev', () => {
+    if (modalEatingInput() || !panelActive()) return;
+    window.MultideckTerminal.cycleSession(-1);
+  });
+})();
