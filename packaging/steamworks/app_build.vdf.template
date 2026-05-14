@@ -1,0 +1,23 @@
+// MultiDeck Steamworks app build TEMPLATE.
+// Copy to app_build.vdf and fill in AppID + DepotID before uploading.
+// Invoke with: steamcmd +login <user> +run_app_build app_build.vdf +quit
+
+"appbuild"
+{
+	// AppID assigned by Steamworks for MultiDeck.
+	"appid" "REPLACE_WITH_APP_ID"
+
+	// Description shown in the Steamworks Build History list.
+	"desc" "MultiDeck v0.7.x"
+
+	// Build branch — "default" pushes to all users; use "beta" for testing.
+	"buildoutput" "../build-output/"
+	"contentroot" "../build-staging/"
+	"setlive" ""
+
+	"depots"
+	{
+		// Single-depot build. Multi-depot for OS-specific assets if ever needed.
+		"REPLACE_WITH_DEPOT_ID" "depot.vdf"
+	}
+}
