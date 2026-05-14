@@ -1356,12 +1356,25 @@ const server = http.createServer((req, res) => {
       const ff = spawn('ffmpeg', ['-y', '-i', inputPath, '-ar', '16000', '-ac', '1', '-f', 'wav', wavPath], { stdio: ['ignore', 'ignore', 'pipe'] });
       let ffErr = '';
       ff.stderr.on('data', (d) => { ffErr += d.toString(); });
-      ff.on('close', (code) => {
+      ff.on('close', async (code) => {
         if (code !== 0 || !fs.existsSync(wavPath)) {
           cleanup();
           return sendJson(res, 500, { error: 'ffmpeg transcode failed', detail: ffErr.slice(-500) });
         }
-        // Stage 2: whisper.cpp → stdout
+        // Stage 2 (preferred): warm whisper-server holds the model in RAM and
+        // serves transcriptions over HTTP. Eliminates the 150 MB mmap penalty
+        // that made base.en run ~1 second per word on Steam Deck when other
+        // processes evicted model pages between calls.
+        try {
+          const text = await whisperServer.transcribe(wavPath);
+          cleanup();
+          return sendJson(res, 200, { text });
+        } catch (e) {
+          // Fall through to whisper-cli so an install without a working warm
+          // server still produces a transcription.
+          console.warn(`[stt] whisper-server unavailable, falling back to whisper-cli: ${e.message}`);
+        }
+        // Stage 2 (fallback): one-shot whisper-cli.
         // -nt = no timestamps, -np = no per-segment prints (cleaner stdout)
         const wp = spawn(whisperBin, ['-m', whisperModel, '-f', wavPath, '-nt', '-np'], { stdio: ['ignore', 'pipe', 'pipe'] });
         let stdout = '';
@@ -1373,8 +1386,6 @@ const server = http.createServer((req, res) => {
           if (wcode !== 0) {
             return sendJson(res, 500, { error: 'whisper failed', code: wcode, detail: stderr.slice(-500) });
           }
-          // Whisper prints transcription lines to stdout (with -nt -np that's
-          // just the text). Trim leading whitespace; collapse internal newlines.
           const text = stdout.replace(/\s+/g, ' ').trim();
           sendJson(res, 200, { text });
         });
@@ -1383,6 +1394,10 @@ const server = http.createServer((req, res) => {
     out.on('error', (e) => { cleanup(); sendJson(res, 500, { error: 'tmp write failed', detail: e.message }); });
     req.on('error', (e) => { cleanup(); sendJson(res, 500, { error: 'request stream error', detail: e.message }); });
     return;
+  }
+
+  if (url === '/stt/status' && req.method === 'GET') {
+    return sendJson(res, 200, whisperServer.status());
   }
 
   // ----------------------------------------------------------
@@ -1575,25 +1590,41 @@ wss.on('connection', (ws, req) => {
   }
   pendingSessions.delete(sessionId);
 
+  // Initial PTY dimensions from xterm.js (sent as query params on connect).
+  // Used to set COLUMNS/LINES env + stty cols/rows so claude wraps at the
+  // visible width instead of bash's default 80 cols. Without this, long
+  // lines from claude run off the right edge of the launcher terminal panel.
+  const initCols = Math.max(20, Math.min(500, Number(url.searchParams.get('cols')) || 100));
+  const initRows = Math.max(5,  Math.min(200, Number(url.searchParams.get('rows')) || 30));
+  const ptyEnv = {
+    ...process.env,
+    COLUMNS: String(initCols),
+    LINES: String(initRows),
+    TERM: process.env.TERM || 'xterm-256color',
+  };
+
   let proc;
   try {
     if (IS_WINDOWS && WSL_AVAILABLE) {
       // Wrap in `script -q -c '...' /dev/null` to allocate a pseudo-TTY so
       // claude behaves interactively (colors, no "no stdin data" warning).
       // Note: util-linux script requires the output file as the LAST positional arg.
+      // stty inside the PTY sets the kernel-side dimensions so claude's
+      // ioctl(TIOCGWINSZ) returns the same cols/rows the browser xterm has.
       const safe      = String(pending.prompt || '').replace(/'/g, "'\\''");
       const dangerArg = pending.dangerous ? ' --dangerously-skip-permissions' : '';
       const inner     = pending.prompt ? `claude${dangerArg} '${safe}'` : `claude${dangerArg}`;
-      const cmd       = `script -q -c '${inner.replace(/'/g, "'\\''")}' /dev/null`;
+      const cmd       = `script -q -c 'stty cols ${initCols} rows ${initRows} 2>/dev/null; ${inner.replace(/'/g, "'\\''")}' /dev/null`;
       proc = spawn('wsl.exe', ['-d', 'Ubuntu', '--', 'bash', '-lc', cmd], {
         stdio: ['pipe', 'pipe', 'pipe'],
+        env: ptyEnv,
       });
     } else if (!IS_WINDOWS) {
       const safe      = String(pending.prompt || '').replace(/'/g, "'\\''");
       const dangerArg = pending.dangerous ? ' --dangerously-skip-permissions' : '';
       const inner     = pending.prompt ? `claude${dangerArg} '${safe}'` : `claude${dangerArg}`;
-      const cmd       = `script -q -c '${inner.replace(/'/g, "'\\''")}' /dev/null`;
-      proc = spawn('bash', ['-lc', cmd], { stdio: ['pipe', 'pipe', 'pipe'] });
+      const cmd       = `script -q -c 'stty cols ${initCols} rows ${initRows} 2>/dev/null; ${inner.replace(/'/g, "'\\''")}' /dev/null`;
+      proc = spawn('bash', ['-lc', cmd], { stdio: ['pipe', 'pipe', 'pipe'], env: ptyEnv });
     } else {
       ws.send(JSON.stringify({ type: 'error', msg: 'browser terminal requires WSL on Windows' }));
       ws.close();
@@ -1634,6 +1665,201 @@ wss.on('connection', (ws, req) => {
     activeSessions.delete(sessionId);
   });
 });
+
+// ============================================================
+// Warm whisper-server manager (v0.7.1)
+//
+// whisper.cpp ships a `whisper-server` binary alongside `whisper-cli`. It
+// loads the model once at startup and serves transcriptions over HTTP at
+// POST /inference. Eliminates the per-request 150 MB model mmap penalty that
+// made base.en run ~1 second per word on Steam Deck (Zen 2) when other
+// processes evicted model pages between calls.
+//
+// Lazy-spawn on first STT request, keep alive, restart on death. Falls back
+// to one-shot whisper-cli if the server binary is missing or fails to start.
+//
+// Override port with DISPATCH_WHISPER_PORT. Disable warm mode with
+// DISPATCH_WHISPER_WARM=0 (forces fallback path).
+// ============================================================
+const WHISPER_WARM = process.env.DISPATCH_WHISPER_WARM !== '0';
+const WHISPER_PORT = Number(process.env.DISPATCH_WHISPER_PORT) || 8780;
+
+const whisperServer = (() => {
+  let proc = null;
+  let starting = null; // Promise<void> while spawning
+  let ready = false;
+  let lastError = null;
+  let restarts = 0;
+
+  function resolveServerBin() {
+    const cli = process.env.DISPATCH_WHISPER_BIN || '';
+    if (!cli) return null;
+    // Sibling lookup: same dir as whisper-cli, named whisper-server.
+    const candidate = path.join(path.dirname(cli), 'whisper-server');
+    return fs.existsSync(candidate) && fs.statSync(candidate).isFile() ? candidate : null;
+  }
+
+  async function ensureRunning() {
+    if (!WHISPER_WARM) throw new Error('warm mode disabled (DISPATCH_WHISPER_WARM=0)');
+    if (proc && ready) return;
+    if (starting) return starting;
+
+    const serverBin = resolveServerBin();
+    if (!serverBin) throw new Error('whisper-server binary not found alongside DISPATCH_WHISPER_BIN');
+
+    const model = process.env.DISPATCH_WHISPER_MODEL;
+    if (!model || !fs.existsSync(model)) throw new Error('DISPATCH_WHISPER_MODEL missing');
+
+    starting = new Promise((resolve, reject) => {
+      console.log(`[stt] starting whisper-server on 127.0.0.1:${WHISPER_PORT} (model=${path.basename(model)})`);
+      const child = spawn(serverBin, [
+        '-m', model,
+        '--host', '127.0.0.1',
+        '--port', String(WHISPER_PORT),
+        '-t', String(Math.min(4, require('os').cpus().length)),
+      ], { stdio: ['ignore', 'pipe', 'pipe'] });
+
+      let bootBuf = '';
+      const onLog = (chunk) => { bootBuf += chunk.toString(); };
+      child.stderr.on('data', onLog);
+      child.stdout.on('data', onLog);
+
+      // whisper-server silently binds its port without printing a readiness
+      // line, so log-scanning is unreliable. We poll the port instead: try
+      // a quick TCP connect every 250ms until it succeeds or we hit timeout.
+      const net = require('net');
+      let resolved = false;
+      const finishOk = () => {
+        if (resolved) return;
+        resolved = true;
+        ready = true;
+        proc = child;
+        starting = null;
+        console.log(`[stt] whisper-server ready on 127.0.0.1:${WHISPER_PORT}`);
+        resolve();
+      };
+      const finishFail = (msg) => {
+        if (resolved) return;
+        resolved = true;
+        starting = null;
+        try { child.kill(); } catch {}
+        lastError = msg;
+        reject(new Error(msg));
+      };
+
+      const probeOnce = () => new Promise((res) => {
+        const sock = net.connect({ host: '127.0.0.1', port: WHISPER_PORT }, () => { sock.destroy(); res(true); });
+        sock.on('error', () => res(false));
+        sock.setTimeout(500, () => { sock.destroy(); res(false); });
+      });
+
+      const startedAt = Date.now();
+      const poll = async () => {
+        if (resolved) return;
+        if (Date.now() - startedAt > 15000) return finishFail(`boot timeout after 15s: ${bootBuf.slice(-300)}`);
+        if (child.killed || child.exitCode !== null) return; // exit handler will reject
+        if (await probeOnce()) return finishOk();
+        setTimeout(poll, 250);
+      };
+      setTimeout(poll, 200); // small initial delay so we don't probe before bind starts
+
+      child.on('exit', (code, signal) => {
+        const wasReady = ready;
+        ready = false;
+        proc = null;
+        if (!wasReady) {
+          finishFail(`whisper-server exited before ready (code=${code} signal=${signal}): ${bootBuf.slice(-300)}`);
+        } else {
+          console.warn(`[stt] whisper-server exited post-readiness code=${code} signal=${signal}`);
+          restarts += 1;
+        }
+      });
+
+      child.on('error', (e) => {
+        ready = false;
+        proc = null;
+        finishFail(`spawn failed: ${e.message}`);
+      });
+    });
+
+    return starting;
+  }
+
+  async function transcribe(wavPath) {
+    await ensureRunning();
+
+    // Read WAV into memory, build multipart body manually. Node has no
+    // built-in FormData/Blob for ~Node 22, but we want zero deps so a
+    // hand-rolled multipart is fine for this single endpoint.
+    const wav = fs.readFileSync(wavPath);
+    const boundary = '----multideck-' + Math.random().toString(36).slice(2);
+    const head = Buffer.from(
+      `--${boundary}\r\n` +
+      `Content-Disposition: form-data; name="file"; filename="audio.wav"\r\n` +
+      `Content-Type: audio/wav\r\n\r\n`
+    );
+    const fmt = Buffer.from(
+      `\r\n--${boundary}\r\n` +
+      `Content-Disposition: form-data; name="response_format"\r\n\r\n` +
+      `json` +
+      `\r\n--${boundary}--\r\n`
+    );
+    const body = Buffer.concat([head, wav, fmt]);
+
+    return await new Promise((resolve, reject) => {
+      const opts = {
+        hostname: '127.0.0.1',
+        port: WHISPER_PORT,
+        path: '/inference',
+        method: 'POST',
+        headers: {
+          'Content-Type': `multipart/form-data; boundary=${boundary}`,
+          'Content-Length': body.length,
+        },
+      };
+      const req2 = http.request(opts, (res2) => {
+        let data = '';
+        res2.on('data', (c) => { data += c.toString(); });
+        res2.on('end', () => {
+          if (res2.statusCode !== 200) {
+            return reject(new Error(`whisper-server HTTP ${res2.statusCode}: ${data.slice(0, 300)}`));
+          }
+          try {
+            const parsed = JSON.parse(data);
+            const text = (parsed.text || '').replace(/\s+/g, ' ').trim();
+            resolve(text);
+          } catch (e) {
+            reject(new Error(`whisper-server response not JSON: ${data.slice(0, 200)}`));
+          }
+        });
+      });
+      req2.on('error', reject);
+      req2.setTimeout(60000, () => req2.destroy(new Error('whisper-server timeout (60s)')));
+      req2.write(body);
+      req2.end();
+    });
+  }
+
+  function status() {
+    return {
+      warmEnabled: WHISPER_WARM,
+      port: WHISPER_PORT,
+      ready,
+      running: !!proc,
+      restarts,
+      lastError,
+      serverBin: resolveServerBin(),
+    };
+  }
+
+  function shutdown() {
+    if (proc && !proc.killed) {
+      try { proc.kill(); } catch {}
+    }
+  }
+
+  return { ensureRunning, transcribe, status, shutdown };
+})();
 
 // ============================================================
 // Audio autoplay manager (v0.7 - replaces multideck-audio.service)
@@ -1826,9 +2052,11 @@ server.listen(PORT, '0.0.0.0', () => {
 
 process.on('SIGTERM', () => {
   if (audioState.playing) { try { process.kill(audioState.playing.pid); } catch {} }
+  whisperServer.shutdown();
   process.exit(0);
 });
 process.on('SIGINT', () => {
   if (audioState.playing) { try { process.kill(audioState.playing.pid); } catch {} }
+  whisperServer.shutdown();
   process.exit(0);
 });
