@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.2] - 2026-05-13
+
 ### Added
 
 - **Remote STT backend (`DISPATCH_WHISPER_REMOTE`)** — set this env var to a `whisper-server` URL on another machine (typically a GPU desktop on the same Tailscale network) and the deck dashboard forwards every `/stt/transcribe` request there instead of running whisper locally. Lets the deck run as a thin client for STT while using a 4090 (or any GPU box) for the actual transcription. Falls back to local warm `whisper-server` when unset. New `/stt/status` field `mode` reports `remote` / `local-warm` / `local-fallback`. Documented in `docs/REMOTE_STT.md` with Windows and Linux server setup.
