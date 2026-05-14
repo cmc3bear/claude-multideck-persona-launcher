@@ -1323,11 +1323,18 @@ const server = http.createServer((req, res) => {
   if (url === '/stt/transcribe' && req.method === 'POST') {
     const whisperBin = process.env.DISPATCH_WHISPER_BIN;
     const whisperModel = process.env.DISPATCH_WHISPER_MODEL;
-    if (!whisperBin || !whisperModel) {
-      return sendJson(res, 503, { error: 'STT not configured. Set DISPATCH_WHISPER_BIN and DISPATCH_WHISPER_MODEL.' });
-    }
-    if (!fs.existsSync(whisperBin) || !fs.existsSync(whisperModel)) {
-      return sendJson(res, 503, { error: 'whisper bin or model missing on disk' });
+    const remoteSet = !!(process.env.DISPATCH_WHISPER_REMOTE || '').trim();
+
+    // Remote mode: a remote whisper-server URL is configured, so we don't need
+    // any local whisper binary or model on disk. Skip the local-file checks
+    // and rely on whisperServer.transcribe() to call out to the remote.
+    if (!remoteSet) {
+      if (!whisperBin || !whisperModel) {
+        return sendJson(res, 503, { error: 'STT not configured. Set DISPATCH_WHISPER_BIN and DISPATCH_WHISPER_MODEL, or DISPATCH_WHISPER_REMOTE for a remote backend.' });
+      }
+      if (!fs.existsSync(whisperBin) || !fs.existsSync(whisperModel)) {
+        return sendJson(res, 503, { error: 'whisper bin or model missing on disk', whisperBin, whisperModel });
+      }
     }
     const os = require('os');
     const crypto = require('crypto');
@@ -1370,11 +1377,21 @@ const server = http.createServer((req, res) => {
           cleanup();
           return sendJson(res, 200, { text });
         } catch (e) {
-          // Fall through to whisper-cli so an install without a working warm
-          // server still produces a transcription.
-          console.warn(`[stt] whisper-server unavailable, falling back to whisper-cli: ${e.message}`);
+          // In remote mode we have no local whisper-cli to fall through to,
+          // so surface the proxy error directly instead of crashing
+          // spawn(undefined). In local-warm mode, fall through to whisper-cli
+          // for installs where the warm server itself is broken.
+          console.warn(`[stt] whisper backend failed: ${e.message}`);
+          if (remoteSet) {
+            cleanup();
+            return sendJson(res, 502, {
+              error: 'remote whisper-server unreachable or returned error',
+              detail: e.message,
+              remoteUrl: (process.env.DISPATCH_WHISPER_REMOTE || '').trim(),
+            });
+          }
         }
-        // Stage 2 (fallback): one-shot whisper-cli.
+        // Stage 2 (fallback): one-shot whisper-cli. Only runs in local mode.
         // -nt = no timestamps, -np = no per-segment prints (cleaner stdout)
         const wp = spawn(whisperBin, ['-m', whisperModel, '-f', wavPath, '-nt', '-np'], { stdio: ['ignore', 'pipe', 'pipe'] });
         let stdout = '';
