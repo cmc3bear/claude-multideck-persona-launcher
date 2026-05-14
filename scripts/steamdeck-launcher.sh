@@ -2,36 +2,43 @@
 # =====================================================
 #  MultiDeck — Steam Deck launcher entry point
 #
-#  This is what the Steam shortcut (or multideck.desktop) executes.
+#  Tested launch contexts:
+#    - Desktop Mode double-click (KDE Plasma session)
+#    - Konsole (direct shell)
+#    - SSH (with or without DISPLAY)
+#    - Steam Big Picture (Desktop session)
+#    - Steam Gaming Mode (Gamescope nested xwayland)
 #
-#  Sequence:
-#    1. Source ~/.config/multideck/env (written by install-steamdeck.sh).
-#    2. If dashboard not responding on $DISPATCH_PORT, start it in the
-#       distrobox container as a detached background process.
-#    3. Wait until /launcher responds.
-#    4. Strip Steam's LD_PRELOAD overlay (32-bit, breaks our 64-bit Chromium).
-#    5. exec Chromium kiosk so when the browser exits, the script exits
-#       cleanly. Steam Big Picture treats the script lifetime as the "game"
-#       lifetime, so exec'ing Chromium keeps the indicator correct.
+#  Why we DON'T use `set -e` here: Steam Gaming Mode launches non-Steam
+#  shortcuts with a stripped environment. Earlier versions of this script
+#  used `set -euo pipefail` at the top, which caused the script to exit
+#  silently before any logging if an env variable was unset. Symptom:
+#  "flash" with no diagnostic output. We now log everything aggressively
+#  and exit only on specific failures we've identified.
 #
-#  Dashboard lifecycle:
-#    The dashboard is intentionally NOT killed when this script exits.
-#    The launcher script is a one-shot bringup; the dashboard is a long-
-#    running service that survives multiple launcher invocations. This lets
-#    you close the launcher and reopen it without losing audio feed state,
-#    pending question modal, or warm whisper-server.
-#
-#  To clean up the dashboard manually:
-#    pkill -f 'node dashboard/server.cjs'
-#
-#  Usage:
-#    ./scripts/steamdeck-launcher.sh
-#    ./scripts/steamdeck-launcher.sh --no-kiosk    # windowed Chromium
-#    ./scripts/steamdeck-launcher.sh --headless    # dashboard only, no browser
-#    ./scripts/steamdeck-launcher.sh --restart-dashboard   # force-restart
+#  Dashboard lifecycle: the dashboard is intentionally NOT killed when
+#  this script exits. The launcher is a one-shot bringup; the dashboard
+#  is a long-running service that survives multiple launcher invocations.
 # =====================================================
 
-set -euo pipefail
+# ---------- step 1: logging FIRST, before anything can fail ----------
+LAUNCHER_LOG_DIR="${HOME:-/home/deck}/.cache/multideck"
+mkdir -p "$LAUNCHER_LOG_DIR" 2>/dev/null
+LAUNCHER_LOG="$LAUNCHER_LOG_DIR/launcher.log"
+# Tee stdout AND stderr to the log; keep them on the original streams too
+# so Steam captures crashes in its own log.
+exec > >(tee -a "$LAUNCHER_LOG") 2>&1
+
+echo
+echo "================================================================"
+echo "[$(date -Iseconds)] launcher invoked"
+echo "  USER=${USER:-<unset>}  HOME=${HOME:-<unset>}  PWD=$(pwd)"
+echo "  DISPLAY=${DISPLAY:-<unset>}  XAUTHORITY=${XAUTHORITY:-<unset>}"
+echo "  WAYLAND_DISPLAY=${WAYLAND_DISPLAY:-<unset>}"
+echo "  GAMESCOPE_WAYLAND_DISPLAY=${GAMESCOPE_WAYLAND_DISPLAY:-<unset>}"
+echo "  XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-<unset>}"
+echo "  argv: $0 $*"
+echo "================================================================"
 
 # ---------- flags ----------
 KIOSK=true
@@ -45,65 +52,85 @@ while [[ $# -gt 0 ]]; do
     -h|--help)
       sed -n '2,/^# =====/p' "${BASH_SOURCE[0]}" | sed 's/^#\s\?//'
       exit 0 ;;
-    *) echo "unknown flag: $1" >&2; exit 2 ;;
+    *) echo "[warn] unknown flag: $1, ignoring"; shift ;;
   esac
 done
 
 # ---------- env ----------
-ENV_FILE="$HOME/.config/multideck/env"
+ENV_FILE="${HOME:-/home/deck}/.config/multideck/env"
 if [[ ! -f "$ENV_FILE" ]]; then
-  echo "[fail] $ENV_FILE not found. Run scripts/install-steamdeck.sh first." >&2
+  echo "[fail] $ENV_FILE not found. Run scripts/install-steamdeck.sh first."
   exit 1
 fi
+echo "[info] sourcing $ENV_FILE"
 # shellcheck disable=SC1090
 source "$ENV_FILE"
 
 BOX="${MULTIDECK_BOX:-multideck-box}"
 PORT="${DISPATCH_PORT:-3046}"
-ROOT="${DISPATCH_ROOT:?DISPATCH_ROOT not set in $ENV_FILE}"
+ROOT="${DISPATCH_ROOT:-${HOME:-/home/deck}/multideck}"
+echo "[info] BOX=$BOX PORT=$PORT ROOT=$ROOT"
 
-# Strip Steam game overlay LD_PRELOAD. Steam injects gameoverlayrenderer.so
-# (32-bit on Steam Deck) which can't be loaded into our 64-bit Chromium and
-# produces noisy stderr warnings, but more importantly the broken inject
-# attempt can race with chromium's GPU init.
-unset LD_PRELOAD
+# ---------- step 2: strip Steam game overlay LD_PRELOAD ----------
+if [[ -n "${LD_PRELOAD:-}" ]]; then
+  echo "[info] stripping LD_PRELOAD=$LD_PRELOAD (Steam's 32-bit game overlay, incompatible with our 64-bit Chromium)"
+  unset LD_PRELOAD
+fi
 
-# Steam Big Picture / Gaming Mode launches non-Steam shortcuts with a
-# stripped environment that often lacks DISPLAY and XAUTHORITY. Without
-# them Chromium dies in under a second with "Missing X server or
-# $DISPLAY" and the user sees a launcher "flash" with no window.
-# Default to :0 + autodetected Xauth file so kiosk works regardless of
-# launch context (Steam, desktop double-click, SSH with X-forward, etc.).
+# ---------- step 3: ensure DISPLAY + XAUTHORITY ----------
+# Steam Gaming Mode (Gamescope) typically sets:
+#   DISPLAY=:0
+#   XAUTHORITY=/run/pressure-vessel/Xauthority
+# Desktop Mode (KDE) typically sets:
+#   DISPLAY=:0
+#   XAUTHORITY=/run/user/1000/xauth_XXXXXX
+# When both are stripped (some launch contexts), we recover by defaulting
+# DISPLAY=:0 and searching known auth paths.
 export DISPLAY="${DISPLAY:-:0}"
-if [[ -z "${XAUTHORITY:-}" ]]; then
-  for xauth in "/run/user/$(id -u)"/xauth_* "$HOME/.Xauthority"; do
-    if [[ -f "$xauth" ]]; then
-      export XAUTHORITY="$xauth"
+
+if [[ -n "${XAUTHORITY:-}" ]] && [[ -f "$XAUTHORITY" ]]; then
+  echo "[info] using inherited XAUTHORITY=$XAUTHORITY"
+else
+  for candidate in \
+      /run/pressure-vessel/Xauthority \
+      /run/user/$(id -u 2>/dev/null)/xauth_* \
+      "${HOME:-/home/deck}/.Xauthority"; do
+    if [[ -f "$candidate" ]]; then
+      export XAUTHORITY="$candidate"
+      echo "[info] auto-detected XAUTHORITY=$XAUTHORITY"
       break
     fi
   done
 fi
+if [[ -z "${XAUTHORITY:-}" ]] || [[ ! -f "${XAUTHORITY:-}" ]]; then
+  echo "[warn] no XAUTHORITY file found; X11 connection may fail unless xhost is permissive"
+fi
 
-# Diagnostic launcher log. Future "flash" symptoms grep this first.
-LAUNCHER_LOG_DIR="$HOME/.cache/multideck"
-mkdir -p "$LAUNCHER_LOG_DIR"
-printf '[%s] launcher start: DISPLAY=%s XAUTHORITY=%s\n' \
-  "$(date -Iseconds)" "$DISPLAY" "${XAUTHORITY:-unset}" \
-  >> "$LAUNCHER_LOG_DIR/launcher.log"
+# Stage XAUTHORITY in /tmp so the distrobox container can read it. The
+# Gaming Mode auth path (/run/pressure-vessel/Xauthority) is inside Steam's
+# pressure-vessel sandbox and typically not bind-mounted into our box.
+STAGED_XAUTH="/tmp/multideck-xauth"
+if [[ -n "${XAUTHORITY:-}" ]] && [[ -f "$XAUTHORITY" ]]; then
+  if cp "$XAUTHORITY" "$STAGED_XAUTH" 2>/dev/null; then
+    chmod 600 "$STAGED_XAUTH" 2>/dev/null
+    export XAUTHORITY="$STAGED_XAUTH"
+    echo "[info] staged XAUTHORITY at $STAGED_XAUTH for container visibility"
+  else
+    echo "[warn] could not stage XAUTHORITY at $STAGED_XAUTH (source: $XAUTHORITY)"
+  fi
+fi
 
 # ---------- helpers ----------
-log()  { printf '\033[1;36m[multideck]\033[0m %s\n' "$*"; }
-fail() { printf '\033[1;31m[fail]\033[0m %s\n' "$*" >&2; exit 1; }
+log()  { printf '[multideck] %s\n' "$*"; }
 
 in_box() {
   distrobox enter "$BOX" -- bash -lc "$*"
 }
 
-LOG_DIR="$HOME/.cache/multideck"
-mkdir -p "$LOG_DIR"
+LOG_DIR="${HOME:-/home/deck}/.cache/multideck"
 DASHBOARD_LOG="$LOG_DIR/dashboard.log"
 
-# ---------- step 1: ensure dashboard ----------
+# ---------- step 4: ensure dashboard ----------
 dashboard_responds() {
   curl -fsS --max-time 2 "http://localhost:$PORT/launcher" >/dev/null 2>&1
 }
@@ -111,34 +138,32 @@ dashboard_responds() {
 ensure_dashboard() {
   if dashboard_responds && [[ "$RESTART_DASHBOARD" != true ]]; then
     log "Dashboard already responding on http://localhost:$PORT (reusing)"
-    return
+    return 0
   fi
 
   if [[ "$RESTART_DASHBOARD" == true ]]; then
-    log "Restarting dashboard (was: $(pgrep -f 'node dashboard/server.cjs' | head -1 || echo none))"
+    log "Restarting dashboard (--restart-dashboard)"
     pkill -f 'node dashboard/server.cjs' 2>/dev/null || true
     sleep 1
   fi
 
   log "Starting dashboard server in container (logs: $DASHBOARD_LOG)"
-  # setsid + nohup so the dashboard survives this script exiting and
-  # detaches from our process group (no SIGHUP propagation from Steam).
   in_box "cd '$ROOT' && setsid nohup node dashboard/server.cjs > '$DASHBOARD_LOG' 2>&1 < /dev/null &"
 
-  # Wait up to 30s for the dashboard to come up
   local tries=0
   until dashboard_responds; do
     tries=$((tries+1))
     if [[ $tries -gt 30 ]]; then
-      tail -n 30 "$DASHBOARD_LOG" >&2 || true
-      fail "Dashboard did not start within 30s"
+      echo "[fail] Dashboard did not start within 30s. Last 30 lines of dashboard log:"
+      tail -n 30 "$DASHBOARD_LOG" 2>&1 || true
+      return 1
     fi
     sleep 1
   done
   log "Dashboard is up on http://localhost:$PORT"
 }
 
-# ---------- step 2: open browser ----------
+# ---------- step 5: open browser ----------
 open_browser() {
   if [[ "$HEADLESS" == true ]]; then
     log "Headless mode. Dashboard at http://localhost:$PORT/launcher"
@@ -147,17 +172,9 @@ open_browser() {
   fi
 
   local url="http://localhost:$PORT/launcher"
-  local profile_dir="${HOME}/.cache/multideck/chromium-profile"
+  local profile_dir="${HOME:-/home/deck}/.cache/multideck/chromium-profile"
   mkdir -p "$profile_dir"
 
-  # Common flags for kiosk-on-Deck:
-  #   --user-data-dir          isolated profile
-  #   --no-first-run           skip welcome flow
-  #   --noerrdialogs           do not show crash dialogs
-  #   --disable-pinch          touch screen, no accidental zoom
-  #   --overscroll-history-navigation=0  no swipe-back nav
-  #   --use-fake-ui-for-media-stream     auto-grant mic for STT
-  #   --autoplay-policy=no-user-gesture-required  audio feed plays without click
   local common_args=(
     "--user-data-dir=$profile_dir"
     "--no-first-run"
@@ -177,17 +194,23 @@ open_browser() {
   fi
 
   log "Opening Chromium: $url (kiosk=$KIOSK)"
-  # exec replaces this shell with chromium. When chromium exits, the
-  # script exits with chromium's exit code. Steam Big Picture sees that
-  # as the "game" ending and switches back to its UI cleanly.
-  #
-  # IMPORTANT: distrobox enter spawns a wrapper shell that handles
-  # podman exec. We exec into that wrapper, which then exec's chromium
-  # inside the container. Net effect: this PID becomes the chromium
-  # session's parent for Steam's accounting purposes.
+  log "Passing to container: DISPLAY=$DISPLAY XAUTHORITY=${XAUTHORITY:-<unset>}"
+
+  if ! distrobox enter "$BOX" -- bash -lc "command -v chromium >/dev/null"; then
+    echo "[fail] chromium not installed in container $BOX (run install-steamdeck.sh)"
+    exit 1
+  fi
+
+  # exec replaces this script's PID with the container exec wrapper, which
+  # in turn execs chromium inside the container. When chromium exits, the
+  # entire chain exits with chromium's code. Steam sees the "game" close
+  # cleanly via PID tracking.
   exec distrobox enter "$BOX" -- bash -lc "exec chromium ${common_args[*]} ${mode_args[*]}"
 }
 
 # ---------- main ----------
-ensure_dashboard
+if ! ensure_dashboard; then
+  echo "[fail] dashboard bringup failed, aborting before chromium"
+  exit 1
+fi
 open_browser
