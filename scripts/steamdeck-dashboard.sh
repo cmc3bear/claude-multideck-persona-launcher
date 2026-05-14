@@ -20,6 +20,19 @@ mkdir -p "$LOG_DIR"
 # Strip Steam's 32-bit overlay LD_PRELOAD (breaks our 64-bit Chromium)
 unset LD_PRELOAD
 
+# Default DISPLAY and XAUTHORITY for Steam Big Picture / Gaming Mode
+# launches where they get stripped from the environment. Without these
+# Chromium exits in < 1s with "Missing X server or $DISPLAY".
+export DISPLAY="${DISPLAY:-:0}"
+if [[ -z "${XAUTHORITY:-}" ]]; then
+  for xauth in "/run/user/$(id -u)"/xauth_* "$HOME/.Xauthority"; do
+    if [[ -f "$xauth" ]]; then
+      export XAUTHORITY="$xauth"
+      break
+    fi
+  done
+fi
+
 # Ensure dashboard is running inside the container (detached)
 if ! curl -fsS -o /dev/null --max-time 3 "$URL"; then
   echo "[dashboard-shortcut] dashboard not responding, starting it"
