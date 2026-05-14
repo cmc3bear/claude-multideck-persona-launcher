@@ -43,7 +43,7 @@ def apply_post_processing(wav_path, custom_cfg, session_id):
     reverb_path = os.path.join(tmp, f'claude-tts-reverb{suffix}.wav')
     final_path = os.path.join(tmp, f'claude-tts-final{suffix}.wav')
 
-    CREATE_NO_WINDOW = 0x08000000
+    CREATE_NO_WINDOW = 0x08000000 if os.name == 'nt' else 0
     try:
         subprocess.run(
             ['ffmpeg', '-y', '-i', wav_path, '-af', custom_cfg['ffmpeg_dry'], dry_path],
@@ -206,7 +206,7 @@ def main():
         )
     except Exception:
         # Degraded fallback — queue layer unavailable, play directly.
-        CREATE_NO_WINDOW = 0x08000000
+        CREATE_NO_WINDOW = 0x08000000 if os.name == 'nt' else 0
         try:
             subprocess.run(
                 ['ffplay', '-nodisp', '-autoexit', '-loglevel', 'quiet', wav_path],
@@ -259,7 +259,7 @@ def save_to_feed(wav_path, callsign):
     mp3_path = os.path.join(tts_dir, mp3_name)
 
     try:
-        CREATE_NO_WINDOW = 0x08000000
+        CREATE_NO_WINDOW = 0x08000000 if os.name == 'nt' else 0
         subprocess.run(
             ['ffmpeg', '-y', '-i', wav_path, '-codec:a', 'libmp3lame', '-b:a', '128k', '-loglevel', 'quiet', mp3_path],
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
