@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Bundled Node 22 in Steamworks tarball** — `packaging/steamworks/build-tarball.sh` now downloads pinned Node 22.11.0 Linux x64 from nodejs.org/dist and stages `bin/node` inside the depot. The `bin/multideck` entry script prefers the bundled Node over system Node so depot-installed users never depend on host Node availability. Skip with `--skip-node` for faster dev builds.
+
+## [0.7.0] - 2026-05-13
+
+### Added
+
 - **`scripts/install-linux-generic.sh`** — non-SteamOS Linux installer (phase 1.5). Mirrors `install-steamdeck.sh` structure but installs runtimes directly to the host instead of into a distrobox container. Pulls Claude Code into `~/.npm-global`, builds Kokoro venv at `${XDG_DATA_HOME}/multideck/kokoro-venv/`, builds whisper.cpp at `${XDG_DATA_HOME}/multideck/whisper/`, wires the AskUserQuestion hook, writes XDG-pathed env file and desktop entry. Tested on Arch + Ubuntu 22.04. Invoked via `install-multideck.sh --target linux-generic`.
 - **`packaging/steamworks/`** — phase 2 Steamworks depot scaffolding. `build-tarball.sh` produces a self-contained `multideck-<version>-linux-x64.tar.zst` with bundled whisper-cli, Kokoro venv (CPU torch), and `bin/multideck` entry point that runs first-launch verify then spawns the dashboard + chromium app-mode. `depot.vdf.template` + `app_build.vdf.template` for steamcmd upload. `stage-steamworks-build.sh` extracts a built tarball into the layout steamcmd expects and validates .vdf files have been populated. `README.md` documents the publish path; phase 2.5 closes it once a Steamworks Partner account exists.
 - **`scripts/install-multideck.sh`** — universal installer wrapping the per-target install scripts. Auto-detects SteamOS / generic Linux / WSL. Single `pkexec` graphical prompt up front for the privileged setup step (replacing the prior pattern of multiple `sudo -v` calls scattered across the install). Built-in `--verify` self-test, `--quiet` mode for CI/Steam Runtime, `--uninstall` flow (with `--purge` for state). Progress UI shows per-step `[N/12]` counters. Rollback journal at `${XDG_STATE_HOME}/multideck/install-journal` for post-mortem on failed installs.
