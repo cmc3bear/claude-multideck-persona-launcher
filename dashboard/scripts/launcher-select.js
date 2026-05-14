@@ -294,6 +294,9 @@ async function launchSelected() {
   playPersonaIntro(persona.key);
 
   try {
+    // Steam Deck launcher script appends ?deck=1 so the dashboard can
+    // tighten persona output to fit the handheld reading area.
+    const deckMode = new URLSearchParams(location.search).get('deck') === '1';
     const r = await fetch('/launcher/launch', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -305,6 +308,7 @@ async function launchSelected() {
         transport: selectedTransport(),
         runtime: state.runtime,
         model: state.selectedModel || '',
+        deckMode,
       }),
     });
     console.log('[DEPLOY] response status', r.status);

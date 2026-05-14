@@ -776,9 +776,19 @@ function handleLauncher(req, res, url) {
         : runtime === 'opencode'
           ? (_persona.local_deploy_string || '')
           : (_persona.deploy_string || '');
-      const effectivePrompt = _deployStr
+      // Steam Deck handheld mode: append a 10-line output cap. The deck
+      // launcher script appends ?deck=1 to the URL, the client JS reads
+      // it and posts deckMode:true here. Reading area on the Deck at the
+      // 28px xterm font is tight; verbose persona output overruns the
+      // screen and the operator loses prior context while scrolling.
+      const deckMode = body.deckMode === true || body.deckMode === 'true';
+      const DECK_CONSTRAINT = 'Output mode: Steam Deck handheld kiosk. Keep every response under 10 lines. Prefer short bullets or one-paragraph answers. Defer details until the operator asks a follow-up.';
+      let effectivePrompt = _deployStr
         ? _deployStr + (initialPrompt ? '\n\n' + initialPrompt : '')
         : initialPrompt;
+      if (deckMode) {
+        effectivePrompt = (effectivePrompt ? effectivePrompt + '\n\n' : '') + DECK_CONSTRAINT;
+      }
       // Browser transport: reserve a session ID, respond with WS URL.
       // The actual process spawns when the browser WebSocket connects.
       if (transport === 'browser') {
