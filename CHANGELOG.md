@@ -7,14 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.3] - 2026-05-13
+
+Driven by real handheld testing on a docked Steam Deck. Big Picture / Gaming Mode launch was failing several distinct ways; the kiosk Chromium crashed on missing display/auth env; touch targets and terminal font were unreadable at arm's length; the Kokoro TTS pipeline silently failed on Linux. Each ships as its own commit; together they make the Steam Deck path actually usable.
+
+### Added
+
+- **Deck-mode prompt constraint (10-line output cap).** When the launcher fires from the Steam Deck handheld kiosk, persona output now lands under a 10-line cap so it fits the visible reading area at the 28px xterm font. Wired via `scripts/steamdeck-launcher.sh` appending `?deck=1` to the kiosk URL, `dashboard/scripts/launcher-select.js` reading the URL param and posting `deckMode:true`, `dashboard/server.cjs` appending a `DECK_CONSTRAINT` suffix to the effective prompt. Applies to all runtimes (claude, opencode, vs) and stacks on top of the runtime-specific deploy_string.
+
+### Changed
+
+- **Steam Deck touch targets bumped for finger handheld use.** Prior 44px button min-height was about 1/3 too small in real-world handheld testing. In the `@media (max-width: 1280px) and (max-height: 800px)` block: mic/NEW/MIN buttons 56px min-height with 16px font (was 44px / 11px); tab close 40px wide (was 28px).
+- **Terminal xterm font doubled on Deck (14px → 28px).** Set in JS, not CSS — xterm.js canvas renderer ignores CSS `font-size`, so the prior CSS-only approach caused cells to render at 28px while xterm still reported 80 cols to the PTY, making claude wrap mid-screen. Now `Terminal({ fontSize: window.matchMedia('(max-width: 1280px) and (max-height: 800px)').matches ? 28 : 14 })`.
+- **Matrix rain panel halved (660px → 330px).** Recovers ~330px of horizontal real estate for the terminal panel.
+- **Terminal panel full viewport height (62vh → 100vh).** Claude session now takes the whole screen when open.
+- **Matrix rain watermarks capped at 4 portraits.** Above 4 the tiled portraits overlapped. `setImages()` keeps the most recent 4.
+
 ### Fixed
 
-- **`steamdeck-launcher.sh` lifecycle and Big Picture compat**. Three bugs were preventing the launcher from working when launched as a Non-Steam Game from Steam Big Picture / Gaming Mode:
-  1. `trap stop_dashboard EXIT` killed the dashboard whenever the script ended, including when Chromium daemonized or detached. Subsequent launches saw the port still bound by a different process and the launcher died confused.
-  2. The script unconditionally tried to spawn a fresh dashboard inside the container, but the systemd-user dashboard service (introduced in v0.7.1) was already bound to the port. The new spawn failed silently.
-  3. Chromium was run via plain command, not `exec`. The launcher script exited before Chromium fully attached, and Steam Big Picture treated that as "game ended" while a half-attached Chromium was still trying to come up.
-  Rewrite of `scripts/steamdeck-launcher.sh` now: probes for an existing dashboard and reuses it; spawns one with `setsid nohup` + `< /dev/null` so it detaches cleanly from the script's process group; strips Steam's 32-bit `LD_PRELOAD` overlay that conflicts with our 64-bit Chromium in the container; and `exec`s Chromium so Steam sees the launcher script's PID as the live Chromium session. `--restart-dashboard` flag for forcing a fresh dashboard.
-- **`steamdeck-dashboard.sh` (windowed shortcut)** has the same lifecycle fixes plus removal of the legacy `multideck-audio.service` dependency (audio is in-server since v0.7.0).
+- **`steamdeck-launcher.sh` lifecycle and Big Picture compat.** Three bugs prevented launching from Big Picture / Gaming Mode: `trap stop_dashboard EXIT` killed the dashboard whenever the script ended; the script always spawned a fresh dashboard, colliding with the v0.7.1+ systemd-user service; Chromium was run via plain command instead of `exec`, so Steam saw "game ended" while a half-attached Chromium was still launching. Rewrite now probes for existing dashboard and reuses it; spawns with `setsid nohup` + `< /dev/null`; strips Steam's 32-bit `LD_PRELOAD` overlay; and `exec`s Chromium.
+- **Steam-launched Chromium dying with "Missing X server or $DISPLAY".** Steam Big Picture / Gaming Mode launches non-Steam shortcuts with a stripped environment that often lacks `DISPLAY` and `XAUTHORITY`. Symptom was "launcher flashes for a second then nothing." Now both `steamdeck-launcher.sh` and `steamdeck-dashboard.sh` default `DISPLAY=:0` and autodetect `XAUTHORITY` from `/run/pressure-vessel/Xauthority` (Gaming Mode), `/run/user/$(id -u)/xauth_*` (Desktop Mode SDDM), or `~/.Xauthority`.
+- **Gamescope `XAUTHORITY` not visible inside distrobox container.** Gaming Mode's auth file lives at `/run/pressure-vessel/Xauthority` inside the Steam Linux Runtime sandbox, which isn't bind-mounted into our `multideck-box`. The launcher now copies `XAUTHORITY` to `/tmp/multideck-xauth` and re-exports it before exec'ing the container chromium.
+- **Bulletproof launcher logging.** Removed prior `set -euo pipefail` which caused silent exits before logging when an env var was unset. Every launcher invocation now records DISPLAY, XAUTHORITY, WAYLAND_DISPLAY, GAMESCOPE_WAYLAND_DISPLAY, XDG_RUNTIME_DIR, and argv to `~/.cache/multideck/launcher.log`.
+- **STT 503 when `DISPATCH_WHISPER_REMOTE` is set but local whisper missing (v0.7.2 regression).** Route now gates local-file checks on `!remoteSet`. When the remote backend itself fails, returns 502 with the remote URL in the body instead of crashing `spawn(undefined)` on the whisper-cli fallback.
+- **`kokoro-speak.py` failing on Linux with "creationflags is only supported on Windows platforms".** Three subprocess.run sites had hardcoded `CREATE_NO_WINDOW = 0x08000000` without the `os.name == 'nt'` guard that `kokoro_queue.py` uses correctly. Now guarded at all three sites (lines 46, 209, 262). Verified end-to-end on Steam Deck: pipeline generated MP3, autoplay picked it up, ffplay played through speakers.
+
+### Operator setup note (Deck)
+
+Misaki (Kokoro's grapheme-to-phoneme engine) auto-downloads `en_core_web_sm` at first run via `spacy.cli.download` → `uv pip install`. If the Kokoro venv was created with `uv venv` (no pip installed) AND uv doesn't recognize it as uv-managed, the auto-install fails. `install-steamdeck.sh` will be updated in a follow-up to pre-install this. Manual workaround:
+```bash
+uv pip install --python "$DISPATCH_KOKORO_VENV/bin/python" \
+  https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl
+```
 
 ## [0.7.2] - 2026-05-13
 
