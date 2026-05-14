@@ -12,8 +12,9 @@
 #    ./build-tarball.sh                          full build
 #    ./build-tarball.sh --skip-models            no whisper model download
 #    ./build-tarball.sh --skip-venv              skip Python venv (use prebuilt)
+#    ./build-tarball.sh --skip-node              skip Node 22 bundling (use system node)
 #    ./build-tarball.sh --output ../dist         custom output dir
-#    ./build-tarball.sh --version 0.7.1          override version (default: read CHANGELOG)
+#    ./build-tarball.sh --version 0.7.1          override version (default: VERSION file or CHANGELOG)
 #    ./build-tarball.sh --no-tar                 stage only, do not tarball
 #
 #  Output:
@@ -31,6 +32,7 @@ MULTIDECK_ROOT="$(dirname "$PACKAGING_ROOT")"
 # ---------- flags ----------
 SKIP_MODELS=false
 SKIP_VENV=false
+SKIP_NODE=false
 NO_TAR=false
 OUTPUT_DIR="$MULTIDECK_ROOT/dist"
 VERSION=""
@@ -39,6 +41,7 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --skip-models)  SKIP_MODELS=true; shift ;;
     --skip-venv)    SKIP_VENV=true; shift ;;
+    --skip-node)    SKIP_NODE=true; shift ;;
     --no-tar)       NO_TAR=true; shift ;;
     --output)       OUTPUT_DIR="$2"; shift 2 ;;
     --version)      VERSION="$2"; shift 2 ;;
@@ -183,6 +186,53 @@ build_whisper() {
   ok "whisper.cpp staged"
 }
 
+# ---------- Bundle Node 22 ----------
+# Downloads the pinned Node 22.11.0 Linux x64 tarball from nodejs.org/dist
+# and stages just the `node` binary into bin/. The entry script prefers
+# bundled node so depot users never depend on system Node.
+bundle_node() {
+  if $SKIP_NODE; then
+    log "Skipping Node bundling (--skip-node); expect system node at runtime"
+    return
+  fi
+
+  local node_url="https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.xz"
+  local node_tarball="$STAGE/build/node-v${NODE_VERSION}-linux-x64.tar.xz"
+  local sums_url="https://nodejs.org/dist/v${NODE_VERSION}/SHASUMS256.txt"
+  local sums_file="$STAGE/build/SHASUMS256.txt"
+
+  mkdir -p "$STAGE/build"
+  log "Downloading Node v${NODE_VERSION} ($node_url)"
+  if ! curl -fsSL --retry 3 -o "$node_tarball" "$node_url"; then
+    fail "failed to download Node tarball from $node_url"
+  fi
+
+  # Verify checksum against the official SHASUMS256.txt from nodejs.org.
+  # Defense in depth: HTTPS + CA pinning catches MITM; SHASUMS pins us to
+  # the exact upstream artifact even if the CDN is later compromised.
+  log "Verifying Node tarball SHA256"
+  if ! curl -fsSL --retry 3 -o "$sums_file" "$sums_url"; then
+    fail "failed to download SHASUMS256.txt from $sums_url"
+  fi
+  (cd "$STAGE/build" && grep "node-v${NODE_VERSION}-linux-x64.tar.xz$" "$sums_file" | sha256sum -c -) \
+    || fail "Node tarball SHA256 mismatch; possible tampering"
+  ok "Node tarball SHA256 verified against upstream SHASUMS256.txt"
+
+  log "Extracting bin/node from Node tarball"
+  tar -xJf "$node_tarball" -C "$STAGE/build" \
+    "node-v${NODE_VERSION}-linux-x64/bin/node"
+
+  cp "$STAGE/build/node-v${NODE_VERSION}-linux-x64/bin/node" "$STAGE/bin/node"
+  chmod +x "$STAGE/bin/node"
+
+  local node_size
+  node_size=$(du -h "$STAGE/bin/node" | cut -f1)
+  ok "Node v${NODE_VERSION} staged at bin/node ($node_size)"
+
+  # Clean up extraction
+  rm -rf "$STAGE/build/node-v${NODE_VERSION}-linux-x64"
+}
+
 # ---------- Python venv ----------
 build_venv() {
   if $SKIP_VENV; then
@@ -261,8 +311,17 @@ while ss -ltn 2>/dev/null | awk '{print $4}' | grep -q ":$PORT$"; do
 done
 export DISPATCH_PORT="$PORT"
 
+# Prefer bundled Node 22 over system node (depot may have shipped on a
+# host with no Node, or with a Node version that is incompatible).
+NODE_BIN="$INSTALL_ROOT/bin/node"
+[[ -x "$NODE_BIN" ]] || NODE_BIN="$(command -v node || true)"
+if [[ -z "$NODE_BIN" ]]; then
+  echo "[multideck] no node binary found (bundled or system)" >&2
+  exit 1
+fi
+
 # Launch dashboard server (foreground; Steam treats it as the app)
-node "$INSTALL_ROOT/app/dashboard/server.cjs" &
+"$NODE_BIN" "$INSTALL_ROOT/app/dashboard/server.cjs" &
 SERVER_PID=$!
 
 # Wait for the server to come up
@@ -335,6 +394,7 @@ make_tarball() {
 preflight
 stage_tree
 build_whisper
+bundle_node
 build_venv
 write_entry_point
 write_manifest
