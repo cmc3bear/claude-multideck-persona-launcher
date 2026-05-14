@@ -52,7 +52,15 @@ function createTerminalSession(sessionId, wsPath, callsign, color, personaKey) {
     setTimeout(() => {
       initXtermSession(sessionId);
 
-      session.ws = new WebSocket(wsUrl);
+      // Pass current xterm dimensions to the server so it can set COLUMNS,
+      // LINES and stty cols/rows on the spawned bash. Without this, claude
+      // wraps at bash's default 80 cols and long lines overflow the panel.
+      const cols = (session.term && session.term.cols) || 100;
+      const rows = (session.term && session.term.rows) || 30;
+      const sep = wsUrl.includes('?') ? '&' : '?';
+      const wsUrlWithSize = `${wsUrl}${sep}cols=${cols}&rows=${rows}`;
+
+      session.ws = new WebSocket(wsUrlWithSize);
 
       session.ws.onopen = () => {
         session.status = 'live';
