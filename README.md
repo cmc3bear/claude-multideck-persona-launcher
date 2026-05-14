@@ -6,9 +6,18 @@ Multiple AI operatives. Each with their own voice. One launcher. You pick your t
 
 It runs entirely local. Zero API cost with a Claude Code CLI membership. Fork it, add your own operatives, your own voices, your own background music. Run it on Windows, Linux, macOS, or a **Steam Deck in your hands**. Make it yours.
 
-![MultiDeck running on a Steam Deck — browser terminal, matrix rain, Voice-Technician persona, toggle mic](docs/screenshots/steamdeck-voice-tech.jpg)
-
-*Voice-Technician deployed on a Steam Deck. Browser terminal, matrix rain composite, toggle mic in the header. Gamepad navigates the launcher. v0.7.*
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <a href="docs/screenshots/steamdeck-persona-launcher.jpg"><img src="docs/screenshots/steamdeck-persona-launcher.jpg" alt="MultiDeck launcher on a Steam Deck — character select, Voice-Technician highlighted, terminal panel docked below"></a>
+      <br><em>Character select on a Steam Deck. Pick an operative, hit DEPLOY.</em>
+    </td>
+    <td align="center" width="50%">
+      <a href="docs/screenshots/steamdeck-dispatch-terminal.jpg"><img src="docs/screenshots/steamdeck-dispatch-terminal.jpg" alt="MultiDeck on a Steam Deck — Dispatch terminal session live, matrix rain watermarks, toggle mic in the header"></a>
+      <br><em>Dispatch deployed on the deck. Matrix rain, persona portrait watermark, toggle mic in the header. Press X for mic, R1/L1 to cycle terminal tabs. v0.7.4.</em>
+    </td>
+  </tr>
+</table>
 
 ![Live multi-session browser terminal — five operatives spawned, Dispatch active, matrix rain composites their accent colors with persona portraits as watermarks](docs/screenshots/browser-terminal.png)
 
