@@ -1,0 +1,13 @@
+# Shell scripts must keep LF endings — WSL bash crashes on CRLF shebangs
+# ('#!/usr/bin/env bash\r' → bash\r: No such file or directory).
+*.sh        text eol=lf
+*.bash      text eol=lf
+
+# Python hooks and dispatch tools run under both Windows and WSL Python.
+*.py        text eol=lf
+
+# Windows-side scripts stay CRLF.
+*.ps1       text eol=crlf
+*.psm1      text eol=crlf
+*.bat       text eol=crlf
+*.cmd       text eol=crlf

@@ -11,7 +11,7 @@ This is the MultiDeck framework — a forkable multi-agent coordination system b
 
 ## OQE 2.0 Mandatory Requirements
 
-Every job created under MultiDeck must satisfy (per `docs/OQE_DISCIPLINE.md` §11-§14):
+Every job created under MultiDeck must satisfy (per `dispatch-framework/docs/OQE_DISCIPLINE.md` §11-§14):
 
 - **problem** — problem statement explaining what is wrong and why it matters (§11)
 - **criteria** — minimum 5 testable criteria, each citing a specific `§N` section of OQE_DISCIPLINE.md or a file path (§11 `linkable_citations_only`)
@@ -19,7 +19,7 @@ Every job created under MultiDeck must satisfy (per `docs/OQE_DISCIPLINE.md` §1
 - **depends_on** — explicit array (never null) listing upstream jobs (§11 `dependency_tracking`)
 - **ID format** — `PROJECT-WORKTYPE-####` (§13 `project_worktype_job_ids`) — legacy `PROJECT-####` being migrated
 
-Generic references like "per OQE standards" are rejected at the creation gate (§11 `linkable_citations_only`). See `state/oqe-version.json` for the full capability matrix.
+Generic references like "per OQE standards" are rejected at the creation gate (§11 `linkable_citations_only`). See `dispatch-framework/state/oqe-version.json` for the full capability matrix.
 
 When a Claude Code session opens this directory, this file provides the project-level context that every persona inherits.
 
@@ -31,90 +31,104 @@ MultiDeck is the public distribution of a persona-driven Claude Code orchestrati
 
 - **Nine personas** — Dispatch (workspace coordinator), Architect (structure + docs), Engineer (code), Reviewer (quality gates), Researcher (investigation), Launcher-Engineer (launcher UI + spawning), Voice-Technician (Kokoro TTS pipeline), Persona-Author (agent design + roster), Commercial-Producer (demo video production). Each persona has its own voice, color, callsign, and OQE discipline. Personas spawn in dedicated terminal windows with distinct tab colors via the launcher system.
 
-- **A cyberpunk character-select launcher** — `dashboard/launcher.html` renders a retro-themed UI where you click an operative card, optionally check dangerous mode, hit DEPLOY, and a new Windows Terminal tab opens with the persona pre-loaded.
+- **A cyberpunk character-select launcher** — `dispatch-framework/dashboard/launcher.html` renders a retro-themed UI where you click an operative card, optionally check dangerous mode, hit DEPLOY, and a new Windows Terminal tab opens with the persona pre-loaded.
 
-- **A dashboard server** — `dashboard/server.cjs` serves the launcher plus dashboard routes (/, /briefing, /audio-feed, /state.json) and launcher API routes (/launcher/personas, /launcher/projects, /launcher/launch, /launcher/launch-team, /launcher/assets/*).
+- **A dashboard server** — `dispatch-framework/dashboard/server.cjs` serves the launcher plus dashboard routes (/, /briefing, /audio-feed, /state.json) and launcher API routes (/launcher/personas, /launcher/projects, /launcher/launch, /launcher/launch-team, /launcher/assets/*).
 
-- **Kokoro TTS integration** — `hooks/kokoro-speak.py` plays generated audio with an atomic mkdir mutex so parallel Claude Code sessions don't overlap. Each persona prepends its callsign to spoken text so you learn which voice belongs to which role. `hooks/kokoro-generate-mp3.py` produces MP3s for programmatic use. `hooks/set-voice.py` writes per-session voice config via CLAUDE_CODE_SSE_PORT so each session has its own voice without clobbering others.
+- **Kokoro TTS integration** — `dispatch-framework/hooks/kokoro-speak.py` plays generated audio with an atomic mkdir mutex so parallel Claude Code sessions don't overlap. Each persona prepends its callsign to spoken text so you learn which voice belongs to which role. `dispatch-framework/hooks/kokoro-generate-mp3.py` produces MP3s for programmatic use. `dispatch-framework/hooks/set-voice.py` writes per-session voice config via CLAUDE_CODE_SSE_PORT so each session has its own voice without clobbering others.
 
-- **An auto-play audio feed** — `dashboard/audio-feed-page.cjs` renders a browser page that polls for new TTS MP3s and plays them automatically. Leave a tab open on `/audio-feed`, and every Dispatch audio response plays without you needing to click. Works on any device that can reach the dashboard (including over Tailscale).
+- **An auto-play audio feed** — `dispatch-framework/dashboard/audio-feed-page.cjs` renders a browser page that polls for new TTS MP3s and plays them automatically. Leave a tab open on `/audio-feed`, and every Dispatch audio response plays without you needing to click. Works on any device that can reach the dashboard.
 
-- **Long-form audio summaries** — `hooks/kokoro-summary.py` generates >1 minute MP3 summaries from text and drops them into `tts-output/` for automatic audio feed playback. Any persona can use this to broadcast status updates, briefings, or handoff summaries that the operator listens to passively on a connected device.
+- **Long-form audio summaries** — `dispatch-framework/hooks/kokoro-summary.py` generates >1 minute MP3 summaries from text and drops them into `dispatch-framework/tts-output/` for automatic audio feed playback. Any persona can use this to broadcast status updates, briefings, or handoff summaries that the operator listens to passively on a connected device.
 
-- **A job board system** — `scripts/job-board.py` is a CLI for creating jobs, assigning to agents, submitting for review, running the Reviewer gate, and closing with dependency tracking. Supports per-project scoping via `--project <key>` so each connected project gets its own `state/job-board-<project>.json`.
+- **A job board system** — `dispatch-framework/scripts/job-board.py` is a CLI for creating jobs, assigning to agents, submitting for review, running the Reviewer gate, and closing with dependency tracking. Supports per-project scoping via `--project <key>` so each connected project gets its own `dispatch-framework/state/job-board-<project>.json`.
 
-- **A reviewer process capability** — `scripts/reviewer-review.py` runs a sanitization and quality check on any job artifact. The review gate fires **automatically** when a job reaches `submitted` status — the Redline review spawns as a sub-process of the original job, with a one-loop fix window before FAIL-ESCALATE. Review prompt template at `dispatch/scripts/redline-review-prompt.md`.
+- **A reviewer process capability** — `dispatch-framework/scripts/reviewer-review.py` runs a sanitization and quality check on any job artifact. The review gate fires **automatically** when a job reaches `submitted` status — the Redline review spawns as a sub-process of the original job, with a one-loop fix window before FAIL-ESCALATE. Review prompt template at `dispatch-framework/scripts/redline-review-prompt.md`.
 
-- **CLI tooling for adding/removing agents** — `scripts/dispatch-agent.py add` and `remove` manage the persona roster with interactive prompts, updates to `personas.json`, auto-generates launch shortcuts, and keeps `set-voice.py` VOICE_MAP in sync.
+- **CLI tooling for adding/removing agents** — `dispatch-framework/scripts/dispatch-agent.py add` and `remove` manage the persona roster with interactive prompts, updates to `dispatch-framework/personas/personas.json`, auto-generates launch shortcuts, and keeps `set-voice.py` VOICE_MAP in sync.
 
-The framework is branded as **MultiDeck** for public distribution. Internal path is `dispatch-framework/`. Discipline is **OQE** (Objective, Qualitative, Evidence) — rebranded from the older "O-E-Q" for public consistency.
+The framework is branded as **MultiDeck** for public distribution. Internal path is `multideck/`. Discipline is **OQE** (Objective, Qualitative, Evidence) — rebranded from the older "O-E-Q" for public consistency.
 
 ---
 
 ## Directory structure
 
 ```
-dispatch-framework/
+multideck/
 ├── README.md                   Hero doc for new users
 ├── LICENSE                     MIT
 ├── CLAUDE.md                   This file — project context for Claude Code
 ├── CHANGELOG.md                Version history
 ├── CONTRIBUTING.md             How to extend the framework
 ├── .gitignore                  Runtime state, secrets, internal docs excluded
-├── docs/
-│   ├── QUICKSTART.md           5-minute install guide
-│   ├── OQE_DISCIPLINE.md       Core methodology (Objective → Qualitative → Evidence)
-│   ├── PERSONA_SYSTEM.md       How personas work: callsigns, colors, voices, scopes
-│   ├── CLAUDE_DISPATCH_INTEGRATION.md   The voice queueing + callsign + audio-feed bundle
-│   ├── KOKORO_SETUP.md         Full Kokoro install instructions
-│   ├── VOICE_RULES.md          TTS-safe writing conventions
-│   ├── DASHBOARD_GUIDE.md      Dashboard routes and configuration
-│   ├── AGENT_TEAMS_GUIDE.md    Claude Code EXPERIMENTAL_AGENT_TEAMS integration
-│   ├── ADD_AGENT_GUIDE.md      Walkthrough of dispatch-agent.py add/remove
-│   ├── JOB_BOARD.md            Job board usage and schema
-│   ├── REVIEW_WORKFLOW.md      The Reviewer gate process
-│   ├── COMMERCIAL_PRODUCTION.md Commercial/demo video production workflow
-│   └── screenshots/            Launcher and dashboard screenshots for README
-├── commercials/                Commercial-Producer working directory
-├── personas/
-│   ├── personas.json           Registry — callsign, color, voice_key, cwd, agent_file per persona
-│   ├── DISPATCH_AGENT.md       Workspace coordinator
-│   ├── ARCHITECT_AGENT.md      Structure + docs
-│   ├── ENGINEER_AGENT.md       Code implementation
-│   ├── REVIEWER_AGENT.md       Quality gate
-│   ├── RESEARCHER_AGENT.md     Investigation + source grading
-│   ├── LAUNCHER_ENGINEER_AGENT.md  Launcher UI + persona spawning
-│   ├── VOICE_TECHNICIAN_AGENT.md   Kokoro TTS pipeline
-│   ├── PERSONA_AUTHOR_AGENT.md     Agent design + roster management
-│   └── COMMERCIAL_PRODUCER_AGENT.md Demo video production
-├── scripts/
-│   ├── launch-persona.ps1      Windows launcher (Windows Terminal tab with color + title)
-│   ├── launch-persona.sh       Linux/macOS launcher
-│   ├── dispatch-agent.py       add/remove/list CLI for agent management
-│   ├── job-board.py            Job board CLI
-│   ├── reviewer-review.py      Reviewer gate runner
-│   ├── init-dispatch-framework.ps1  Windows init script
-│   └── init-dispatch-framework.sh   Linux/macOS init script
-├── hooks/
-│   ├── set-voice.py            Per-session Kokoro voice config writer
-│   ├── kokoro-speak.py         TTS playback worker (with mkdir mutex + callsign prepend)
-│   ├── kokoro-generate-mp3.py  Programmatic MP3 generator
-│   ├── kokoro-summary.py       Long-form summary MP3 → tts-output for audio feed autoplay
-│   ├── voice-audition.py       Voice preview tool
-│   └── requirements.txt        Python deps: kokoro, soundfile, torch, numpy
-├── dashboard/
-│   ├── server.cjs              Dashboard HTTP server with launcher + audio feed routes
-│   ├── audio-feed-page.cjs     Auto-play audio feed browser page renderer
-│   ├── launcher.html           The MultiDeck launcher UI (cyberpunk character select)
-│   ├── team-presets.json       Default team presets: Full Roster, Build Team, Investigation
-│   ├── package.json            Node package metadata (no runtime deps)
-│   ├── state-templates/        Empty schema-valid default state JSON files
-│   └── launcher-assets/        Portraits, intros, music bed (gitkept placeholder)
-├── templates/
-│   ├── AGENT_TEMPLATE.md       Template for user-created personas
-│   └── persona-entry.json      JSON template for adding a persona to personas.json
-└── examples/
-    └── README.md               Example use case walkthroughs
+├── docs/                       Public-facing install docs
+│   ├── INSTALL.md              Installation guide
+│   ├── DEPLOYMENT.md           Deployment options
+│   └── STEAMDECK_SETUP.md      Steam Deck distrobox install + Steam shortcut setup
+├── scripts/                    User-facing install scripts
+│   ├── install-steamdeck.sh    Steam Deck distrobox installer (idempotent)
+│   └── steamdeck-launcher.sh   Dashboard launcher for Steam Non-Steam Game shortcut
+└── dispatch-framework/         Framework internals — all runtime files live here
+    ├── personas/
+    │   ├── personas.json           Registry — callsign, color, voice_key, cwd, agent_file per persona
+    │   ├── DISPATCH_AGENT.md       Workspace coordinator
+    │   ├── ARCHITECT_AGENT.md      Structure + docs
+    │   ├── ENGINEER_AGENT.md       Code implementation
+    │   ├── REVIEWER_AGENT.md       Quality gate
+    │   ├── RESEARCHER_AGENT.md     Investigation + source grading
+    │   ├── LAUNCHER_ENGINEER_AGENT.md  Launcher UI + persona spawning
+    │   ├── VOICE_TECHNICIAN_AGENT.md   Kokoro TTS pipeline
+    │   ├── PERSONA_AUTHOR_AGENT.md     Agent design + roster management
+    │   └── COMMERCIAL_PRODUCER_AGENT.md Demo video production
+    ├── scripts/
+    │   ├── launch-persona.ps1      Windows launcher (Windows Terminal tab with color + title)
+    │   ├── launch-persona-tmux.sh  WSL/tmux launcher
+    │   ├── dispatch-agent.py       add/remove/list CLI for agent management
+    │   ├── job-board.py            Job board CLI
+    │   ├── reviewer-review.py      Reviewer gate runner
+    │   ├── init-multideck.ps1      Windows init script
+    │   └── init-multideck.sh       Linux/macOS init script
+    ├── hooks/
+    │   ├── set-voice.py            Per-session Kokoro voice config writer
+    │   ├── kokoro-speak.py         TTS playback worker (with mkdir mutex + callsign prepend)
+    │   ├── kokoro-generate-mp3.py  Programmatic MP3 generator
+    │   ├── kokoro-summary.py       Long-form summary MP3 → tts-output for audio feed autoplay
+    │   ├── voice-audition.py       Voice preview tool
+    │   └── requirements.txt        Python deps: kokoro, soundfile, torch, numpy
+    ├── dashboard/
+    │   ├── server.cjs              Dashboard HTTP server with launcher + audio feed routes
+    │   ├── audio-feed-page.cjs     Auto-play audio feed browser page renderer
+    │   ├── launcher.html           The MultiDeck launcher UI (cyberpunk character select)
+    │   ├── team-presets.json       Default team presets: Full Roster, Build Team, Investigation
+    │   ├── package.json            Node package metadata (no runtime deps)
+    │   ├── state-templates/        Empty schema-valid default state JSON files
+    │   └── launcher-assets/        Portraits, intros, music bed (gitkept placeholder)
+    ├── coordination/
+    │   ├── server.py               Inter-agent coordination server (port 3047)
+    │   ├── hook-announce.py        Broadcast a message to the coordination channel
+    │   ├── hook-complete.py        Mark a coordination todo complete
+    │   └── hook-resource.py        Claim/release shared resources
+    ├── docs/                       Operational docs (OQE, personas, job board, voice)
+    │   ├── QUICKSTART.md           5-minute install guide
+    │   ├── OQE_DISCIPLINE.md       Core methodology (Objective → Qualitative → Evidence)
+    │   ├── PERSONA_SYSTEM.md       How personas work: callsigns, colors, voices, scopes
+    │   ├── CLAUDE_DISPATCH_INTEGRATION.md   The voice queueing + callsign + audio-feed bundle
+    │   ├── KOKORO_SETUP.md         Full Kokoro install instructions
+    │   ├── VOICE_RULES.md          TTS-safe writing conventions
+    │   ├── DASHBOARD_GUIDE.md      Dashboard routes and configuration
+    │   ├── AGENT_TEAMS_GUIDE.md    Claude Code EXPERIMENTAL_AGENT_TEAMS integration
+    │   ├── ADD_AGENT_GUIDE.md      Walkthrough of dispatch-agent.py add/remove
+    │   ├── JOB_BOARD.md            Job board usage and schema
+    │   ├── REVIEW_WORKFLOW.md      The Reviewer gate process
+    │   ├── WORKSPACE_GOVERNANCE.md Coordination standards and escalation protocol
+    │   ├── COMMERCIAL_PRODUCTION.md Commercial/demo video production workflow
+    │   └── screenshots/            Launcher and dashboard screenshots for README
+    ├── templates/
+    │   ├── AGENT_TEMPLATE.md       Template for user-created personas
+    │   └── persona-entry.json      JSON template for adding a persona to personas.json
+    ├── commercials/                Commercial-Producer working directory
+    └── examples/
+        └── README.md               Example use case walkthroughs
 ```
 
 ---
@@ -123,17 +137,17 @@ dispatch-framework/
 
 When you are editing MultiDeck (as opposed to using it for another project), here are the touchpoints that matter most:
 
-**Changing the launcher UI:** edit `dashboard/launcher.html`. It's a single-file HTML with inline CSS and JS. Fetches data from `/launcher/personas`, `/launcher/projects`, `/launcher/music`, `/launcher/team-presets`. Has hardcoded fallback STATS and GLYPHS for each persona — update those if you rename or add personas.
+**Changing the launcher UI:** edit `dispatch-framework/dashboard/launcher.html`. It's a single-file HTML with inline CSS and JS. Fetches data from `/launcher/personas`, `/launcher/projects`, `/launcher/music`, `/launcher/team-presets`. Has hardcoded fallback STATS and GLYPHS for each persona — update those if you rename or add personas.
 
-**Adding a dashboard route:** edit `dashboard/server.cjs`. Add a new condition in the request handler (alongside the existing `handleLauncher`, `handleAudioFeed`, and core route matches). Use the `sendJson(res, status, obj)` helper for JSON responses and `fs.createReadStream` for binary streaming.
+**Adding a dashboard route:** edit `dispatch-framework/dashboard/server.cjs`. Add a new condition in the request handler (alongside the existing `handleLauncher`, `handleAudioFeed`, and core route matches). Use the `sendJson(res, status, obj)` helper for JSON responses and `fs.createReadStream` for binary streaming.
 
-**Changing voice behavior:** the three files with a VOICE_MAP are `hooks/set-voice.py` (voice registry), `hooks/kokoro-generate-mp3.py` (one-shot MP3 generation), and `hooks/kokoro-summary.py` (summary narration) — keep VOICE_MAP in sync across all three. `hooks/kokoro-speak.py` has no VOICE_MAP; it reads voice config from JSON files written by `set-voice.py`. The mkdir mutex at `LOCK_DIR` in kokoro-speak.py is critical — never remove it or parallel sessions overlap.
+**Changing voice behavior:** the three files with a VOICE_MAP are `dispatch-framework/hooks/set-voice.py` (voice registry), `dispatch-framework/hooks/kokoro-generate-mp3.py` (one-shot MP3 generation), and `dispatch-framework/hooks/kokoro-summary.py` (summary narration) — keep VOICE_MAP in sync across all three. `dispatch-framework/hooks/kokoro-speak.py` has no VOICE_MAP; it reads voice config from JSON files written by `set-voice.py`. The mkdir mutex at `LOCK_DIR` in kokoro-speak.py is critical — never remove it or parallel sessions overlap.
 
-**Adding a persona:** run `python scripts/dispatch-agent.py add` and follow the interactive prompts. It updates `personas.json`, generates the agent markdown from `templates/AGENT_TEMPLATE.md`, creates a launch shortcut, and updates `set-voice.py` VOICE_MAP. Don't edit `personas.json` by hand unless you're fixing a typo.
+**Adding a persona:** run `python dispatch-framework/scripts/dispatch-agent.py add` and follow the interactive prompts. It updates `dispatch-framework/personas/personas.json`, generates the agent markdown from `dispatch-framework/templates/AGENT_TEMPLATE.md`, creates a launch shortcut, and updates `set-voice.py` VOICE_MAP. Don't edit `personas.json` by hand unless you're fixing a typo.
 
-**Adding a doc:** new markdown file in `docs/`. Reference it from README.md's "Further reading" or from another doc that groups it. Follow the existing tone — technical but readable, code examples where relevant, no marketing fluff.
+**Adding a doc:** new markdown file in `dispatch-framework/docs/`. Reference it from README.md's "Further reading" or from another doc that groups it. Follow the existing tone — technical but readable, code examples where relevant, no marketing fluff.
 
-**Testing changes locally:** run `node dashboard/server.cjs`. The dashboard serves on port 3046 (configurable via `DISPATCH_PORT`). Visit `http://localhost:3046/launcher` to see the launcher, `/audio-feed` for the audio feed, `/` for the main dashboard.
+**Testing changes locally:** run `node dispatch-framework/dashboard/server.cjs`. The dashboard serves on port 3046 (configurable via `DISPATCH_PORT`). Visit `http://localhost:3046/launcher` to see the launcher, `/audio-feed` for the audio feed, `/` for the main dashboard.
 
 **Pushing to the public repo:** the repo is `github.com/cmc3bear/claude-multideck-persona-launcher`. Commit with a conventional-commit-style message (`feat:`, `fix:`, `docs:`, `chore:`, etc.). Don't commit runtime state files (`state/*.json` except templates), `tts-output/*.mp3`, `voice-config-*.json`, or anything matching `.internal-*` — those are all in `.gitignore` already.
 
@@ -141,7 +155,7 @@ When you are editing MultiDeck (as opposed to using it for another project), her
 
 ## Workspace Governance (MANDATORY)
 
-All personas operating in this framework are governed by `docs/WORKSPACE_GOVERNANCE.md`. This includes: 9 coordination standards, project boundary enforcement, job board field requirements (including `alternatives_considered`), review workflow with `Reviewed-by:` trailer, and push denial escalation protocol. Read it before starting work.
+All personas operating in this framework are governed by `dispatch-framework/docs/WORKSPACE_GOVERNANCE.md`. This includes: 9 coordination standards, project boundary enforcement, job board field requirements (including `alternatives_considered`), review workflow with `Reviewed-by:` trailer, and push denial escalation protocol. Read it before starting work.
 
 ---
 
@@ -157,7 +171,7 @@ Every task that any persona handles follows **Objective → Qualitative → Evid
 
 Every deliverable must include an OQE frame in its completion report. The Reviewer checks for it on every job.
 
-Full explanation in `docs/OQE_DISCIPLINE.md`.
+Full explanation in `dispatch-framework/docs/OQE_DISCIPLINE.md`.
 
 ---
 
@@ -173,7 +187,7 @@ When any persona writes text that will be spoken aloud:
 - Conversational tone, not documentation voice
 - No special characters that read aloud as literal punctuation names
 
-The TTS hook auto-strips markdown before synthesis, but well-written source text produces better audio. Full rules in `docs/VOICE_RULES.md`.
+The TTS hook auto-strips markdown before synthesis, but well-written source text produces better audio. Full rules in `dispatch-framework/docs/VOICE_RULES.md`.
 
 ---
 
@@ -189,7 +203,7 @@ When personas complete work on the MultiDeck project, they **auto-advance** with
 
 Otherwise the job flows through the Reviewer gate and closes. The Reviewer gate is **auto-triggered** — when a job reaches `submitted` status, a Redline review spawns automatically as a sub-process of the original job (no separate review job is created). The review is one-loop-max: PASS auto-closes the job and unblocks dependents, or one fix attempt then FAIL-ESCALATE to user. The project reviewer retains final determination of validity.
 
-See `docs/JOB_BOARD.md` and `docs/REVIEW_WORKFLOW.md` for full protocol.
+See `dispatch-framework/docs/JOB_BOARD.md` and `dispatch-framework/docs/REVIEW_WORKFLOW.md` for full protocol.
 
 ---
 
@@ -224,13 +238,13 @@ Three features ship together as the "Claude Dispatch Integration" component. Thi
 
 1. **Voice queueing** — multiple parallel Claude sessions don't overlap audio. The `kokoro-speak.py` hook uses an atomic mkdir mutex to serialize playback.
 
-2. **Persona callsigns** — each voice opens with its callsign ("Dispatch.", "Architect.", "Engineer.", etc.) so you learn which voice belongs to which role. The callsign is stored in `personas.json` and prepended by `kokoro-speak.py` and `kokoro-generate-mp3.py` before synthesis.
+2. **Persona callsigns** — each voice opens with its callsign ("Dispatch.", "Architect.", "Engineer.", etc.) so you learn which voice belongs to which role. The callsign is stored in `dispatch-framework/personas/personas.json` and prepended by `kokoro-speak.py` and `kokoro-generate-mp3.py` before synthesis.
 
 3. **Audio feed auto-play** — `/audio-feed` in the dashboard is a browser page that polls for new Kokoro TTS MP3s and plays them automatically. Leave a tab open on your laptop, and every agent update plays without you needing to interact.
 
 Together these create "operator mode" — a laptop browser tab hears agent work as it completes without requiring the operator's attention on the desktop machine.
 
-Full doc at `docs/CLAUDE_DISPATCH_INTEGRATION.md`.
+Full doc at `dispatch-framework/docs/CLAUDE_DISPATCH_INTEGRATION.md`.
 
 ---
 
@@ -248,21 +262,21 @@ Before you commit and push:
 - [ ] README "Further reading" section updated if you added docs
 - [ ] CHANGELOG.md updated for user-visible changes
 
-The `scripts/reviewer-review.py` script automates most of these checks. Run it before pushing.
+The `dispatch-framework/scripts/reviewer-review.py` script automates most of these checks. Run it before pushing.
 
 ---
 
 ## Where to find things fast
 
-- Launcher UI bug? `dashboard/launcher.html`
-- New API route? `dashboard/server.cjs` + wire into the request handler
-- Voice issue? `hooks/kokoro-speak.py` or `hooks/set-voice.py`
-- Persona roster change? `personas/personas.json` (single source of truth)
-- Persona behavior change? `personas/<NAME>_AGENT.md`
-- Doc question? Start with `README.md`, drill into `docs/`
-- Job board issue? `scripts/job-board.py` + `docs/JOB_BOARD.md`
-- Review gate issue? `scripts/reviewer-review.py` + `docs/REVIEW_WORKFLOW.md` (auto-triggered on submit)
-- Review prompt template? `dispatch/scripts/redline-review-prompt.md`
+- Launcher UI bug? `dispatch-framework/dashboard/launcher.html`
+- New API route? `dispatch-framework/dashboard/server.cjs` + wire into the request handler
+- Voice issue? `dispatch-framework/hooks/kokoro-speak.py` or `dispatch-framework/hooks/set-voice.py`
+- Persona roster change? `dispatch-framework/personas/personas.json` (single source of truth)
+- Persona behavior change? `dispatch-framework/personas/<NAME>_AGENT.md`
+- Doc question? Start with `README.md`, drill into `dispatch-framework/docs/`
+- Job board issue? `dispatch-framework/scripts/job-board.py` + `dispatch-framework/docs/JOB_BOARD.md`
+- Review gate issue? `dispatch-framework/scripts/reviewer-review.py` + `dispatch-framework/docs/REVIEW_WORKFLOW.md` (auto-triggered on submit)
+- Review prompt template? `dispatch-framework/scripts/redline-review-prompt.md`
 
 ---
 

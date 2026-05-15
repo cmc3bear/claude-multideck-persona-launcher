@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>DISPATCH — Coordination</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root {
+    --bg:      #0a0a0f;
+    --panel:   #0f0f1a;
+    --border:  #1a1a2e;
+    --text:    #c8c8e8;
+    --dim:     #4a4a6a;
+    --green:   #00ff88;
+    --red:     #ff2255;
+    --log-bg:  #07070f;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Courier New', monospace;
+    min-height: 100vh;
+    padding: 20px;
+  }
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 14px;
+    margin-bottom: 20px;
+  }
+  header h1 {
+    font-size: 11px;
+    letter-spacing: 5px;
+    color: var(--dim);
+    text-transform: uppercase;
+  }
+  #conn {
+    font-size: 10px;
+    color: var(--dim);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  #conn.live { color: var(--green); }
+  #conn.live::before { content: '● '; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+  @media (max-width: 680px) { .grid { grid-template-columns: 1fr; } }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 18px;
+  }
+  .panel-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 12px;
+  }
+  .callsign {
+    font-size: 13px;
+    font-weight: bold;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+  }
+  .job-id { font-size: 9px; color: var(--dim); letter-spacing: 1px; }
+
+  .progress-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .bar {
+    flex: 1;
+    height: 2px;
+    background: var(--border);
+    border-radius: 1px;
+    overflow: hidden;
+  }
+  .bar-fill { height: 100%; border-radius: 1px; transition: width .5s ease; }
+  .pct { font-size: 10px; color: var(--dim); width: 30px; text-align: right; }
+
+  ul { list-style: none; }
+  li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 11px;
+    line-height: 1.5;
+  }
+  li:last-child { border-bottom: none; }
+  .mark { flex-shrink: 0; width: 12px; margin-top: 1px; font-size: 11px; }
+  .lbl  { flex: 1; }
+
+  li.done .lbl  { color: var(--dim); text-decoration: line-through; }
+  li.done .mark { color: var(--green); }
+  li.blocked .mark { color: var(--red); }
+  li.blocked .lbl  { color: var(--red); opacity: .7; }
+
+  .tag {
+    display: inline-block;
+    font-size: 8px;
+    letter-spacing: 1px;
+    padding: 1px 4px;
+    border-radius: 2px;
+    margin-left: 6px;
+    vertical-align: middle;
+    text-transform: uppercase;
+  }
+  .tag-blocked { background: #2a0010; color: var(--red);   border: 1px solid var(--red); }
+  .tag-clear   { background: #002a14; color: var(--green); border: 1px solid var(--green); }
+
+  .log-box {
+    background: var(--log-bg);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 16px;
+  }
+  .log-box h2 {
+    font-size: 9px;
+    letter-spacing: 4px;
+    color: var(--dim);
+    margin-bottom: 12px;
+    text-transform: uppercase;
+  }
+  .log-row {
+    display: flex;
+    gap: 12px;
+    font-size: 11px;
+    padding: 4px 0;
+    border-bottom: 1px solid var(--border);
+    line-height: 1.4;
+  }
+  .log-row:last-child { border-bottom: none; }
+  .log-ts  { color: var(--dim); flex-shrink: 0; white-space: nowrap; }
+  .log-who { flex-shrink: 0; width: 72px; font-weight: bold; }
+  .log-msg { color: var(--dim); }
+  .empty   { color: var(--dim); font-size: 11px; padding: 6px 0; }
+
+  .res-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+    min-height: 24px;
+  }
+  .res-label { font-size: 9px; letter-spacing: 3px; color: var(--dim); text-transform: uppercase; flex-shrink: 0; }
+  .res-chip {
+    font-size: 11px;
+    padding: 3px 10px;
+    border: 1px solid;
+    border-radius: 3px;
+    background: var(--panel);
+    animation: pulse 2s infinite;
+  }
+  .res-free { color: var(--dim); font-size: 10px; font-style: italic; }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: .65; }
+  }
+
+  .announce-box {
+    background: #0c0c10;
+    border: 1px solid #3a3010;
+    border-left: 3px solid #ffcc00;
+    border-radius: 3px;
+    padding: 14px 16px;
+    margin-bottom: 18px;
+  }
+  .announce-box h2 {
+    font-size: 9px;
+    letter-spacing: 4px;
+    color: #ffcc00;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    opacity: .8;
+  }
+  .announce-row {
+    display: flex;
+    gap: 12px;
+    font-size: 11px;
+    padding: 5px 0;
+    border-bottom: 1px solid #1e1a08;
+    line-height: 1.4;
+  }
+  .announce-row:last-child { border-bottom: none; }
+  .announce-ts   { color: var(--dim); flex-shrink: 0; white-space: nowrap; }
+  .announce-from { flex-shrink: 0; width: 72px; font-weight: bold; color: #ffcc00; }
+  .announce-to   { flex-shrink: 0; font-size: 9px; color: var(--dim); padding-top: 1px; }
+  .announce-text { flex: 1; color: var(--text); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Dispatch — Coordination Feed</h1>
+  <span id="conn">connecting...</span>
+</header>
+
+<div class="announce-box" id="announce-box" style="display:none">
+  <h2>Dispatch Channel</h2>
+  <div id="announcements"></div>
+</div>
+<div class="res-bar" id="resources"></div>
+<div class="grid" id="grid"></div>
+
+<div class="log-box">
+  <h2>Activity Log</h2>
+  <div id="log"><p class="empty">No activity yet.</p></div>
+</div>
+
+<script>
+function pct(todos) {
+  if (!todos.length) return 0;
+  return Math.round(todos.filter(t => t.done).length / todos.length * 100);
+}
+
+function renderAgent(key, agent) {
+  const color = agent.color || '#7878aa';
+  const done  = pct(agent.todos);
+
+  const items = agent.todos.map(t => {
+    const isBlocked  = !t.done && t.blockedOn;
+    const wasBlocked = !t.done && t.blockedOn === null && t._wasBlocked; // future use
+    const cls  = t.done ? 'done' : isBlocked ? 'blocked' : '';
+    const mark = t.done ? '✓' : isBlocked ? '⊘' : '○';
+    const badge = isBlocked ? `<span class="tag tag-blocked">blocked</span>` : '';
+
+    return `<li class="${cls}">
+      <span class="mark">${mark}</span>
+      <span class="lbl">${t.label}${badge}</span>
+    </li>`;
+  }).join('');
+
+  return `
+    <div class="panel">
+      <div class="panel-head">
+        <span class="callsign" style="color:${color}">${agent.callsign}</span>
+        <span class="job-id">${agent.job || ''}</span>
+      </div>
+      <div class="progress-wrap">
+        <div class="bar"><div class="bar-fill" style="width:${done}%;background:${color}"></div></div>
+        <span class="pct">${done}%</span>
+      </div>
+      <ul>${items}</ul>
+    </div>`;
+}
+
+function renderResources(resources) {
+  const el = document.getElementById('resources');
+  const entries = Object.entries(resources || {});
+  if (!entries.length) {
+    el.innerHTML = '<span class="res-label">RESOURCES</span><span class="res-free">all clear</span>';
+    return;
+  }
+  const chips = entries.map(([name, r]) => {
+    const color = r.agent === 'engineer' ? '#00ff88' : r.agent === 'producer' ? '#ff6b35' : '#7878aa';
+    return `<span class="res-chip" style="border-color:${color};color:${color}">
+      ${r.agent} <span style="color:var(--text)">holding</span> <strong style="color:var(--text)">${name}</strong>${r.task ? `<span style="color:var(--dim)"> — ${r.task}</span>` : ''}
+    </span>`;
+  }).join('');
+  el.innerHTML = `<span class="res-label">RESOURCES</span>${chips}`;
+}
+
+function renderAnnouncements(messages) {
+  const box = document.getElementById('announce-box');
+  const el  = document.getElementById('announcements');
+  if (!messages || !messages.length) { box.style.display = 'none'; return; }
+  box.style.display = '';
+  el.innerHTML = messages.slice(0, 10).map(m => {
+    const ts   = new Date(m.ts).toLocaleTimeString();
+    const to   = m.to && m.to !== 'all' ? `→ ${m.to.toUpperCase()}` : '→ ALL';
+    return `<div class="announce-row">
+      <span class="announce-ts">${ts}</span>
+      <span class="announce-from">${(m.from || 'DISPATCH').toUpperCase()}</span>
+      <span class="announce-to">${to}</span>
+      <span class="announce-text">${m.text}</span>
+    </div>`;
+  }).join('');
+}
+
+function render(state) {
+  renderAnnouncements(state.messages);
+  renderResources(state.resources);
+  document.getElementById('grid').innerHTML =
+    Object.entries(state.agents).map(([k, a]) => renderAgent(k, a)).join('');
+
+  const logEl = document.getElementById('log');
+  if (!state.log || !state.log.length) {
+    logEl.innerHTML = '<p class="empty">No activity yet.</p>';
+    return;
+  }
+  logEl.innerHTML = state.log.slice(0, 25).map(e => {
+    const ts    = new Date(e.ts).toLocaleTimeString();
+    const color = e.agent === 'Engineer' ? '#00ff88' : e.agent === 'Producer' ? '#ff6b35' : '#7878aa';
+    const msg   = e.message ? ` <span class="log-msg">— ${e.message}</span>` : '';
+    return `<div class="log-row">
+      <span class="log-ts">${ts}</span>
+      <span class="log-who" style="color:${color}">${e.agent}</span>
+      <span>${e.todo}${msg}</span>
+    </div>`;
+  }).join('');
+}
+
+// SSE connection
+const conn = document.getElementById('conn');
+const es   = new EventSource('/events');
+
+es.onopen    = () => { conn.textContent = 'live'; conn.className = 'live'; };
+es.onmessage = e  => { try { render(JSON.parse(e.data)); } catch {} };
+es.onerror   = () => { conn.textContent = 'reconnecting...'; conn.className = ''; };
+
+// Initial load from snapshot
+fetch('/state.json').then(r => r.json()).then(render).catch(() => {});
+</script>
+</body>
+</html>

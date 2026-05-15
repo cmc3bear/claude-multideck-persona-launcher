@@ -368,3 +368,20 @@
   .pd-cov-row { grid-template-columns: 140px 1fr auto; }
   .pd-cov-score { display: none; }
 }
+
+/* C5: pattern detector heatmap scrollable at 375px — MULTI-UI-0068 */
+@media (max-width: 768px) {
+  /* matrix already has overflow-x:auto on .pd-matrix-wrap; ensure table
+     doesn't collapse below readable cell width */
+  .pd-matrix-table th,
+  .pd-matrix-table td { min-width: 52px; font-size: 10px; padding: 5px 4px; }
+
+  /* trend grid: stack label+bar vertically so bar has full width */
+  .pd-trend-row { grid-template-columns: 60px 1fr 60px 28px; }
+
+  /* phase grid: 3 cols at narrow widths */
+  .pd-phase-grid { grid-template-columns: repeat(3, 1fr); }
+
+  /* coverage row: hide score column */
+  .pd-cov-row { grid-template-columns: 120px 1fr; }
+}

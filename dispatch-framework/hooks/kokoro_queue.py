@@ -37,6 +37,18 @@ LOCK_DIR = os.path.join(QUEUE_ROOT, 'lock')
 EVENTS_DIR = os.path.join(QUEUE_ROOT, 'events')
 STATS_PATH = os.path.join(QUEUE_ROOT, 'stats.json')
 
+# Widget state + playback control signals
+NOW_PLAYING_PATH = os.path.join(QUEUE_ROOT, 'now-playing.json')
+SIGNAL_SKIP_PATH  = os.path.join(QUEUE_ROOT, 'signal_skip')
+SIGNAL_PAUSE_PATH = os.path.join(QUEUE_ROOT, 'signal_pause')
+SIGNAL_BACK_PATH  = os.path.join(QUEUE_ROOT, 'signal_back')
+LAST_PLAYED_DIR   = os.path.join(QUEUE_ROOT, 'last-played')
+
+
+class SkipSignal(Exception):
+    """Raised by play_ffplay when a skip signal fires mid-playback."""
+
+
 # Monotonic counters are stored as one empty marker file per event in events/<counter>/.
 # This avoids the read-modify-write race on stats.json under concurrent enqueue.
 COUNTER_NAMES = ('enqueued', 'played', 'spilled', 'retried', 'dropped', 'p0_dropped')
@@ -47,7 +59,7 @@ LOCK_STALE_SECS = 600
 
 
 def _ensure_dirs():
-    for d in (QUEUE_ROOT, P0_DIR, NORMAL_DIR, SPILLOVER_DIR, TMP_DIR, EVENTS_DIR):
+    for d in (QUEUE_ROOT, P0_DIR, NORMAL_DIR, SPILLOVER_DIR, TMP_DIR, EVENTS_DIR, LAST_PLAYED_DIR):
         os.makedirs(d, exist_ok=True)
     for name in COUNTER_NAMES:
         os.makedirs(os.path.join(EVENTS_DIR, name), exist_ok=True)
@@ -156,6 +168,37 @@ def _evict_if_over_capacity():
     return evicted
 
 
+def _write_now_playing(callsign='', playing=False):
+    """Write widget state. Atomic replace so readers never see a partial file."""
+    depths = _depths()
+    state = {
+        'callsign': callsign,
+        'playing': playing,
+        'queue_depth': depths['p0'] + depths['normal'] + depths['spillover'],
+        'ts': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
+    }
+    tmp = os.path.join(TMP_DIR, f'now-playing-{uuid.uuid4().hex}.json')
+    try:
+        with open(tmp, 'w', encoding='utf-8') as f:
+            json.dump(state, f)
+        os.replace(tmp, NOW_PLAYING_PATH)
+    except OSError:
+        try: os.remove(tmp)
+        except OSError: pass
+
+
+def _save_last_played(src_dir, stem):
+    """Copy the just-played item to last-played/ so back() can re-enqueue it."""
+    os.makedirs(LAST_PLAYED_DIR, exist_ok=True)
+    for suffix in ('.wav', '.meta.json'):
+        src = os.path.join(src_dir, stem + suffix)
+        dst = os.path.join(LAST_PLAYED_DIR, 'last' + suffix)
+        try:
+            shutil.copy2(src, dst)
+        except OSError:
+            pass
+
+
 def enqueue(wav_path, callsign='', priority='normal', session_id=''):
     """Enqueue a rendered WAV for playback. Returns the queue stem.
 
@@ -185,7 +228,7 @@ def enqueue(wav_path, callsign='', priority='normal', session_id=''):
         json.dump(meta, f)
 
     # Rename wav + meta into target atomically
-    os.replace(wav_path, dst_wav)
+    shutil.move(wav_path, dst_wav)
     os.replace(tmp_meta, dst_meta)
 
     spilled = 0
@@ -278,14 +321,27 @@ def drain(play_fn, stop_after=None):
         return summary
 
     processed = 0
-    # Each item gets at most one attempt per drain call. Retries are deferred
-    # to the next drain invocation — the failure mode that motivated the retry
-    # (busy audio device, file lock) is unlikely to clear within the same drain.
     seen_this_call = set()
     try:
         while True:
             if stop_after is not None and processed >= stop_after:
                 break
+
+            # Back signal: re-enqueue last-played at P0 before fetching next item.
+            if os.path.exists(SIGNAL_BACK_PATH):
+                try:
+                    os.remove(SIGNAL_BACK_PATH)
+                except OSError:
+                    pass
+                back()
+
+            # Pause signal: hold here until resume clears it (max 5 min).
+            pause_waited = 0
+            while os.path.exists(SIGNAL_PAUSE_PATH) and pause_waited < 300:
+                _write_now_playing('', playing=False)
+                time.sleep(1)
+                pause_waited += 1
+
             nxt = _next_item(skip=seen_this_call)
             if not nxt:
                 break
@@ -294,11 +350,18 @@ def drain(play_fn, stop_after=None):
             meta = _read_meta(src_dir, stem)
             wav = os.path.join(src_dir, stem + '.wav')
             if not os.path.exists(wav):
-                # Someone else cleaned it up (shouldn't happen with lock held, but safe)
                 continue
+
+            _write_now_playing(meta.get('callsign', ''), playing=True)
             try:
                 play_fn(wav, meta)
+            except SkipSignal:
+                # User-requested skip — discard item, no retry, no drop counter.
+                _delete_item(src_dir, stem)
+                processed += 1
+                continue
             except Exception:
+                _write_now_playing('', playing=False)
                 if meta.get('retry_count', 0) < MAX_RETRIES:
                     _increment_retry(src_dir, stem, meta)
                     summary['retried'] += 1
@@ -315,25 +378,41 @@ def drain(play_fn, stop_after=None):
                     _update_stats({'dropped': 1})
                 processed += 1
                 continue
-            # Success
+
+            # Success — save a copy for back(), then clean up.
+            _save_last_played(src_dir, stem)
             _delete_item(src_dir, stem)
             summary['played'] += 1
             _update_stats({'played': 1})
             processed += 1
     finally:
+        _write_now_playing('', playing=False)
         _release_lock()
     return summary
 
 
 def play_ffplay(wav_path, meta):
-    """Default play_fn: runs ffplay synchronously. Raises on non-zero exit."""
+    """Default play_fn: runs ffplay via Popen, polling for skip signal at 100ms intervals."""
     CREATE_NO_WINDOW = 0x08000000 if os.name == 'nt' else 0
-    proc = subprocess.run(
+    proc = subprocess.Popen(
         ['ffplay', '-nodisp', '-autoexit', '-loglevel', 'quiet', wav_path],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
         creationflags=CREATE_NO_WINDOW,
     )
+    while proc.poll() is None:
+        if os.path.exists(SIGNAL_SKIP_PATH):
+            try:
+                os.remove(SIGNAL_SKIP_PATH)
+            except OSError:
+                pass
+            proc.terminate()
+            try:
+                proc.wait(timeout=2)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+            raise SkipSignal()
+        time.sleep(0.1)
     if proc.returncode != 0:
         raise RuntimeError(f"ffplay exit {proc.returncode}")
 
@@ -347,10 +426,62 @@ def reset():
 
 
 def read_stats():
-    """Public accessor for the dashboard route and tests.
-
-    Always recomputes from filesystem (depths from queue dirs, counters from
-    event marker files). stats.json is a best-effort mirror for cross-language
-    consumers that don't want to walk directories.
-    """
+    """Public accessor for the dashboard route and tests."""
     return _stats_snapshot()
+
+
+# ── Widget control API ────────────────────────────────────────────────────────
+
+def skip():
+    """Signal the active drainer to stop the current item immediately."""
+    _ensure_dirs()
+    open(SIGNAL_SKIP_PATH, 'w').close()
+
+
+def pause():
+    """Signal the drainer to hold before the next item."""
+    _ensure_dirs()
+    open(SIGNAL_PAUSE_PATH, 'w').close()
+
+
+def resume():
+    """Clear the pause signal so the drainer continues."""
+    try:
+        os.remove(SIGNAL_PAUSE_PATH)
+    except OSError:
+        pass
+
+
+def back():
+    """Re-enqueue the last-played item at P0 priority. Returns True if found."""
+    _ensure_dirs()
+    last_wav = os.path.join(LAST_PLAYED_DIR, 'last.wav')
+    last_meta_path = os.path.join(LAST_PLAYED_DIR, 'last.meta.json')
+    if not os.path.exists(last_wav):
+        return False
+    stem = _stem()
+    dst_wav = os.path.join(P0_DIR, stem + '.wav')
+    dst_meta = os.path.join(P0_DIR, stem + '.meta.json')
+    try:
+        meta = {}
+        if os.path.exists(last_meta_path):
+            with open(last_meta_path, 'r', encoding='utf-8') as f:
+                meta = json.load(f)
+        meta['priority'] = 'p0'
+        meta['retry_count'] = 0
+        shutil.copy2(last_wav, dst_wav)
+        with open(dst_meta, 'w', encoding='utf-8') as f:
+            json.dump(meta, f)
+        _update_stats({'enqueued': 1})
+        return True
+    except OSError:
+        return False
+
+
+def read_now_playing():
+    """Read current widget state. Returns dict with callsign, playing, queue_depth."""
+    try:
+        with open(NOW_PLAYING_PATH, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except (OSError, json.JSONDecodeError):
+        return {'callsign': '', 'playing': False, 'queue_depth': 0, 'ts': ''}

@@ -456,3 +456,114 @@ body[data-scanlines="on"]::before {
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-thumb { background: var(--line-hi); }
 ::-webkit-scrollbar-track { background: transparent; }
+
+/* ============================================================
+   MOBILE — 768px and 480px breakpoints
+   C2: grid collapse + rail → bottom tab strip
+   C3: 44px touch targets on nav-item, chip, seg, drawer close
+   MULTI-UI-0068 / OQE_DISCIPLINE.md §11
+   ============================================================ */
+@media (max-width: 768px) {
+
+  /* Single-column layout: topbar → main → rail (bottom tab) */
+  body {
+    grid-template-columns: 1fr;
+    grid-template-rows: 56px 1fr auto;
+    grid-template-areas:
+      "topbar"
+      "main"
+      "rail";
+  }
+
+  .brand { display: none; }
+
+  .topbar { padding: 0 var(--pad); gap: 8px; }
+
+  /* stat pills and clock are too wide for mobile topbar */
+  .stat-strip,
+  .clock { display: none; }
+
+  /* --- Rail → horizontal bottom tab strip ----------------- */
+  .rail {
+    border-right: none;
+    border-top: 1px solid var(--line);
+    flex-direction: row;
+    overflow-x: auto;
+    overflow-y: hidden;
+    height: auto;
+    min-height: 56px;
+    flex-shrink: 0;
+    scrollbar-width: none;
+  }
+  .rail::-webkit-scrollbar { display: none; }
+
+  /* hide roster — too many rows for a bottom strip */
+  .roster-group { display: none; }
+
+  .rail-section { padding: 0; display: flex; flex-direction: row; }
+  .rail-label { display: none; }
+  .nav-list { display: flex; flex-direction: row; }
+
+  .nav-item {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    padding: 6px 16px;
+    border-left: none;
+    border-bottom: 2px solid transparent;
+    font-size: 8px;
+    min-width: 60px;
+    min-height: 44px;   /* C3 touch target */
+    white-space: nowrap;
+  }
+
+  .nav-item.active {
+    border-left-color: transparent;
+    border-bottom-color: var(--accent);
+    background: linear-gradient(0deg, var(--accent-soft), transparent);
+  }
+
+  /* --- Touch targets (C3) — 44×44px minimum -------------- */
+  .chip {
+    min-height: 44px;
+    padding: 0 12px;
+  }
+
+  .seg button {
+    min-height: 44px;
+    padding: 0 14px;
+  }
+
+  .drawer .closebtn {
+    width: 44px;
+    height: 44px;
+  }
+
+  /* --- Controls ------------------------------------------- */
+  .controls { padding: var(--pad-sm); gap: 6px; }
+  .search { min-width: 0; flex: 1; }
+  .controls .right { margin-left: 0; }
+
+  /* --- Drawer: full-width bottom sheet -------------------- */
+  .drawer {
+    width: 100%;
+    border-left: none;
+    border-top: 1px solid var(--accent);
+    top: 56px;
+    bottom: 56px;   /* clear the bottom tab strip */
+    height: auto;
+    transform: translateY(110%);
+  }
+  .drawer[data-on="true"] { transform: translateY(0); }
+
+  /* --- Tweaks panel --------------------------------------- */
+  .tweaks { left: 8px; right: 8px; width: auto; bottom: 64px; }
+}
+
+@media (max-width: 480px) {
+  .crumbs { display: none; }
+  .topbar { padding: 0 var(--pad-sm); gap: 4px; }
+  .search { min-width: 0; width: 100%; }
+  .controls .right { width: 100%; }
+}

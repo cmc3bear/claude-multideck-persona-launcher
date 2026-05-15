@@ -1,0 +1,578 @@
+{
+  "meta": {
+    "version": 1,
+    "next_job_id": 23,
+    "next_meeting_id": 1,
+    "project_name": "dispatch-framework-release",
+    "project_code": "DFR",
+    "oqe_version": "2.0",
+    "last_modified": "2026-05-06T00:00:00Z",
+    "last_modified_by": "Launcher-Engineer (MULTI-INFRA-0001)"
+  },
+  "jobs": [
+    {
+      "id": "JOB-0001",
+      "posted_by": "Smith",
+      "assigned_to": "Foreman",
+      "subject": "Strip 4 unaligned persona files",
+      "description": "Remove launcher-engineer, voice-technician, persona-author, commercial-producer from dispatch/personas/. They were created outside the standard template and overlap existing lanes. Back them up to dispatch/personas/_archive/ before deletion. Update personas.json to remove their entries.",
+      "priority": "P1",
+      "status": "completed",
+      "created_at": "2026-04-15T20:00:00Z",
+      "accepted_at": "2026-04-15T21:00:00Z",
+      "completed_at": "2026-04-15T21:15:00Z",
+      "meeting_ref": null,
+      "result": "4 files archived to dispatch/personas/_archive/. Entries stripped from personas.json and set-voice.py.",
+      "tags": [
+        "cleanup",
+        "personas",
+        "alignment"
+      ]
+    },
+    {
+      "id": "JOB-0002",
+      "posted_by": "Smith",
+      "assigned_to": "Foreman",
+      "subject": "Create FOREMAN_AGENT.md persona file",
+      "description": "Write the Foreman persona agent file at dispatch-framework/personas/FOREMAN_AGENT.md following the standard template (Identity, What I Am/Not, Lane table, Job Board, On Startup, Tools, Style). Foreman is the MULTIDECK project lead — owns PM, docs, CLAUDE.md, cross-persona coordination.",
+      "priority": "P1",
+      "status": "completed",
+      "created_at": "2026-04-15T20:00:00Z",
+      "accepted_at": "2026-04-15T21:00:00Z",
+      "completed_at": "2026-04-15T21:30:00Z",
+      "meeting_ref": null,
+      "result": "Completed by Smith. Agent file written, registered, assets generated.",
+      "tags": [
+        "persona",
+        "creation",
+        "foreman"
+      ]
+    },
+    {
+      "id": "JOB-0003",
+      "posted_by": "Smith",
+      "assigned_to": "Kernel",
+      "subject": "Create KERNEL_AGENT.md persona file",
+      "description": "Write the Kernel persona agent file at dispatch-framework/personas/KERNEL_AGENT.md. Kernel is the core developer — launcher HTML/JS/CSS, server.cjs routes, Node backend, feature implementation. Standard template.",
+      "priority": "P1",
+      "status": "completed",
+      "created_at": "2026-04-15T20:00:00Z",
+      "accepted_at": "2026-04-15T21:00:00Z",
+      "completed_at": "2026-04-15T21:30:00Z",
+      "meeting_ref": null,
+      "result": "Completed by Smith. Agent file written, registered, assets generated.",
+      "tags": [
+        "persona",
+        "creation",
+        "kernel"
+      ]
+    },
+    {
+      "id": "JOB-0004",
+      "posted_by": "Smith",
+      "assigned_to": "Packer",
+      "subject": "Create PACKER_AGENT.md persona file",
+      "description": "Write the Packer persona agent file at dispatch-framework/personas/PACKER_AGENT.md. Packer owns the asset pipeline — SD portrait generation, Kokoro intro generation, ICO conversion, desktop shortcut building, asset serving. Standard template.",
+      "priority": "P1",
+      "status": "completed",
+      "created_at": "2026-04-15T20:00:00Z",
+      "accepted_at": "2026-04-15T21:00:00Z",
+      "completed_at": "2026-04-15T21:30:00Z",
+      "meeting_ref": null,
+      "result": "Completed by Smith. Agent file written, registered, assets generated.",
+      "tags": [
+        "persona",
+        "creation",
+        "packer"
+      ]
+    },
+    {
+      "id": "JOB-0005",
+      "posted_by": "Smith",
+      "assigned_to": "Inspector",
+      "subject": "Create INSPECTOR_AGENT.md persona file",
+      "description": "Write the Inspector persona agent file at dispatch-framework/personas/INSPECTOR_AGENT.md. Inspector is the QA/review gate — test launches, validate persona loads, check job board compliance, review changes. Standard template.",
+      "priority": "P1",
+      "status": "completed",
+      "created_at": "2026-04-15T20:00:00Z",
+      "accepted_at": "2026-04-15T21:00:00Z",
+      "completed_at": "2026-04-15T21:30:00Z",
+      "meeting_ref": null,
+      "result": "Completed by Smith. Agent file written, registered, assets generated.",
+      "tags": [
+        "persona",
+        "creation",
+        "inspector"
+      ]
+    },
+    {
+      "id": "JOB-0006",
+      "posted_by": "Smith",
+      "assigned_to": "Resonance",
+      "subject": "Create RESONANCE_AGENT.md persona file",
+      "description": "Write the Resonance persona agent file at dispatch-framework/personas/RESONANCE_AGENT.md. Resonance owns voice engineering — Kokoro hooks, ffmpeg post-processing chains, voice config, playback mutex, callsign system, custom voice blending. Standard template. Glean useful domain knowledge from the stripped voice-technician file.",
+      "priority": "P1",
+      "status": "completed",
+      "created_at": "2026-04-15T20:00:00Z",
+      "accepted_at": "2026-04-15T21:00:00Z",
+      "completed_at": "2026-04-15T21:30:00Z",
+      "meeting_ref": null,
+      "result": "Completed by Smith. Agent file written, registered, assets generated.",
+      "tags": [
+        "persona",
+        "creation",
+        "resonance"
+      ]
+    },
+    {
+      "id": "JOB-0007",
+      "posted_by": "Smith",
+      "assigned_to": "Producer",
+      "subject": "Create PRODUCER_AGENT.md persona file",
+      "description": "Write the Producer persona agent file at dispatch-framework/personas/PRODUCER_AGENT.md. Producer owns end-to-end commercial production — script, VO, music bed, scene direction, review gate, final master. Standard template. Glean useful domain knowledge from the stripped commercial-producer file (audio mix levels, production pipeline, lessons-learned).",
+      "priority": "P1",
+      "status": "completed",
+      "created_at": "2026-04-15T20:00:00Z",
+      "accepted_at": "2026-04-15T21:00:00Z",
+      "completed_at": "2026-04-15T21:30:00Z",
+      "meeting_ref": null,
+      "result": "Completed by Smith. Agent file written, registered, assets generated.",
+      "tags": [
+        "persona",
+        "creation",
+        "producer"
+      ]
+    },
+    {
+      "id": "JOB-0008",
+      "posted_by": "Smith",
+      "assigned_to": "Packer",
+      "subject": "Register all 6 MULTIDECK personas in personas.json",
+      "description": "Add Foreman, Kernel, Packer, Inspector, Resonance, Producer to dispatch/personas/personas.json with correct callsign, color_hex, tab_color, voice_key, cwd (dispatch-framework), agent_file path, description, scope (project:multideck).",
+      "priority": "P1",
+      "status": "completed",
+      "created_at": "2026-04-15T20:00:00Z",
+      "accepted_at": "2026-04-15T21:00:00Z",
+      "completed_at": "2026-04-15T21:30:00Z",
+      "meeting_ref": null,
+      "result": "Completed by Smith. Agent file written, registered, assets generated.",
+      "tags": [
+        "registry",
+        "personas.json"
+      ]
+    },
+    {
+      "id": "JOB-0009",
+      "posted_by": "Smith",
+      "assigned_to": "Resonance",
+      "subject": "Register all 6 MULTIDECK personas in set-voice.py and generate-intros.py",
+      "description": "Add Foreman, Kernel, Packer, Inspector, Resonance, Producer to set-voice.py VOICE_MAP (with callsign field) and generate-intros.py VOICE_MAP + INTROS + DEPLOY_STUBS dicts.",
+      "priority": "P1",
+      "status": "completed",
+      "created_at": "2026-04-15T20:00:00Z",
+      "accepted_at": "2026-04-15T21:00:00Z",
+      "completed_at": "2026-04-15T21:30:00Z",
+      "meeting_ref": null,
+      "result": "Completed by Smith. Agent file written, registered, assets generated.",
+      "tags": [
+        "registry",
+        "voice"
+      ]
+    },
+    {
+      "id": "JOB-0010",
+      "posted_by": "Smith",
+      "assigned_to": "Packer",
+      "subject": "Register all 6 in launch-persona.ps1 color map",
+      "description": "Add Foreman, Kernel, Packer, Inspector, Resonance, Producer to the $colorNameMap in launch-persona.ps1 with appropriate Claude Code /color names.",
+      "priority": "P1",
+      "status": "completed",
+      "created_at": "2026-04-15T20:00:00Z",
+      "accepted_at": "2026-04-15T21:00:00Z",
+      "completed_at": "2026-04-15T21:30:00Z",
+      "meeting_ref": null,
+      "result": "Completed by Smith. Agent file written, registered, assets generated.",
+      "tags": [
+        "registry",
+        "launch"
+      ]
+    },
+    {
+      "id": "JOB-0011",
+      "posted_by": "Smith",
+      "assigned_to": "Packer",
+      "subject": "Generate intros + deploy stubs for all 6 MULTIDECK personas",
+      "description": "Run generate-intros.py for foreman kernel packer inspector resonance producer. Verify all 12 files land in dashboard/assets/intros/ (6 long + 6 short deploy stubs).",
+      "priority": "P2",
+      "status": "completed",
+      "created_at": "2026-04-15T20:00:00Z",
+      "accepted_at": "2026-04-15T21:00:00Z",
+      "completed_at": "2026-04-15T21:30:00Z",
+      "meeting_ref": null,
+      "result": "Completed by Smith. Agent file written, registered, assets generated.",
+      "tags": [
+        "assets",
+        "audio",
+        "kokoro"
+      ]
+    },
+    {
+      "id": "JOB-0012",
+      "posted_by": "Smith",
+      "assigned_to": "Packer",
+      "subject": "Generate pixel-art portraits for all 6 MULTIDECK personas",
+      "description": "Add PERSONA_LOOKS entries for foreman, kernel, packer, inspector, resonance, producer to generate-portraits.py. Run generation via local SD (ComfyUI on 8188). Verify all 6 PNGs land in dashboard/assets/portraits/.",
+      "priority": "P2",
+      "status": "completed",
+      "created_at": "2026-04-15T20:00:00Z",
+      "accepted_at": "2026-04-15T21:00:00Z",
+      "completed_at": "2026-04-15T21:30:00Z",
+      "meeting_ref": null,
+      "result": "Completed by Smith. Agent file written, registered, assets generated.",
+      "tags": [
+        "assets",
+        "portraits",
+        "stable-diffusion"
+      ]
+    },
+    {
+      "id": "JOB-0013",
+      "posted_by": "Smith",
+      "assigned_to": "Packer",
+      "subject": "Regenerate desktop shortcuts for all personas",
+      "description": "Run generate-persona-shortcuts.ps1 to rebuild the MULTIDECK/ desktop folder with all personas including the 6 new ones. Verify ICO files generated for each.",
+      "priority": "P2",
+      "status": "completed",
+      "created_at": "2026-04-15T20:00:00Z",
+      "accepted_at": "2026-04-15T21:00:00Z",
+      "completed_at": "2026-04-15T21:30:00Z",
+      "meeting_ref": null,
+      "result": "Completed by Smith. Agent file written, registered, assets generated.",
+      "tags": [
+        "assets",
+        "shortcuts",
+        "desktop"
+      ]
+    },
+    {
+      "id": "JOB-0014",
+      "oqe_version": "2.0",
+      "posted_by": "Smith",
+      "assigned_to": "Inspector",
+      "subject": "Validate all 6 MULTIDECK personas deploy correctly",
+      "description": "After all registration and asset generation is complete, deploy each of the 6 new personas via the launcher. Verify: wt window opens, persona agent file loads, voice sets, /color fires, job board is read, no errors. Report any failures.",
+      "problem": "Six new MULTIDECK personas (Foreman, Kernel, Packer, Inspector, Resonance, Producer) were registered and given assets, but the deploy paths were never end-to-end validated. Without verification, persona launches can silently fail at any of five integration points (wt window, agent file, voice, color, job board) and the failure surfaces only when a user tries to deploy that persona.",
+      "priority": "P2",
+      "status": "pending",
+      "created_at": "2026-04-15T20:00:00Z",
+      "accepted_at": null,
+      "completed_at": null,
+      "meeting_ref": null,
+      "result": null,
+      "tags": [
+        "qa",
+        "validation",
+        "deploy"
+      ],
+      "alternatives_considered": [
+        "Spot-check 2 of 6 personas and assume the rest follow the template — rejected because the rogue-agent pattern shows that template adherence is exactly what gets violated silently",
+        "Defer validation until first user-reported failure — rejected because the cost of a silent failure during a deploy attempt is higher than running the gate proactively"
+      ],
+      "criteria": [
+        "Each of the 6 new personas launches a Windows Terminal window via dispatch/scripts/launch-persona.ps1 with no script error — per OQE_DISCIPLINE.md §11 evidence_must_match_criterion, because launch is the gate the criterion observes",
+        "Each persona's agent file loads from dispatch-framework/personas/*_AGENT.md and the assistant emits the persona-loaded confirmation line — per OQE_DISCIPLINE.md §11 source_artifact_citation, because the agent file is the named artifact whose load is being measured",
+        "Voice sets correctly per persona via dispatch/hooks/set-voice.py and the spoken voice matches dispatch/personas/personas.json voice_key — per OQE_DISCIPLINE.md §11 evidence_must_match_criterion, because voice mismatch is one of the exact failure modes named in the problem",
+        "/color command applies the correct hex per dispatch/personas/personas.json color_hex field, observed in the terminal title bar — per OQE_DISCIPLINE.md §11 source_artifact_citation, because personas.json is the registered source of truth for color",
+        "Each persona reads dispatch-framework/coordination/JOB_BOARD.json on startup and surfaces its assigned jobs — per OQE_DISCIPLINE.md §14 standing_gate, because the standing gate observes integration with the job board",
+        "Validation report saved at dispatch/state/multideck-deploy-validation.json with pass/fail per persona per gate — per OQE_DISCIPLINE.md §11 itemized_change_list applied as itemized result list"
+      ]
+    },
+    {
+      "id": "JOB-0015",
+      "posted_by": "Smith",
+      "assigned_to": "Foreman",
+      "subject": "Build create-persona.py generator tool",
+      "description": "Create F:\\03-INFRASTRUCTURE\\dispatch\\scripts\\create-persona.py that takes (name, role, scope, project, color, voice) as CLI args and: generates AGENT.md from template with Job Board section, registers in personas.json, registers in set-voice.py, registers in launch-persona.ps1 color map, generates intros + deploy stub via Kokoro, generates portrait via SD, creates desktop shortcut. Enforces single-word naming convention. Validates no color/voice collisions.",
+      "priority": "P0",
+      "status": "completed",
+      "created_at": "2026-04-15T20:00:00Z",
+      "accepted_at": null,
+      "completed_at": "2026-04-15T21:30:00Z",
+      "meeting_ref": null,
+      "result": "Closed P0 per user directive. Generator tool deferred to post-team-standup.",
+      "tags": [
+        "tooling",
+        "generator",
+        "template"
+      ]
+    },
+    {
+      "id": "JOB-0016",
+      "oqe_version": "2.0",
+      "posted_by": "Smith",
+      "assigned_to": "Inspector",
+      "subject": "Audit dispatch-framework/ rogue agent damage",
+      "description": "Full audit of everything the rogue Launcher-Engineer agent touched in dispatch-framework/. Cross-reference the retrospective at state/retrospective-2026-04-15.md. Verify: (1) set-voice.py in hooks/ compiles and has correct entries, (2) kokoro-speak.py mutex works, (3) server.cjs starts cleanly, (4) launcher.html loads and renders, (5) personas.json is accurate count and data, (6) all docs reference correct names/counts/labels. Report all remaining discrepancies.",
+      "problem": "A previous Launcher-Engineer agent operated outside its lane and made disorganized changes across hooks, server, launcher HTML, and personas.json. The retrospective at state/retrospective-2026-04-15.md flagged specific failures but a full audit pass was never run, so residual breakages remain hidden behind appearances of correctness.",
+      "priority": "P0",
+      "status": "pending",
+      "created_at": "2026-04-15T21:00:00Z",
+      "accepted_at": null,
+      "completed_at": null,
+      "meeting_ref": null,
+      "result": null,
+      "tags": [
+        "audit",
+        "rogue-agent",
+        "p0",
+        "inspector"
+      ],
+      "alternatives_considered": [
+        "Trust the rogue agent's own retrospective and skip the audit — rejected because self-reported retrospectives are exactly the kind of trust-based evidence §11 calls out as insufficient",
+        "Run only the failing checks the retrospective named — rejected because the retrospective itself may have missed items that an independent audit would catch"
+      ],
+      "criteria": [
+        "dispatch/hooks/set-voice.py compiles with python -m py_compile and entries spot-checked against dispatch/personas/personas.json — per OQE_DISCIPLINE.md §11 evidence_must_match_criterion, because compile + spot-check is the observable form of correctness for a script",
+        "dispatch/hooks/kokoro-speak.py mutex works under concurrent invocation, observed via dispatch/state/audit-mutex.json log — per OQE_DISCIPLINE.md §11 evidence_must_match_criterion, because the mutex is the exact failure mode the audit is checking",
+        "dispatch/dashboard/server.cjs starts cleanly to a listening port and renders / without errors, captured in dispatch/state/audit-server-startup.json — per OQE_DISCIPLINE.md §14 standing_gate, because server health is a standing observation",
+        "dispatch/dashboard/launcher.html loads in a browser and renders the persona grid, screenshot saved at dispatch/state/audit-launcher.json — per OQE_DISCIPLINE.md §11 source_artifact_citation, because the screenshot is the named artifact",
+        "dispatch/personas/personas.json count and per-persona fields (callsign, color_hex, voice_key, cwd, agent_file, scope) verified against the 9 expected personas — per OQE_DISCIPLINE.md §11 evidence_must_match_criterion, because the rogue-agent retrospective specifically flagged personas.json drift",
+        "All docs in dispatch/docs/ and dispatch-framework/docs/ verified to reference correct persona names, counts, and button labels (e.g. 'DEPLOY' not 'JACK IN') by grep audit captured at dispatch/state/audit-docs.json — per OQE_DISCIPLINE.md §14 standing_gate, because docs are part of standing surface",
+        "Audit report saved at dispatch/state/multideck-rogue-agent-audit.json enumerating every discrepancy still present with file/line evidence — per OQE_DISCIPLINE.md §11 itemized_change_list, because non-compliance must ship as a work order not a flag"
+      ]
+    },
+    {
+      "id": "JOB-0017",
+      "oqe_version": "2.0",
+      "posted_by": "Smith",
+      "assigned_to": "Kernel",
+      "subject": "Fix rogue agent code errors in dispatch-framework/",
+      "description": "Fix all code bugs identified by the rogue agent's own retrospective and Inspector's audit: (1) audio-feed-page.cjs escaped backtick bug, (2) any remaining VOICE_MAP sync issues in hooks/set-voice.py, (3) dashboard theme consistency, (4) any other code-level issues. Each fix must be a separate job board entry accepted before coding.",
+      "problem": "Specific code-level bugs remain in dispatch-framework after the rogue agent's retrospective named them but did not fix them. The audio-feed-page.cjs escaped backtick is the only one fully described; other items (VOICE_MAP sync, theme consistency) were noted without fix patches. Operators hit these bugs every time they touch the affected files.",
+      "priority": "P1",
+      "status": "pending",
+      "created_at": "2026-04-15T21:00:00Z",
+      "accepted_at": null,
+      "completed_at": null,
+      "meeting_ref": null,
+      "result": null,
+      "tags": [
+        "bugfix",
+        "rogue-agent",
+        "code"
+      ],
+      "alternatives_considered": [
+        "Bundle all fixes into one job — rejected because the description explicitly requires each fix as a separate accepted job before coding so reviewers can verify scope per change",
+        "Wait for JOB-0016 audit to enumerate every bug before starting any fix — rejected because the named bugs (audio-feed-page backtick) can ship in parallel and the audit's role is to surface unknown-unknowns"
+      ],
+      "criteria": [
+        "dispatch/dashboard/audio-feed-page.cjs escaped-backtick bug fixed and verified by node --check with log saved at dispatch/state/audio-feed-fix.json — per OQE_DISCIPLINE.md §11 evidence_must_match_criterion, because parse-clean is the observable form of the fix",
+        "dispatch/hooks/set-voice.py VOICE_MAP entries cross-checked against dispatch/personas/personas.json with zero drift, verification log at dispatch/state/voice-map-sync.json — per OQE_DISCIPLINE.md §11 source_artifact_citation, because personas.json is the registered source of truth",
+        "dispatch/dashboard/styles/theme.css consolidated and applied consistently across all routes per dispatch/state/theme-audit.json — per OQE_DISCIPLINE.md §13 standardized_job_numbering applied as standardized style surface, because theme drift is a numbering analogue at the style layer",
+        "Each fix submitted as a separate job board entry on dispatch-framework/coordination/JOB_BOARD.json with its own problem and 5+ cited criteria — per OQE_DISCIPLINE.md §11 problem_statement_enforced, because the description explicitly mandates separate accepted jobs",
+        "All fixes verified by re-running dispatch/dashboard/server.cjs and exercising the previously broken routes, log at dispatch/state/post-fix-verification.json — per OQE_DISCIPLINE.md §14 standing_gate, because the standing gate observes integrated behavior",
+        "Code-fix manifest written at dispatch-framework/state/manifests/multideck-rogue-fixes.json enumerating file, line, before, after for every change — per OQE_DISCIPLINE.md §11 itemized_change_list, because non-compliance ships as a work order"
+      ]
+    },
+    {
+      "id": "JOB-0018",
+      "oqe_version": "2.0",
+      "posted_by": "Smith",
+      "assigned_to": "Foreman",
+      "subject": "Sanitize dispatch-framework/ for public release",
+      "description": "Strip all personal data from the public fork: (1) replace personal paths (F:, C:\\Users\\cmc3b) with generic ${DISPATCH_ROOT} / ${HOME} variables, (2) remove personal names/emails from any config, (3) replace OQE-specific persona callsigns with generic defaults (Operative-1, Alpha, etc or keep current names if they're not personally identifying), (4) verify no API keys, tokens, or credentials in any file, (5) ensure the repo is functional for a cold clone (npm install + node server.cjs should work). Create a sanitization checklist.",
+      "problem": "dispatch-framework/ is intended as a public open source release but currently contains personal paths (F:, C:\\Users\\cmc3b), the maintainer's email, and OQE-internal persona callsigns. Without sanitization a public push leaks personal data, and the cold clone will not work for an outside user because of hard-coded local paths.",
+      "priority": "P1",
+      "status": "pending",
+      "created_at": "2026-04-15T21:00:00Z",
+      "accepted_at": null,
+      "completed_at": null,
+      "meeting_ref": null,
+      "result": null,
+      "tags": [
+        "sanitization",
+        "public-release",
+        "privacy"
+      ],
+      "alternatives_considered": [
+        "Push the repo private and skip sanitization — rejected because the goal of dispatch-framework/ is a public release, so private push defeats the purpose",
+        "Sanitize only paths and defer PII strip — rejected because the email leak is the highest-severity item and cannot ship publicly even once"
+      ],
+      "criteria": [
+        "All personal absolute paths (F:, C:\\Users\\cmc3b) replaced with ${DISPATCH_ROOT} or ${HOME} variables across dispatch-framework/, verified by grep audit at dispatch/state/sanitization-paths.json showing zero remaining matches — per OQE_DISCIPLINE.md §11 evidence_must_match_criterion, because zero-match is the observable form of completion",
+        "Personal names and email addresses removed from all configs and docs, verified by grep at dispatch/state/sanitization-pii.json showing zero remaining matches — per OQE_DISCIPLINE.md §11 source_artifact_citation, because the audit log is the named artifact",
+        "OQE-specific callsigns reviewed with a per-callsign keep-or-replace decision recorded at dispatch-framework/docs/PUBLIC_RELEASE_NOTES.md — per OQE_DISCIPLINE.md §11 source_artifact_citation, because each decision must point at a named rationale",
+        "No API keys, tokens, or credentials present, verified by gitleaks or equivalent secret-scan log saved at dispatch/state/sanitization-secrets.json — per OQE_DISCIPLINE.md §14 standing_gate, because secret scanning is a standing surface check",
+        "Cold clone test passes: clone, npm install, node dispatch/dashboard/server.cjs starts, launcher renders — log at dispatch/state/sanitization-cold-clone.json — per OQE_DISCIPLINE.md §11 evidence_must_match_criterion, because the cold clone is the user-facing test",
+        "Sanitization checklist published at dispatch-framework/docs/SANITIZATION_CHECKLIST.md so future contributors follow the same gate — per OQE_DISCIPLINE.md §13 standardized_job_numbering applied as standardized release process, because checklists are the format §13 uses to standardize repeatable work"
+      ]
+    },
+    {
+      "id": "JOB-0019",
+      "oqe_version": "2.0",
+      "posted_by": "Smith",
+      "assigned_to": "Foreman",
+      "subject": "Fix all doc inaccuracies in dispatch-framework/",
+      "description": "Audit every .md file in docs/ and root. Verify: persona counts match personas.json, button labels match launcher.html, feature descriptions match actual code, screenshots match current UI state. The rogue agent shipped docs saying 'five operatives' and 'JACK IN' when reality was 'nine' and 'DEPLOY'. Fix every discrepancy.",
+      "problem": "Documentation in dispatch-framework/docs/ contains specific factual inaccuracies introduced by a previous rogue agent: persona counts cite five when reality is nine, button labels say 'JACK IN' when the launcher uses 'DEPLOY', and screenshots may be outdated. Operators reading the docs build a false mental model of the system.",
+      "priority": "P1",
+      "status": "pending",
+      "created_at": "2026-04-15T21:00:00Z",
+      "accepted_at": null,
+      "completed_at": null,
+      "meeting_ref": null,
+      "result": null,
+      "tags": [
+        "docs",
+        "accuracy",
+        "rogue-agent"
+      ],
+      "alternatives_considered": [
+        "Rewrite all docs from scratch — rejected because most content is correct and a targeted fix preserves authorial intent",
+        "Fix only the named items (five operatives, JACK IN) — rejected because the rogue-agent pattern means there are likely additional unflagged inaccuracies an audit would catch"
+      ],
+      "criteria": [
+        "Every .md file in dispatch-framework/docs/ and dispatch-framework/ root grepped for known stale phrases ('five operatives', 'JACK IN') with results recorded at dispatch/state/doc-audit.json — per OQE_DISCIPLINE.md §11 evidence_must_match_criterion, because the grep result is the observable evidence",
+        "Persona counts in every doc reconciled with dispatch/personas/personas.json count of 9 — per OQE_DISCIPLINE.md §11 source_artifact_citation, because personas.json is the registered source of truth for counts",
+        "Button labels in every doc reconciled with dispatch/dashboard/launcher.html source text — per OQE_DISCIPLINE.md §11 source_artifact_citation, because launcher.html is the registered source of truth for UI labels",
+        "Feature descriptions in every doc reconciled with current behavior in dispatch/dashboard/server.cjs and observed via runtime log at dispatch/state/doc-feature-audit.json — per OQE_DISCIPLINE.md §14 standing_gate, because feature description must match runtime observation",
+        "Screenshots updated where stale, with a screenshot manifest at dispatch-framework/docs/SCREENSHOT_MANIFEST.md naming each image and the date captured — per OQE_DISCIPLINE.md §13 standardized_job_numbering applied as standardized doc artifact, because the manifest standardizes a deliverable format",
+        "Doc-fix manifest written at dispatch-framework/state/manifests/doc-accuracy-fix.json enumerating every file, line, before, after — per OQE_DISCIPLINE.md §11 itemized_change_list, because non-compliance ships as a work order"
+      ]
+    },
+    {
+      "id": "JOB-0020",
+      "oqe_version": "2.0",
+      "posted_by": "Smith",
+      "assigned_to": "Packer",
+      "subject": "Generate portraits for all 6 MULTIDECK personas in dispatch-framework/",
+      "description": "Add PERSONA_LOOKS entries for foreman, kernel, packer, inspector, resonance, producer to generate-portraits.py. Generate via local SD. Copy to BOTH dispatch/dashboard/assets/portraits/ (canonical) and dispatch-framework/dashboard/launcher-assets/portraits/ (public fork).",
+      "problem": "The 6 new MULTIDECK personas have entries in personas.json but no portrait images, so the launcher renders placeholder squares. Both the canonical asset directory and the public fork's launcher-assets need the same files for the dashboard to display the personas correctly in either context.",
+      "priority": "P2",
+      "status": "pending",
+      "created_at": "2026-04-15T21:00:00Z",
+      "accepted_at": null,
+      "completed_at": null,
+      "meeting_ref": null,
+      "result": null,
+      "tags": [
+        "assets",
+        "portraits",
+        "stable-diffusion"
+      ],
+      "alternatives_considered": [
+        "Use the same portrait for all 6 with a color overlay — rejected because the launcher's persona-grid pattern depends on visual distinction across personas",
+        "Generate portraits only in the public fork — rejected because the canonical dispatch/ tree is the source-of-truth and the public fork mirrors it"
+      ],
+      "criteria": [
+        "PERSONA_LOOKS entries added for all 6 personas in dispatch/scripts/generate-portraits.py — per OQE_DISCIPLINE.md §11 source_artifact_citation, because the script is the registered artifact that drives generation",
+        "Local Stable Diffusion generation run via ComfyUI on port 8188 with verification log at dispatch/state/portrait-generation.json — per OQE_DISCIPLINE.md §11 evidence_must_match_criterion, because the log is the observable evidence of generation",
+        "All 6 PNGs land in dispatch/dashboard/assets/portraits/ verified by directory listing captured in dispatch/state/portraits-canonical.json — per OQE_DISCIPLINE.md §11, because the canonical tree must contain the artifacts",
+        "All 6 PNGs copied to dispatch-framework/dashboard/launcher-assets/portraits/ verified by listing at dispatch/state/portraits-public-fork.json — per OQE_DISCIPLINE.md §13 standardized_job_numbering applied as standardized asset path, because the public fork mirrors the canonical layout",
+        "Launcher renders the new portraits without placeholder fallback, verified by screenshot saved at dispatch/state/portrait-render-verification.json — per OQE_DISCIPLINE.md §14 standing_gate, because the launcher render is the standing observation",
+        "PERSONA_LOOKS schema documented at dispatch-framework/docs/PORTRAIT_SCHEMA.md so future personas inherit the convention — per OQE_DISCIPLINE.md §13 standardized_job_numbering applied as standardized asset spec"
+      ]
+    },
+    {
+      "id": "JOB-0021",
+      "oqe_version": "2.0",
+      "posted_by": "Smith",
+      "assigned_to": "Resonance",
+      "subject": "Generate voice intros + deploy stubs for 6 MULTIDECK personas",
+      "description": "Add the 6 new personas to generate-intros.py VOICE_MAP, INTROS, and DEPLOY_STUBS. Run generation. Copy to BOTH dispatch/dashboard/assets/intros/ (canonical) and dispatch-framework/dashboard/launcher-assets/intros/ (public fork).",
+      "problem": "The 6 new MULTIDECK personas have entries in personas.json but no Kokoro intros or deploy stubs, so the launcher uses silent fallback when deploying these personas. Both the canonical asset directory and the public fork's launcher-assets need the same audio files for the dashboard to deploy personas with audio in either context.",
+      "priority": "P2",
+      "status": "pending",
+      "created_at": "2026-04-15T21:00:00Z",
+      "accepted_at": null,
+      "completed_at": null,
+      "meeting_ref": null,
+      "result": null,
+      "tags": [
+        "assets",
+        "audio",
+        "kokoro"
+      ],
+      "alternatives_considered": [
+        "Use the same generic intro for all 6 personas — rejected because each persona has a distinct voice_key in personas.json and the intro must match the assigned voice",
+        "Skip the deploy stubs and use full intros only — rejected because the launcher uses the short stub during repeated deploys to avoid replaying the long intro"
+      ],
+      "criteria": [
+        "All 6 new personas added to VOICE_MAP, INTROS, and DEPLOY_STUBS dicts in dispatch/scripts/generate-intros.py — per OQE_DISCIPLINE.md §11 source_artifact_citation, because the script is the registered artifact that drives generation",
+        "Generation run via dispatch/scripts/generate-intros.py with log at dispatch/state/intro-generation.json — per OQE_DISCIPLINE.md §11 evidence_must_match_criterion, because the log is the observable evidence of generation",
+        "All 12 files (6 long intros + 6 short deploy stubs) land in dispatch/dashboard/assets/intros/ verified by listing at dispatch/state/intros-canonical.json — per OQE_DISCIPLINE.md §11, because the canonical tree must contain the artifacts",
+        "All 12 files copied to dispatch-framework/dashboard/launcher-assets/intros/ verified by listing at dispatch/state/intros-public-fork.json — per OQE_DISCIPLINE.md §13 standardized_job_numbering applied as standardized asset path, because the public fork mirrors the canonical layout",
+        "Deploy launches play the correct intro per persona, verified by audio log at dispatch/state/intro-playback-verification.json — per OQE_DISCIPLINE.md §14 standing_gate, because deploy playback is the standing observation",
+        "Intro and stub schema documented at dispatch-framework/docs/INTRO_SCHEMA.md so future personas inherit the convention — per OQE_DISCIPLINE.md §13 standardized_job_numbering applied as standardized asset spec"
+      ]
+    },
+    {
+      "id": "JOB-0022",
+      "oqe_version": "2.0",
+      "posted_by": "Smith",
+      "assigned_to": "Inspector",
+      "subject": "Final gate review before GitHub push",
+      "description": "Run full OQE 5-gate review on dispatch-framework/ before any new push to GitHub. Verify: (1) all code compiles/parses, (2) no personal data in any file, (3) all docs accurate, (4) cold clone test works, (5) persona count matches everywhere, (6) job board reflects actual state. PASS or FLAG with specific issues. No push without PASS.",
+      "problem": "dispatch-framework/ is intended for public release but no single review has run all the §14 gates against the public surface in one pass. Without an enforced final-gate review, a regression introduced by any earlier job (sanitize, doc-fix, asset-generate) could ship to GitHub and surface only after public eyes find it.",
+      "priority": "P1",
+      "status": "pending",
+      "created_at": "2026-04-15T21:00:00Z",
+      "accepted_at": null,
+      "completed_at": null,
+      "meeting_ref": null,
+      "result": null,
+      "tags": [
+        "review-gate",
+        "github",
+        "final"
+      ],
+      "alternatives_considered": [
+        "Skip the final gate and rely on per-job reviews — rejected because the regression risk this job exists to catch is the kind that surfaces only when all parts ship together",
+        "Push first and patch issues as discovered — rejected because the public release is the surface where unfixed issues become permanently visible in git history"
+      ],
+      "criteria": [
+        "All code in dispatch-framework/ passes parse and compile (node --check on .cjs and .js, python -m py_compile on .py) with log at dispatch/state/final-gate-compile.json — per OQE_DISCIPLINE.md §11 evidence_must_match_criterion, because parse-clean is the observable evidence",
+        "No personal data in any file, gitleaks or equivalent secret-scan log saved at dispatch/state/final-gate-secrets.json — per OQE_DISCIPLINE.md §14 standing_gate, because secret scanning is a standing surface check",
+        "All docs accurate per the criteria of JOB-0019 doc-fix completion, verified by re-running the JOB-0019 audit grep — per OQE_DISCIPLINE.md §11 source_artifact_citation, because JOB-0019's manifest is the named upstream artifact",
+        "Cold clone test passes per the criteria of JOB-0018 sanitization completion, log at dispatch/state/final-gate-cold-clone.json — per OQE_DISCIPLINE.md §11 source_artifact_citation, because JOB-0018's manifest is the named upstream artifact",
+        "Persona count matches across dispatch/personas/personas.json, dispatch/hooks/set-voice.py, dispatch/scripts/launch-persona.ps1, and all docs, verification log at dispatch/state/final-gate-persona-count.json — per OQE_DISCIPLINE.md §11 evidence_must_match_criterion",
+        "Job board reflects actual state with no in_progress jobs that are actually complete and no completed jobs that are not, verification log at dispatch/state/final-gate-job-board.json — per OQE_DISCIPLINE.md §14 standing_gate, because job-board accuracy is a standing observation",
+        "Final review verdict (PASS or FLAG with specific issues) recorded at dispatch-framework/state/final-gate-review-2026-04-26.md — per OQE_DISCIPLINE.md §13 standardized_job_numbering applied as standardized review artifact, because the review file format is a repeatable deliverable"
+      ]
+    }
+  ,{
+      "id": "MULTI-INFRA-0001",
+      "oqe_version": "2.0",
+      "posted_by": "Launcher-Engineer",
+      "assigned_to": "Launcher-Engineer",
+      "subject": "Expose MultiDeck dashboard on private LAN",
+      "problem": "The MultiDeck dashboard server runs inside WSL2 and binds to 0.0.0.0:3045, but WSL2's NAT layer prevents other devices on the private LAN from reaching that port. Without a Windows Firewall inbound rule and a netsh portproxy entry forwarding the Windows host port to the WSL2 VM IP, the dashboard is only reachable from localhost on the host machine.",
+      "description": "Diagnose and resolve LAN access to the MultiDeck dashboard. Verify server bind address, identify WSL2 NAT as the blocker, provide Windows Firewall rule and netsh portproxy commands, confirm firewall rule live, document WSL2 IP persistence caveat.",
+      "priority": "P2",
+      "status": "completed",
+      "created_at": "2026-05-06T00:00:00Z",
+      "accepted_at": "2026-05-06T00:00:00Z",
+      "completed_at": "2026-05-06T00:00:00Z",
+      "depends_on": [],
+      "meeting_ref": null,
+      "result": "No code changes required. Server already binds 0.0.0.0:3045 (dashboard/server.cjs:1356). Windows Firewall rule 'MultiDeck Dashboard' confirmed live (Enabled: True, Action: Allow, Profile: Any). netsh portproxy rule provided; operator verification via 'netsh interface portproxy show all' pending. WSL2 IP persistence caveat documented: 172.25.222.226 changes on WSL restart; startup script remediation offered.",
+      "tags": [
+        "networking",
+        "wsl2",
+        "lan",
+        "dashboard"
+      ],
+      "alternatives_considered": [
+        "Tailscale VPN for cross-device access — rejected because user specified private network access, implying co-located LAN devices where portproxy is simpler and does not require an external service",
+        "Run server.cjs natively on Windows instead of WSL2 — rejected because the request was to enable LAN access to the existing server, not to migrate its runtime environment"
+      ],
+      "criteria": [
+        "dashboard/server.cjs:1356 confirms server.listen(PORT, '0.0.0.0', ...) binding all interfaces, observed by direct code read — per OQE_DISCIPLINE.md §11 source_artifact_citation, because the bind address is the observable form of interface exposure",
+        "Windows Firewall inbound rule 'MultiDeck Dashboard' present and enabled (TCP 3045, Profile: Any, Action: Allow), confirmed by Get-NetFirewallRule output showing Enabled: True and PrimaryStatus: OK — per OQE_DISCIPLINE.md §11 evidence_must_match_criterion, because the rule's enabled state is the observable form of firewall permission",
+        "netsh interface portproxy show all output shows listen 0.0.0.0:3045 forwarding to connect 172.25.222.226:3045, verifiable by operator via admin PowerShell — per OQE_DISCIPLINE.md §11 evidence_must_match_criterion, because the portproxy entry is the observable form of the WSL2 NAT bypass",
+        "A device on the private LAN loads http://<windows-host-ip>:3045/launcher in a browser without error — per OQE_DISCIPLINE.md §14 standing_gate, because the browser load is the standing user-facing confirmation of network reachability",
+        "Operator informed that WSL2 IP 172.25.222.226 changes on every WSL restart and the portproxy rule must be re-applied, with a startup-script remediation path offered — per OQE_DISCIPLINE.md §11 source_artifact_citation, because docs/WSL_SETUP.md documents WSL2 IP persistence as a known infrastructure behavior requiring mitigation"
+      ]
+    }
+  ]
+}

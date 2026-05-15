@@ -758,6 +758,39 @@
   .rl-edit-row { grid-template-columns: repeat(2, 1fr); }
 }
 
+/* C4: lesson editor usable at 375px — MULTI-UI-0068 */
+@media (max-width: 768px) {
+  /* stack master list above detail editor */
+  .rl-body {
+    grid-template-columns: 1fr;
+    grid-template-rows: 200px 1fr;
+    overflow: hidden;
+  }
+
+  .rl-list { border-right: none; border-bottom: 1px solid var(--line); }
+
+  /* form fields: full-width, stacked */
+  .rl-tenet-grid { grid-template-columns: repeat(2, 1fr); }
+  .rl-analysis-grid { grid-template-columns: 1fr; }
+  .rl-edit-row { grid-template-columns: 1fr; }
+  .rl-tags-row { grid-template-columns: 1fr; }
+
+  /* textarea and text inputs full-width */
+  .rl-editor textarea,
+  .rl-editor input[type="text"],
+  .rl-editor input[type="number"] {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* worktype picker wraps correctly */
+  .rl-wt-picker { flex-wrap: wrap; }
+  .rl-wt-pick { min-height: 44px; display: flex; align-items: center; }
+
+  /* applies-to tags input wraps */
+  .rl-tag-list { flex-wrap: wrap; }
+}
+
 /* =========================================================
    PRIOR LESSONS PANEL — surfaced inside the job drawer.
    This is the retrieval layer: when a job is opened, ratified
@@ -896,6 +929,10 @@
 .pl-reason-same-project {
   color: #A855F7;
   border-color: color-mix(in srgb, #A855F7 40%, var(--line));
+}
+.pl-reason-semantic {
+  color: #06B6D4;
+  border-color: color-mix(in srgb, #06B6D4 40%, var(--line));
 }
 
 .pl-mits-label {

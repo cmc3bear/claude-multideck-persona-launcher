@@ -91,8 +91,8 @@ personas/PACKER_AGENT.md
 personas/PRODUCER_AGENT.md
 personas/RESONANCE_AGENT.md
 
-# Local coordination state (project-specific, not distributable)
-coordination/
+# Local coordination runtime state (project-specific, not distributable)
+dispatch-framework/coordination/coord-state.json
 
 # Claude Code local project settings
 .claude/
@@ -103,9 +103,21 @@ scrap/
 # Binary archives
 Multideck.zip
 
-# State: dated backups and backup subdirectory
-state/*.bak-*
-state/backups/
+# State: runtime files, dated backups, and backup subdirectory
+dispatch-framework/state/*.bak-*
+dispatch-framework/state/*.log
+dispatch-framework/state/backups/
+dispatch-framework/state/migrations/
+dispatch-framework/state/manifests/build-audit-*.json
+
+# Runtime audio output (regenerated each session)
+dispatch-framework/tts-output/
+
+# Server logs and stray artifacts
+server.log
+server.err.log
+dispatch-agent.log
+$logFile
 
 # State: per-job acceptance criteria (operator working files)
 state/criteria-*.txt

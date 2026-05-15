@@ -3,12 +3,16 @@
 Usage: python set-voice.py <persona_callsign>
        python set-voice.py --voice <voice_id> --lang <lang_code> [--speed <speed>]
 
-Writes a per-session voice config keyed by the active Claude Code session UUID. The
-session UUID is discovered by inspecting the most-recently-modified transcript JSONL
-under ~/.claude/projects/<encoded-cwd>/, which the Stop hook also sees in its stdin
-payload — that lets parallel Claude Code sessions in the same CWD each have their
-own voice without overwriting a shared file. Falls back to CLAUDE_CODE_SSE_PORT,
-then a shared file, if discovery fails.
+Writes a per-session voice config keyed by the active Claude Code session UUID so
+parallel sessions each have their own voice without clobbering one another.
+
+Session key resolution (in priority order):
+  1. If CLAUDE_CODE_SSE_PORT is UUID-shaped (current Claude Code), use it directly.
+     This avoids JSONL discovery, which could pick the most-recently-active session
+     in the same CWD — a different concurrent session — and overwrite their callsign.
+  2. Legacy fallback: if CLAUDE_CODE_SSE_PORT is a short port number, discover the
+     UUID from the most-recently-modified JSONL under ~/.claude/projects/<cwd>/.
+  3. Final fallback: write to shared voice-config.json when no session ID is available.
 
 Each persona entry includes a 'callsign' field that the TTS hook prepends to the text
 so each voice introduces itself when speaking.
@@ -16,29 +20,46 @@ so each voice introduces itself when speaking.
 MultiDeck framework: see VOICE_MAP below for the full persona list.
 Users can extend VOICE_MAP with custom personas. Custom voice tensors are added via CUSTOM_VOICES.
 """
-import sys, os, json
+import sys, os, json, re
+
+_UUID_RE = re.compile(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', re.I)
 
 VOICE_MAP = {
-    "dispatch":           {"voice": "af_sky",    "lang": "a", "speed": 0.95, "callsign": "Dispatch"},
-    "architect":          {"voice": "bm_daniel", "lang": "b", "speed": 1.05, "callsign": "Architect"},
-    "engineer":           {"voice": "am_eric",   "lang": "a", "speed": 1.05, "callsign": "Engineer"},
-    "reviewer":           {"voice": "bm_lewis",  "lang": "b", "speed": 1.05, "callsign": "Reviewer"},
-    "researcher":         {"voice": "bf_emma",   "lang": "b", "speed": 1.05, "callsign": "Researcher"},
-    "launcher-engineer":  {"voice": "am_michael","lang": "a", "speed": 1.05, "callsign": "Launcher-Engineer"},
-    "voice-technician":   {"voice": "af_nova",   "lang": "a", "speed": 1.05, "callsign": "Voice-Technician"},
-    "persona-author":     {"voice": "af_heart",  "lang": "a", "speed": 1.0,  "callsign": "Persona-Author"},
-    "commercial-producer":{"voice": "bm_fable",  "lang": "b", "speed": 0.95, "callsign": "Commercial-Producer"},
-    "dungeon-master":     {"voice": "dm",        "lang": "a", "speed": 1.0,  "callsign": "Dungeon-Master"},
-    "dm":                 {"voice": "dm",        "lang": "a", "speed": 1.0,  "callsign": "Dungeon-Master"},
-    "frasier":            {"voice": "bm_george", "lang": "b", "speed": 1.0,  "callsign": "Frasier"},
-    "npc-agent":          {"voice": "am_adam",   "lang": "a", "speed": 1.0,  "callsign": "NPC"},
-    "npc":                {"voice": "am_adam",   "lang": "a", "speed": 1.0,  "callsign": "NPC"},
+    "dispatch":           {"voice": "af_sky",    "lang": "a", "speed": 0.85, "callsign": "Dispatch"},
+    "architect":          {"voice": "bm_daniel", "lang": "b", "speed": 0.95, "callsign": "Architect"},
+    "engineer":           {"voice": "am_eric",   "lang": "a", "speed": 0.95, "callsign": "Engineer"},
+    "reviewer":           {"voice": "bm_lewis",  "lang": "b", "speed": 0.95, "callsign": "Reviewer"},
+    "researcher":         {"voice": "bf_emma",   "lang": "b", "speed": 0.95, "callsign": "Researcher"},
+    "launcher-engineer":  {"voice": "am_michael","lang": "a", "speed": 0.95, "callsign": "Launcher-Engineer"},
+    "voice-technician":   {"voice": "af_nova",   "lang": "a", "speed": 0.95, "callsign": "Voice-Technician"},
+    "persona-author":     {"voice": "af_heart",  "lang": "a", "speed": 0.9,  "callsign": "Persona-Author"},
+    "commercial-producer":{"voice": "bm_fable",  "lang": "b", "speed": 0.85, "callsign": "Commercial-Producer"},
+    "dungeon-master":     {"voice": "dm",        "lang": "a", "speed": 0.9,  "callsign": "Dungeon-Master"},
+    "dm":                 {"voice": "dm",        "lang": "a", "speed": 0.9,  "callsign": "Dungeon-Master"},
+    "frasier":            {"voice": "bm_george", "lang": "b", "speed": 0.9,  "callsign": "Frasier"},
+    "daphne":             {"voice": "bf_emma",   "lang": "b", "speed": 0.9,  "callsign": "Daphne"},
+    "roz":                {"voice": "af_nova",   "lang": "a", "speed": 0.99,  "callsign": "Roz"},
+    "niles":              {"voice": "bm_fable",  "lang": "b", "speed": 0.9,  "callsign": "Niles"},
+    "martin":             {"voice": "am_adam",   "lang": "a", "speed": 0.85, "callsign": "Martin"},
+    "npc-agent":          {"voice": "am_adam",   "lang": "a", "speed": 0.9,  "callsign": "NPC"},
+    "npc":                {"voice": "am_adam",   "lang": "a", "speed": 0.9,  "callsign": "NPC"},
+    "foreman":            {"voice": "bf_lily",   "lang": "b", "speed": 0.95, "callsign": "Foreman"},
+    "kernel":             {"voice": "am_echo",   "lang": "a", "speed": 0.95, "callsign": "Kernel"},
+    "packer":             {"voice": "af_sarah",  "lang": "a", "speed": 0.95, "callsign": "Packer"},
+    "inspector":          {"voice": "af_bella",  "lang": "a", "speed": 0.9,  "callsign": "Inspector"},
+    "resonance":          {"voice": "af_nova",   "lang": "a", "speed": 0.95, "callsign": "Resonance"},
+    "producer":           {"voice": "af_nicole", "lang": "a", "speed": 0.85, "callsign": "Producer"},
+    "quorum":             {"voice": "af_alloy",  "lang": "a", "speed": 0.9,  "callsign": "Quorum"},
 
-    "default":            {"voice": "am_puck",   "lang": "a", "speed": 1.05, "callsign": ""},
+    # project:white-noise-studio
+    "mix-engineer":       {"voice": "am_fenrir", "lang": "a", "speed": 0.95, "callsign": "Mix-Engineer"},
+    "render-technician":  {"voice": "af_jessica","lang": "a", "speed": 0.95, "callsign": "Render-Technician"},
+
+    "default":            {"voice": "am_puck",   "lang": "a", "speed": 0.95, "callsign": ""},
 }
 
 # CUSTOM_VOICES: Add custom voice tensor mappings here.
-# Example: "my_voice": {"voice_pt": "/path/to/my_voice.pt", "lang": "a", "speed": 1.0, ...}
+# Example: "my_voice": {"voice_pt": "/path/to/my_voice.pt", "lang": "a", "speed": 0.9, ...}
 # See kokoro-speak.py for the full schema (includes ffmpeg post-processing chains).
 # Drive the path via env var so it works across machines without hardcoded paths:
 #   export DISPATCH_DM_VOICE_PT="/path/to/dm-voice.pt"
@@ -57,7 +78,7 @@ def main():
 
     # Manual voice override mode
     if args[0] == "--voice":
-        config = {"voice": args[1], "lang": "a", "speed": 1.05, "callsign": ""}
+        config = {"voice": args[1], "lang": "a", "speed": 0.95, "callsign": ""}
         i = 2
         while i < len(args):
             if args[i] == "--lang" and i + 1 < len(args):
@@ -80,8 +101,17 @@ def main():
             sys.exit(1)
 
     hooks_dir = os.path.dirname(os.path.abspath(__file__))
-    session_id = _discover_session_id()
     port = os.environ.get("CLAUDE_CODE_SSE_PORT")
+
+    # When CLAUDE_CODE_SSE_PORT is UUID-shaped (current Claude Code), use it directly
+    # as the sole session key — skip JSONL discovery. Discovery picks the most-recently-
+    # modified JSONL in the CWD, which can be a different concurrent session; writing
+    # that session's config key with this persona's callsign would clobber their voice.
+    if port and _UUID_RE.match(port):
+        session_id = port
+    else:
+        # Legacy: CLAUDE_CODE_SSE_PORT is a port number — discover the UUID from JSONL.
+        session_id = _discover_session_id()
 
     # Write to both the local hooks dir AND the Windows-side hooks dir where
     # kokoro-speak.py (the actual TTS runtime) reads voice configs from.
@@ -95,8 +125,6 @@ def main():
     for d in write_dirs:
         if session_id:
             paths_written.append(os.path.join(d, f"voice-config-{session_id}.json"))
-        if port:
-            paths_written.append(os.path.join(d, f"voice-config-{port}.json"))
     if not paths_written:
         paths_written.append(os.path.join(hooks_dir, "voice-config.json"))
 
@@ -107,8 +135,6 @@ def main():
 
     if session_id:
         label = f" (session {session_id[:8]}…)"
-    elif port:
-        label = f" (port {port})"
     else:
         label = " (shared fallback)"
     cs = f" as {config['callsign']}" if config.get('callsign') else ""

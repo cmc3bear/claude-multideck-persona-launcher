@@ -14,6 +14,7 @@ Designed for summaries longer than one minute — progress updates print to stde
 import sys
 import os
 import re
+from voice_scrub import scrub as _voice_scrub
 import tempfile
 import subprocess
 import time
@@ -25,40 +26,43 @@ FRAMEWORK_ROOT = SCRIPT_DIR.parent
 TTS_OUTPUT_DIR = Path(os.environ.get("DISPATCH_TTS_OUTPUT", FRAMEWORK_ROOT / "tts-output"))
 
 VOICE_MAP = {
-    "dispatch":            {"voice": "af_sky",    "lang": "a", "speed": 0.95, "callsign": "Dispatch"},
-    "architect":           {"voice": "bm_daniel", "lang": "b", "speed": 1.05, "callsign": "Architect"},
-    "engineer":            {"voice": "am_eric",   "lang": "a", "speed": 1.05, "callsign": "Engineer"},
-    "reviewer":            {"voice": "bm_lewis",  "lang": "b", "speed": 1.05, "callsign": "Reviewer"},
-    "researcher":          {"voice": "bf_emma",   "lang": "b", "speed": 1.05, "callsign": "Researcher"},
-    "launcher-engineer":   {"voice": "am_michael","lang": "a", "speed": 1.05, "callsign": "Launcher-Engineer"},
-    "voice-technician":    {"voice": "af_nova",   "lang": "a", "speed": 1.05, "callsign": "Voice-Technician"},
-    "persona-author":      {"voice": "af_heart",  "lang": "a", "speed": 1.0,  "callsign": "Persona-Author"},
-    "commercial-producer": {"voice": "bm_fable",  "lang": "b", "speed": 0.95, "callsign": "Commercial-Producer"},
-    "default":             {"voice": "am_puck",   "lang": "a", "speed": 1.05, "callsign": ""},
+    "dispatch":            {"voice": "af_sky",    "lang": "a", "speed": 0.85, "callsign": "Dispatch"},
+    "architect":           {"voice": "bm_daniel", "lang": "b", "speed": 0.95, "callsign": "Architect"},
+    "engineer":            {"voice": "am_eric",   "lang": "a", "speed": 0.95, "callsign": "Engineer"},
+    "reviewer":            {"voice": "bm_lewis",  "lang": "b", "speed": 0.95, "callsign": "Reviewer"},
+    "researcher":          {"voice": "bf_emma",   "lang": "b", "speed": 0.95, "callsign": "Researcher"},
+    "launcher-engineer":   {"voice": "am_michael","lang": "a", "speed": 0.95, "callsign": "Launcher-Engineer"},
+    "voice-technician":    {"voice": "af_nova",   "lang": "a", "speed": 0.95, "callsign": "Voice-Technician"},
+    "persona-author":      {"voice": "af_heart",  "lang": "a", "speed": 0.9,  "callsign": "Persona-Author"},
+    "commercial-producer": {"voice": "bm_fable",  "lang": "b", "speed": 0.85, "callsign": "Commercial-Producer"},
+    "dungeon-master":      {"voice": "dm",        "lang": "a", "speed": 0.9,  "callsign": "Dungeon-Master"},
+    "dm":                  {"voice": "dm",        "lang": "a", "speed": 0.9,  "callsign": "Dungeon-Master"},
+    "npc-agent":           {"voice": "am_adam",   "lang": "a", "speed": 0.9,  "callsign": "NPC"},
+    "npc":                 {"voice": "am_adam",   "lang": "a", "speed": 0.9,  "callsign": "NPC"},
+    "frasier":             {"voice": "bm_george", "lang": "b", "speed": 0.9,  "callsign": "Frasier"},
+    "daphne":              {"voice": "bf_emma",   "lang": "b", "speed": 0.9,  "callsign": "Daphne"},
+    "roz":                 {"voice": "af_nova",   "lang": "a", "speed": 0.99,  "callsign": "Roz"},
+    "niles":               {"voice": "bm_fable",  "lang": "b", "speed": 0.9,  "callsign": "Niles"},
+    "martin":              {"voice": "am_adam",   "lang": "a", "speed": 0.85, "callsign": "Martin"},
+    "foreman":             {"voice": "bf_lily",   "lang": "b", "speed": 0.95, "callsign": "Foreman"},
+    "kernel":              {"voice": "am_echo",   "lang": "a", "speed": 0.95, "callsign": "Kernel"},
+    "packer":              {"voice": "af_sarah",  "lang": "a", "speed": 0.95, "callsign": "Packer"},
+    "inspector":           {"voice": "af_bella",  "lang": "a", "speed": 0.9,  "callsign": "Inspector"},
+    "resonance":           {"voice": "af_nova",   "lang": "a", "speed": 0.95, "callsign": "Resonance"},
+    "producer":            {"voice": "af_nicole", "lang": "a", "speed": 0.85, "callsign": "Producer"},
+    "quorum":              {"voice": "af_alloy",  "lang": "a", "speed": 0.9,  "callsign": "Quorum"},
+    # project:white-noise-studio
+    "mix-engineer":        {"voice": "am_fenrir", "lang": "a", "speed": 0.95, "callsign": "Mix-Engineer"},
+    "render-technician":   {"voice": "af_jessica","lang": "a", "speed": 0.95, "callsign": "Render-Technician"},
+    "default":             {"voice": "am_puck",   "lang": "a", "speed": 0.95, "callsign": ""},
 }
 
 CUSTOM_VOICES = {}
 
 
 def scrub_text(text: str) -> str:
-    text = text.replace("\u2014", ", ")
-    text = text.replace("\u2013", ", ")
-    text = text.replace("\u2015", ", ")
-    text = text.replace("`", "")
-    text = text.replace("~", " ")
-    text = text.replace("|", ", ")
-    text = text.replace("[", "").replace("]", "")
-    text = text.replace("{", "").replace("}", "")
-    text = text.replace("<", "").replace(">", "")
-    text = text.replace("*", "")
-    text = text.replace("#", "")
-    text = text.replace("_", " ")
-    text = text.replace("-", " ")
-    text = text.replace("/", " ")
-    text = text.replace("\\", " ")
-    text = re.sub(r"https?://\S+", "", text)
-    text = re.sub(r"\s+", " ", text).strip()
-    return text
+    return _voice_scrub(text, max_words=None)
+
 
 
 def wav_to_mp3(wav_path: str, mp3_path: str) -> bool:

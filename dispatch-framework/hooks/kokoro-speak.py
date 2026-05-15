@@ -17,6 +17,7 @@ Earlier updates:
 import sys, os, json, tempfile, subprocess, time
 
 from kokoro_queue import enqueue as queue_enqueue, drain as queue_drain, play_ffplay
+from voice_scrub import scrub as _voice_scrub
 
 # Custom voice configs with post-processing chains
 # Add your custom voice tensors here. Example:
@@ -108,26 +109,7 @@ def main():
     if not text:
         return
 
-    # Scrub special characters that TTS reads aloud
-    import re
-    text = text.replace('\u2014', ', ')
-    text = text.replace('\u2013', ', ')
-    text = text.replace('\u2015', ', ')
-    text = text.replace('—', ', ')
-    text = text.replace('–', ', ')
-    text = text.replace('~', ' ')
-    text = text.replace('`', '')
-    text = text.replace('|', ', ')
-    text = text.replace('[', '').replace(']', '')
-    text = text.replace('{', '').replace('}', '')
-    text = text.replace('<', '').replace('>', '')
-    text = text.replace('*', '')
-    text = text.replace('#', '')
-    text = text.replace('/', ' ')
-    text = text.replace('\\', ' ')
-    text = text.replace('_', ' ')
-    text = text.replace('-', ' ')
-    text = re.sub(r'\s+', ' ', text).strip()
+    text = _voice_scrub(text, max_words=150)
 
     # Read voice config — try session-specific first, then shared fallback
     hooks_dir = os.path.dirname(os.path.abspath(__file__))

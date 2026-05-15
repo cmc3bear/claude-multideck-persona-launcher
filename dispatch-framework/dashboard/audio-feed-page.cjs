@@ -160,6 +160,25 @@ function renderAudioFeedPage() {
     color: #FF00AA;
     text-shadow: 0 0 4px #FF00AA;
   }
+  /* C6: mobile layout — MULTI-UI-0068 */
+  @media (max-width: 768px) {
+    body { padding: 16px; }
+    h1 { font-size: 14px; letter-spacing: 2px; }
+    .sub { font-size: 12px; margin-bottom: 18px; }
+    .status { top: 12px; right: 12px; font-size: 12px; }
+    /* touch-sized buttons */
+    button { min-height: 44px; padding: 0 14px; font-size: 9px; }
+    .controls { gap: 8px; }
+    /* now-playing readable at narrow widths */
+    .now-playing { padding: 14px; }
+    .np-file { font-size: 16px; word-break: break-word; }
+    li { font-size: 14px; word-break: break-word; }
+  }
+  @media (max-width: 480px) {
+    h1 { font-size: 11px; }
+    button { font-size: 8px; }
+    .controls { flex-wrap: wrap; }
+  }
 </style>
 </head>
 <body>

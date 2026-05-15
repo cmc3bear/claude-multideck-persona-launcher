@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-PreToolUse hook for AskUserQuestion -> MultiDeck dashboard glyph modal.
+PreToolUse hook for AskUserQuestion → MultiDeck dashboard glyph modal.
 
 Flow:
   1. Claude calls AskUserQuestion. Claude Code fires PreToolUse hook with this
@@ -21,7 +21,7 @@ Flow:
      payload with the answers, so Claude treats the question as answered
      without ever rendering its native UI.
 
-Failure modes (all degrade gracefully -> exit 0 with empty output -> Claude
+Failure modes (all degrade gracefully — exit 0 with empty output → Claude
 falls back to its native AskUserQuestion UI):
   - tool_name is not AskUserQuestion (passthrough)
   - DISPATCH_STATE_DIR not set or directory not writable (passthrough)
@@ -29,9 +29,7 @@ falls back to its native AskUserQuestion UI):
     message so Claude can adapt)
   - Any other unexpected exception (passthrough, log to stderr)
 
-See docs/STEAMDECK_SETUP.md for the operator-facing controls and the
-dashboard routes /events/questions (SSE) and POST /questions/<sid>/answer
-that close the loop in dashboard/server.cjs.
+Reference: dispatch-framework/coordination/research-question-detection.md
 """
 
 import json

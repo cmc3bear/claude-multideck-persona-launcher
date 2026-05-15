@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Now Playing · MultiDeck</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    background: #0a0a0f;
+    font-family: 'Courier New', monospace;
+    width: 240px;
+    min-height: 340px;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  /* ── Launch screen (shown when popup blocked) ───────────────── */
+  #launch-screen {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 340px;
+    gap: 16px;
+    color: #00ffaa;
+  }
+  #launch-screen p { font-size: 11px; letter-spacing: 0.1em; color: #336655; text-align: center; padding: 0 20px; }
+  #launch-btn {
+    padding: 8px 20px;
+    border: 1px solid #00aa66;
+    border-radius: 4px;
+    background: #0e1414;
+    color: #00ffaa;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+  }
+  #launch-btn:hover { background: #152020; }
+
+  /* ── Float-on-top button (top-right corner of portrait) ─────── */
+  #float-btn {
+    position: absolute;
+    top: 7px; right: 7px;
+    padding: 3px 7px;
+    border: 1px solid #336655;
+    border-radius: 3px;
+    background: rgba(10,10,15,0.82);
+    color: #00aa77;
+    font-family: 'Courier New', monospace;
+    font-size: 9px;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    z-index: 10;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  #float-btn:hover { border-color: #00ffaa; color: #00ffaa; }
+
+  /* ── Main widget ────────────────────────────────────────────── */
+  #widget { display: block; }
+
+  /* ── Portrait ──────────────────────────────────────────────── */
+  #portrait-wrap {
+    position: relative;
+    width: 240px;
+    height: 160px;
+    overflow: hidden;
+    background: #111;
+  }
+
+  #portrait {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top center;
+    transition: filter 0.4s ease, opacity 0.4s ease;
+    display: block;
+  }
+
+  body.idle #portrait {
+    filter: grayscale(0.2) brightness(0.85);
+    opacity: 0.9;
+  }
+
+  /* scan-line overlay */
+  #portrait-wrap::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg, transparent, transparent 2px,
+      rgba(0,0,0,0.18) 2px, rgba(0,0,0,0.18) 4px
+    );
+    pointer-events: none;
+  }
+
+  /* ── Waveform bars ──────────────────────────────────────────── */
+  #wave {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 44px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 3px;
+    padding: 0 12px 6px;
+    background: linear-gradient(transparent, rgba(0,0,0,0.75));
+    transition: opacity 0.3s;
+  }
+
+  body.idle #wave { opacity: 0; }
+
+  .bar {
+    flex: 1; max-width: 10px;
+    background: #00ffaa;
+    border-radius: 2px 2px 0 0;
+    min-height: 3px;
+    transform-origin: bottom;
+    box-shadow: 0 0 4px #00ffaa88;
+  }
+
+  .bar:nth-child(1)  { animation: pulse 0.7s ease-in-out infinite 0.00s; }
+  .bar:nth-child(2)  { animation: pulse 0.7s ease-in-out infinite 0.08s; }
+  .bar:nth-child(3)  { animation: pulse 0.7s ease-in-out infinite 0.16s; }
+  .bar:nth-child(4)  { animation: pulse 0.7s ease-in-out infinite 0.24s; }
+  .bar:nth-child(5)  { animation: pulse 0.7s ease-in-out infinite 0.32s; }
+  .bar:nth-child(6)  { animation: pulse 0.7s ease-in-out infinite 0.40s; }
+  .bar:nth-child(7)  { animation: pulse 0.7s ease-in-out infinite 0.32s; }
+  .bar:nth-child(8)  { animation: pulse 0.7s ease-in-out infinite 0.24s; }
+  .bar:nth-child(9)  { animation: pulse 0.7s ease-in-out infinite 0.16s; }
+  .bar:nth-child(10) { animation: pulse 0.7s ease-in-out infinite 0.08s; }
+
+  @keyframes pulse {
+    0%, 100% { height: 4px; }
+    50%       { height: 32px; }
+  }
+
+  body.idle .bar { animation: none; height: 3px; }
+
+  /* ── Name strip ─────────────────────────────────────────────── */
+  #info {
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #0d0d14;
+    border-top: 1px solid #1a1a2e;
+  }
+
+  #callsign {
+    font-size: 11px;
+    font-weight: bold;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: #00ffaa;
+    text-shadow: 0 0 8px #00ffaa88;
+    transition: color 0.4s, text-shadow 0.4s;
+  }
+
+  body.idle #callsign { color: #336655; text-shadow: none; }
+
+  #queue-badge {
+    font-size: 9px;
+    color: #556655;
+    margin-left: 6px;
+    letter-spacing: 0.05em;
+  }
+  body.playing #queue-badge { color: #00aa77; }
+
+  /* ── Controls ───────────────────────────────────────────────── */
+  #controls {
+    height: 46px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    background: #090910;
+    border-top: 1px solid #1a1a2e;
+  }
+
+  .btn {
+    width: 32px; height: 32px;
+    border: 1px solid #1e2e2e;
+    border-radius: 50%;
+    background: #0e1414;
+    color: #00cc88;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s;
+    line-height: 1;
+  }
+  .btn:hover { background: #152020; border-color: #00cc88; box-shadow: 0 0 8px #00cc8844; color: #00ffaa; }
+  .btn:active { background: #0a1a1a; transform: scale(0.92); }
+  .btn.primary { width: 38px; height: 38px; font-size: 16px; border-color: #00aa66; }
+  body.idle .btn { color: #2a4a3a; border-color: #1a2a2a; }
+  body.idle .btn:hover { color: #00cc88; border-color: #00cc88; background: #0e1414; box-shadow: none; }
+  body.paused #btn-pause { color: #00ffaa; border-color: #00aa66; }
+</style>
+</head>
+<body class="idle">
+
+<!-- Shown when popup is blocked — user clicks to open manually -->
+<div id="launch-screen">
+  <span style="font-size:13px;letter-spacing:0.1em">▶ NOW PLAYING</span>
+  <button id="launch-btn" onclick="openPopup()">OPEN WIDGET</button>
+  <p>Popup was blocked. Click above or allow popups for this site.</p>
+</div>
+
+<!-- The actual widget UI -->
+<div id="widget">
+  <div id="portrait-wrap">
+    <img id="portrait" src="/launcher/assets/portraits/dispatch.png" alt="">
+    <div id="wave">
+      <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+      <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+      <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+      <div class="bar"></div>
+    </div>
+    <button id="float-btn" title="Float always on top" onclick="launchFloat()">⬆ FLOAT</button>
+  </div>
+
+  <div id="info">
+    <span id="callsign">STANDBY</span>
+    <span id="queue-badge"></span>
+  </div>
+
+  <div id="controls">
+    <button class="btn"         id="btn-back"  title="Back"         onclick="ctl('back')">⏮</button>
+    <button class="btn primary" id="btn-pause" title="Pause/Resume" onclick="togglePause()">⏸</button>
+    <button class="btn"         id="btn-skip"  title="Skip"         onclick="ctl('skip')">⏭</button>
+  </div>
+</div>
+
+<script>
+  const API  = '/api/kokoro/now-playing';
+  const CTRL = '/api/kokoro/control';
+  const POPUP_FEATURES = 'width=240,height=340,resizable=no,scrollbars=no,location=no,toolbar=no,menubar=no,status=no,popup=yes';
+
+  let paused = false;
+  let lastCallsign = '';
+  let pollTimer = null;
+
+  // Element refs cached before any DOM move — survive transfer into PiP document
+  let elPortrait, elCallsign, elQueueBadge, elBtnPause, elFloatBtn;
+
+  function cacheRefs() {
+    elPortrait   = document.getElementById('portrait');
+    elCallsign   = document.getElementById('callsign');
+    elQueueBadge = document.getElementById('queue-badge');
+    elBtnPause   = document.getElementById('btn-pause');
+    elFloatBtn   = document.getElementById('float-btn');
+  }
+
+  // ── Detection helpers ───────────────────────────────────────────
+  function isPopup() {
+    try {
+      return !!window.opener || window.outerWidth <= 300 || new URLSearchParams(location.search).has('popup');
+    } catch { return false; }
+  }
+
+  function isPipWindow() {
+    try { return window.documentPictureInPicture?.window === window; } catch { return false; }
+  }
+
+  // ── Popup fallback ──────────────────────────────────────────────
+  function openPopup() {
+    window.open(window.location.href, 'multideck-widget', POPUP_FEATURES);
+  }
+
+  // ── "FLOAT" button handler ──────────────────────────────────────
+  async function launchFloat() {
+    if (window.documentPictureInPicture) {
+      await launchPip();
+    } else {
+      // No PiP API — degrade to popup
+      const popup = window.open(
+        window.location.href + (location.search ? '&popup=1' : '?popup=1'),
+        'multideck-widget', POPUP_FEATURES);
+      if (popup) {
+        showLaunched('WIDGET LAUNCHED', 'you can close this tab');
+      } else {
+        document.getElementById('widget').style.display = 'none';
+        document.getElementById('launch-screen').style.display = 'flex';
+      }
+    }
+  }
+
+  // ── Document Picture-in-Picture ────────────────────────────────
+  async function launchPip() {
+    let pipWin;
+    try {
+      pipWin = await window.documentPictureInPicture.requestWindow({
+        width: 240,
+        height: 340,
+        disallowReturnToOpener: false,
+      });
+    } catch {
+      // User cancelled or unsupported — stay in main tab
+      return;
+    }
+
+    // Copy stylesheet into PiP window so CSS rules work
+    const styleEl = document.createElement('style');
+    styleEl.textContent = document.querySelector('style').textContent;
+    pipWin.document.head.appendChild(styleEl);
+    pipWin.document.documentElement.style.cssText = 'background:#0a0a0f;overflow:hidden';
+    pipWin.document.body.style.cssText = 'background:#0a0a0f;margin:0;padding:0;overflow:hidden';
+    pipWin.document.body.className = document.body.className;
+
+    // Hide the float button inside PiP — no nesting PiP-in-PiP
+    if (elFloatBtn) elFloatBtn.style.display = 'none';
+
+    // Move widget DOM into PiP window
+    const widget = document.getElementById('widget');
+    pipWin.document.body.appendChild(widget);
+
+    // Replace this tab with a status message
+    showLaunched('WIDGET FLOATING', 'always on top');
+
+    // Poll in this JS context; body class updates target pipWin.document.body
+    // so the CSS idle/playing selectors work on the correct document
+    clearInterval(pollTimer);
+    pollTimer = setInterval(() => _pollImpl(pipWin.document.body), 300);
+    _pollImpl(pipWin.document.body);
+
+    // When PiP closes, restore widget to this tab
+    pipWin.addEventListener('pagehide', () => {
+      clearInterval(pollTimer);
+      pollTimer = null;
+      document.body.style.cssText = '';
+      document.body.className = 'idle';
+      document.body.innerHTML = '';
+      document.body.appendChild(widget);
+      if (elFloatBtn) elFloatBtn.style.display = '';
+      startPolling();
+    });
+  }
+
+  function showLaunched(line1, line2) {
+    document.getElementById('widget').style.display = 'none';
+    document.getElementById('launch-screen').style.display = 'none';
+    document.body.style.cssText = 'background:#0a0a0f;display:flex;align-items:center;justify-content:center;height:100vh;width:100vw';
+    document.body.innerHTML = `<p style="color:#336655;font-family:Courier New,monospace;font-size:11px;letter-spacing:.1em;text-align:center">${line1}<br><span style="color:#1a3322;font-size:9px">${line2}</span></p>`;
+  }
+
+  // ── Playback controls ───────────────────────────────────────────
+  async function ctl(action) {
+    await fetch(CTRL, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({action}) }).catch(()=>{});
+  }
+
+  async function togglePause() {
+    if (paused) {
+      paused = false;
+      if (elBtnPause) elBtnPause.textContent = '⏸';
+      await ctl('resume');
+    } else {
+      paused = true;
+      if (elBtnPause) elBtnPause.textContent = '▶';
+      await ctl('pause');
+    }
+  }
+
+  // ── Polling ─────────────────────────────────────────────────────
+  function portraitUrl(callsign) {
+    if (!callsign) return '/launcher/assets/portraits/dispatch.png';
+    return '/launcher/assets/portraits/' + callsign.toLowerCase().replace(/[\s_]+/g, '-') + '.png';
+  }
+
+  // bodyEl is the <body> of whichever document currently holds the widget
+  // (original doc or PiP doc) so idle/playing class selectors apply correctly
+  async function _pollImpl(bodyEl) {
+    try {
+      const data = await fetch(API + '?_=' + Date.now()).then(r => r.json());
+      const { callsign = '', playing = false, queue_depth = 0 } = data;
+
+      if (callsign !== lastCallsign) {
+        if (elPortrait) {
+          elPortrait.style.opacity = '0';
+          elPortrait.src = portraitUrl(callsign);
+          elPortrait.onload  = () => { elPortrait.style.opacity = ''; };
+          elPortrait.onerror = () => {
+            elPortrait.src = '/launcher/assets/portraits/dispatch.png';
+            elPortrait.style.opacity = '';
+          };
+        }
+        lastCallsign = callsign;
+      }
+
+      if (elCallsign)   elCallsign.textContent  = callsign ? callsign.toUpperCase() : 'STANDBY';
+      if (elQueueBadge) elQueueBadge.textContent = queue_depth > 0 ? '+' + queue_depth : '';
+
+      bodyEl.classList.toggle('playing', !!playing);
+      bodyEl.classList.toggle('idle', !playing);
+
+      if (playing && paused) {
+        paused = false;
+        if (elBtnPause) elBtnPause.textContent = '⏸';
+        bodyEl.classList.remove('paused');
+      }
+    } catch { /* server down — keep last state */ }
+  }
+
+  function startPolling() {
+    clearInterval(pollTimer);
+    _pollImpl(document.body);
+    pollTimer = setInterval(() => _pollImpl(document.body), 300);
+  }
+
+  // ── Init ─────────────────────────────────────────────────────────
+  (function init() {
+    cacheRefs();
+
+    if (isPipWindow()) {
+      // Already inside a PiP window (e.g. navigated directly) — just show and poll
+      if (elFloatBtn) elFloatBtn.style.display = 'none';
+      document.getElementById('launch-screen').style.display = 'none';
+      document.getElementById('widget').style.display = 'block';
+      startPolling();
+      return;
+    }
+
+    if (isPopup()) {
+      // Regular popup (non-PiP) — show widget and poll, no float button needed
+      if (elFloatBtn) elFloatBtn.style.display = 'none';
+      document.getElementById('launch-screen').style.display = 'none';
+      document.getElementById('widget').style.display = 'block';
+      startPolling();
+      return;
+    }
+
+    // Main tab: show widget + float button
+    // If PiP is available the button triggers launchPip(); otherwise it degrades to popup.
+    // Either way the widget is live in this tab until the user clicks FLOAT.
+    document.getElementById('launch-screen').style.display = 'none';
+    document.getElementById('widget').style.display = 'block';
+    if (elFloatBtn && !window.documentPictureInPicture) {
+      // Retitle button to set expectations when degrading to popup
+      elFloatBtn.textContent = '⬆ POP';
+    }
+    startPolling();
+  })();
+</script>
+</body>
+</html>
