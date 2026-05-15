@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.7] - 2026-05-15
+
+Integration release. Merges origin/main feature work (correction tracking pipeline, Internal Affairs persona, gamepad rebinding, gamepad tutorial, Steam Deck screenshots) with local-only operational infrastructure (dispatch-framework/ subdirectory migration, coordination server stack, now-playing widget, mobile-responsive dashboard, voice subsystem hardening).
+
+### Added
+
+- **dispatch-framework/ subdirectory layout.** All framework internals (personas, hooks, scripts, dashboard, docs, templates, examples, commercials, persona-wizard, data, state, styles) moved under `dispatch-framework/`. Top-level reserved for README, LICENSE, CHANGELOG, CLAUDE.md, CONTRIBUTING, install scripts, and Steamworks packaging. Documented in CLAUDE.md.
+- **Coordination server stack** (`dispatch-framework/coordination/`). Pure-stdlib Python HTTP server on port 3047 with REST + SSE routes for inter-agent coordination: `/todo/complete`, `/todo/add`, `/resource/claim`, `/resource/release`, `/announce`, `/lesson`, `/state.json`, `/events`. Hook clients for announce, complete, resource, lesson. Dashboard UI at `/`. Persistent state in `coord-state.json` (gitignored runtime).
+- **Now-playing widget** (`dispatch-framework/dashboard/widget.html` + `audio-feed-page.cjs`). Browser-embeddable widget showing the currently-playing Kokoro TTS clip with skip/pause/back controls. Backed by `kokoro_queue.py` signal files.
+- **Mobile-responsive dashboard.** `shell.css`, `lessons.css`, `patterns.css` 768px breakpoints: nav rail collapses to bottom tab strip, single-column layout, 44px touch targets on all interactive elements, heatmap matrices scroll horizontally on narrow viewports.
+- **Voice subsystem hardening.** Priority queue (`kokoro_queue.py`) with P0 lane, spillover queue, retry-on-failure, and atomic-mkdir drainer mutex. UUID-priority session keying in `set-voice.py` prevents parallel-session voice config clobbering. Callsign prepending in `kokoro-speak.py` and `kokoro-generate-mp3.py` announces every voice with its persona name before synthesis.
+- **Internal lessons-learned playbooks** (`dispatch-framework/lessons-learned/`). Regression-troubleshooting and video-production checklists captured from real incidents.
+
+### Changed
+
+- **`hook-announce.py` UTF-8 stdio fix.** Adds `sys.stdout.reconfigure(encoding='utf-8')` and same for stderr so the Unicode arrow in `[announce] <from> → <to>: <text>` doesn't crash under Windows' default cp1252 codec when callers don't set PYTHONIOENCODING.
+- **`personas.json` roster** — full roster minus `test1` (pipeline-validation persona removed per operator intent; matching VOICE_MAP cleanup in `set-voice.py`, `kokoro-generate-mp3.py`, `kokoro-summary.py`).
+- **`.gitignore`** — narrowed coordination/ pattern from generic to specific (only `coord-state.json` runtime ignored, server code itself tracked). Added runtime ignores for `tts-output/`, `state/*.bak-*`, `state/backups/`, `state/migrations/`, `server.log`, `dispatch-agent.log`, stray PowerShell `$logFile` artifacts.
+
+### Migration notes
+
+- Local main had drifted 14 commits ahead and 61 commits behind origin/main. The reset-and-replay strategy was: hard-reset local main to origin/main, then bring back local-only operational features (coordination/, hooks/, mobile CSS, now-playing widget, lessons-learned/) as a single coherent integration commit. The 13 individual local commits are preserved on the `wip/pre-reset-main` branch for archaeology.
+- Version went from local-claimed v0.7.4 (never tagged on origin) to v0.7.7 to reflect actual feature count since v0.7.3: 4 origin features (correction tracking + Internal Affairs, gamepad bindings, gamepad tutorial, screenshots) plus the local integration commit.
+
+## [0.7.3-prerelease] - 2026-05-13
+
+Previously documented under [Unreleased] before the v0.7.7 integration. Content rolled forward as-is:
+
 ### Added
 
 - **Correction tracking pipeline.** Workspace-wide system that watches every Claude Code session for mistake-acknowledgement language and pipes detected events through a validation → interview → resolution flow. Components: (1) a global `Stop` hook (`~/.claude/hooks/correction-detector.py`, installed outside this repo) that regex-scans the assistant's just-completed response for HIGH/MEDIUM confidence acknowledgement phrases and appends to `F:\corrections\corrections.jsonl`; (2) a new **Internal Affairs** persona (`personas/INTERNAL_AFFAIRS_AGENT.md`, color `#64748B`, slate) that walks the operator through pending entries to validate, categorize (knowledge/attention/process/tool-misuse/context-stale/instruction-conflict), and assign severity; (3) `scripts/interview-agent.py` — hourly cron that asks the originating persona "what have you actually changed since" for each operator-validated entry, parses STATUS/EVIDENCE/NOTES output, appends to `fix_attempts[]`, auto-closes on STRONG evidence; (4) `scripts/correction-cron-install.ps1` — Windows Scheduled Task installer with `-Backend claude-code|local` switch (local uses Ollama, default uses Claude Code with grep/read tool access). Trigger semantics are agent-acknowledgement-driven, not user-pushback-driven — the agent owning the mistake is the truth signal. Full docs at `docs/CORRECTION_TRACKING.md`.

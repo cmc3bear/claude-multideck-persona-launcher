@@ -1,6 +1,6 @@
 {
   "name": "claude-multideck-persona-launcher",
-  "version": "0.1.0",
+  "version": "0.7.7",
   "description": "MultiDeck: forkable multi-agent coordination framework for Claude Code with personas, cyberpunk launcher, Kokoro TTS, and OQE-disciplined job board",
   "main": "dashboard/server.cjs",
   "scripts": {
