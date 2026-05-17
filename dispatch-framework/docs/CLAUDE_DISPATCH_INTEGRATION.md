@@ -352,6 +352,67 @@ Global TTS daemon configuration:
 
 ---
 
+---
+
+## Coordination Server Connectivity
+
+The coordination server (`F:/03-INFRASTRUCTURE/coordination/server.py`) runs on the Windows host and binds `0.0.0.0:3047`. How you reach it depends on your transport.
+
+### Transport Matrix
+
+| Transport | Reach coord server at |
+|---|---|
+| Windows Terminal (native) | `http://localhost:3047` |
+| WSL + tmux | Derive gateway: `http://$(ip route\|grep default\|awk '{print $3}'):3047` |
+| Steam Deck + Tailscale | `http://<windows-host-tailscale-ip>:3047` |
+
+### Setting DISPATCH_COORD_URL (WSL)
+
+WSL sessions must export `DISPATCH_COORD_URL` before calling any hook, or let `hook-announce.py` auto-derive it:
+
+```bash
+# Manual: derive Windows host IP from WSL default route
+WIN_IP=$(ip route | grep default | awk '{print $3}')
+export DISPATCH_COORD_URL=http://${WIN_IP}:3047
+
+# Then call the hook normally
+python3 dispatch-framework/coordination/hook-announce.py architect "online" --to dispatch
+```
+
+`hook-announce.py` also auto-detects WSL by reading `/proc/version` and derives the gateway automatically if `DISPATCH_COORD_URL` is not set. Exporting the variable is recommended for clarity and for other hooks (`hook-complete.py`, `hook-resource.py`) that do not auto-detect.
+
+### Backslash Rule
+
+POST `/announce` returns HTTP 400 if the message body contains raw backslash characters. The server's JSON Content-Length parser rejects them. Always use forward slashes in path references inside message text:
+
+```bash
+# Wrong — causes 400
+python3 hook-announce.py architect "artifact at dispatch-framework\\state\\output.md"
+
+# Correct — forward slashes only
+python3 hook-announce.py architect "artifact at dispatch-framework/state/output.md"
+```
+
+`hook-announce.py` automatically replaces `\` with `/` in the message argument, but message text assembled in other hooks must sanitize manually.
+
+### Available Routes
+
+| Method | Route | Purpose |
+|---|---|---|
+| GET | `/state.json` | Full server state (agents, messages, resources, lessons) |
+| GET | `/messages` | Message log only |
+| GET | `/events` | SSE stream of all state changes |
+| POST | `/announce` | Broadcast a message `{"from":"agent","to":"all","text":"..."}` |
+| POST | `/todo/add` | Add a todo to a registered agent |
+| POST | `/todo/complete` | Mark a todo done |
+| POST | `/resource/claim` | Claim a shared resource |
+| POST | `/resource/release` | Release a resource |
+| POST | `/lesson` | Post a pipeline error lesson |
+
+Note: `/todo/add` and `/todo/complete` require the agent to be registered in the server seed state (`INITIAL['agents']` in `server.py`). Announce works for any sender string.
+
+---
+
 ## Further Reading
 
 - `docs/VOICE_RULES.md` — TTS-safe writing for all agents

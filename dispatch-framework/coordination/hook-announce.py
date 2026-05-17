@@ -7,15 +7,36 @@ Usage:
 
 Environment:
   DISPATCH_COORD_URL  Override server URL (default: http://localhost:3047)
-                      WSL/tmux: http://$(ip route|grep default|awk '{print $3}'):3047
+                      Set this when the server is not reachable via localhost.
   DISPATCH_COORD_PORT Override port only (ignored when DISPATCH_COORD_URL is set)
+
+Transport-specific setup:
+  Windows Terminal (native):
+    No setup needed — coord server is at localhost:3047.
+
+  WSL + tmux:
+    Coord server runs on Windows host; WSL loopback does not cross the bridge.
+    Derive the Windows-host IP from the default route before calling:
+
+      WIN_IP=$(ip route | grep default | awk '{print $3}')
+      export DISPATCH_COORD_URL=http://${WIN_IP}:3047
+
+    This hook auto-detects WSL by reading /proc/version and derives the gateway
+    if DISPATCH_COORD_URL is unset. Exporting explicitly is recommended so that
+    hook-complete.py and hook-resource.py also reach the server.
+
+  Steam Deck + Tailscale:
+    export DISPATCH_COORD_URL=http://<windows-host-tailscale-ip>:3047
 
 Examples:
   python3 hook-announce.py dispatch "Stand by — routing query incoming"
   python3 hook-announce.py dispatch "Engineer: pause T2V run" --to engineer
   python3 hook-announce.py engineer "T2V smoke test complete — Producer unblocked" --to all
 
-Note: avoid backslashes in message text — use forward slashes for paths.
+Note: avoid backslashes in message text — use forward slashes for path references.
+  Wrong:  "artifact at dispatch-framework\\state\\output.md"
+  Correct: "artifact at dispatch-framework/state/output.md"
+  (This hook sanitizes backslashes automatically, but other callers must do it manually.)
 """
 import json, sys, urllib.request, os, subprocess
 

@@ -119,6 +119,59 @@ Significant technical or process decisions are documented with full OQE frames:
 
 ---
 
+## 8. Persona Startup Protocol (Coordination Check-In)
+
+Every persona session must check in with the coordination server on startup. The check-in pattern differs by transport.
+
+### Windows Terminal (native)
+
+```bash
+python3 dispatch-framework/coordination/hook-announce.py <persona> \
+  "orient online: <N> active jobs. focus: <one-line priority>." \
+  --to dispatch
+```
+
+Coord server is at `localhost:3047` — no additional setup needed.
+
+### WSL + tmux
+
+The Windows-host coord server is not reachable via `localhost` from WSL. Derive the gateway IP from the default route before announcing:
+
+```bash
+WIN_IP=$(ip route | grep default | awk '{print $3}' 2>/dev/null)
+export DISPATCH_COORD_URL=http://${WIN_IP}:3047
+python3 dispatch-framework/coordination/hook-announce.py <persona> \
+  "orient online: <N> active jobs. focus: <one-line priority>." \
+  --to dispatch
+```
+
+`hook-announce.py` auto-detects WSL and derives the gateway when `DISPATCH_COORD_URL` is unset, but exporting it explicitly is recommended so `hook-complete.py` and `hook-resource.py` also reach the server without manual intervention.
+
+### Steam Deck + Tailscale
+
+```bash
+export DISPATCH_COORD_URL=http://<windows-host-tailscale-ip>:3047
+python3 dispatch-framework/coordination/hook-announce.py <persona> \
+  "orient online" --to dispatch
+```
+
+### What to include in the startup announce
+
+```
+"orient online: <N> active jobs, <N> closed. focus: <one-line current priority>."
+```
+
+Example:
+```
+"orient online: 3 active jobs, 12 closed. focus: MULTI-DOCS-0089 transport matrix doc."
+```
+
+### Backslash rule
+
+Avoid backslashes in announce message text. The coord server Content-Length parser returns 400 on raw backslash sequences. Use forward slashes for any path references in messages. See `docs/CLAUDE_DISPATCH_INTEGRATION.md` for details.
+
+---
+
 ## Adoption
 
 Each project team is responsible for adopting these standards by:
