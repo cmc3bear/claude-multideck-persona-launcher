@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.8] - 2026-05-17
+
+WSL coordination fixes and documentation. No new features — patch release.
+
+### Fixed
+
+- **`hook-announce.py` WSL gateway auto-detect.** When running inside WSL2, the hook now derives the Windows host IP from the default route (`ip route | grep default | awk '{print $3}'`) so it reaches the coordination server without requiring `DISPATCH_COORD_URL` to be set manually. Falls back to `localhost` on non-WSL hosts. Previously WSL sessions could not reach the coord server at all unless the env var was pre-set.
+- **`hook-announce.py` backslash sanitization.** Message text has backslashes replaced with forward slashes before POST. The coordination server's Content-Length parser returns 400 on raw backslashes (Windows paths, escape sequences). All three hook scripts now document the safe forms: forward slashes or `--data-binary @file`.
+- **`hook-announce.py` `DISPATCH_COORD_URL` env var support.** Aligns with `hook-complete.py` and `hook-resource.py`, which already supported this override. Set `DISPATCH_COORD_URL=http://172.25.208.1:3047` for WSL/tmux sessions; `http://<tailscale-ip>:3047` for Steam Deck / remote.
+### Documentation
+
+- **`COORDINATION.md` Coordination Server section.** New section covering: canonical server path (`F:/03-INFRASTRUCTURE/coordination/server.py`), connectivity by transport (Windows Terminal / WSL / Steam Deck), `DISPATCH_COORD_URL` setup snippet, backslash rule, and full route table. Previously the doc covered only job board protocol with no server connectivity reference.
+
 ## [0.7.7] - 2026-05-15
 
 Integration release. Merges origin/main feature work (correction tracking pipeline, Internal Affairs persona, gamepad rebinding, gamepad tutorial, Steam Deck screenshots) with local-only operational infrastructure (dispatch-framework/ subdirectory migration, coordination server stack, now-playing widget, mobile-responsive dashboard, voice subsystem hardening).

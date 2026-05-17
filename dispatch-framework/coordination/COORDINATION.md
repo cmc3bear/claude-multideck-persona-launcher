@@ -2,6 +2,58 @@
 
 > **Governance authority:** `docs/WORKSPACE_GOVERNANCE.md` is the canonical source of workspace-level standards that override anything in this file. It defines OQE discipline, coordination rules (§2), project boundary enforcement (§3), job board field requirements (§4), review workflow (§5), and escalation protocol (§6). Read it before cross-project coordination.
 
+---
+
+## Coordination Server
+
+The coordination server runs as a standalone Python process outside the multideck repo.
+
+| Item | Value |
+|------|-------|
+| Canonical path | `F:/03-INFRASTRUCTURE/coordination/server.py` |
+| Binds | `0.0.0.0:3047` (IPv4 only) |
+| State file | `F:/03-INFRASTRUCTURE/coordination/coord-state.json` |
+
+### Connecting by transport
+
+| Transport | URL |
+|-----------|-----|
+| Windows Terminal / native | `http://localhost:3047` |
+| WSL / tmux | `http://172.25.208.1:3047` — resolve dynamically: `ip route \| grep default \| awk '{print $3}'` |
+| Steam Deck / remote | `http://<windows-host-tailscale-ip>:3047` |
+
+Set `DISPATCH_COORD_URL` before calling any hook script — all three hook scripts (`hook-announce.py`, `hook-complete.py`, `hook-resource.py`) read this env var:
+
+```bash
+export DISPATCH_COORD_URL="http://$(ip route | grep default | awk '{print $3}'):3047"
+```
+
+### Backslash rule
+
+POST `/announce` returns 400 if the message body contains literal backslashes (Windows paths, escape sequences) — the Python server's Content-Length parser mismatch. Two safe forms:
+
+- Use forward slashes in any path references: `F:/03-INFRASTRUCTURE/coordination`
+- Or pipe from a file: `curl --data-binary @body.json http://...`
+
+### Routes
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | `/state.json` | Full agent state snapshot |
+| GET | `/events` | SSE stream |
+| GET | `/messages` | Message history |
+| GET | `/resources` | Resource claim registry |
+| GET | `/lessons` | Lessons-learned log |
+| POST | `/announce` | Broadcast a message |
+| POST | `/todo/add` | Add a coordination todo |
+| POST | `/todo/complete` | Mark a todo done |
+| POST | `/resource/claim` | Claim a shared resource |
+| POST | `/resource/release` | Release a shared resource |
+| POST | `/lesson` | Write a lesson entry |
+| POST | `/reset` | Reset server state |
+
+---
+
 This document defines how the MULTIDECK project agents hand off work to each other and make joint decisions. All coordination state lives in this directory.
 
 > **External coordinator:** Dispatch is a workspace-level agent that sits above MULTIDECK. It may post jobs to this board on behalf of the user but is not a MULTIDECK agent. Dispatch persona: `dispatch-framework/personas/DISPATCH_AGENT.md`
