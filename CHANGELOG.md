@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-05-17
+
+Minor release. Transport auto-detection, launcher keyboard, goals widget, visual job board, coord dashboard, tmux topology, OpenCode integration, lessons-learned system, WSL service wiring, and full persona roster updates.
+
+### Added
+
+- **Transport auto-detection.** Dashboard launcher now detects the appropriate persona spawn transport at runtime: `tmux` when WSL + tmux + claude are all present, `wt` (Windows Terminal) otherwise. Override via `DISPATCH_LAUNCHER_TRANSPORT` env var or per-launch radio in the launcher UI. Eliminates the manual `DISPATCH_LAUNCHER_TRANSPORT=wt` workaround that WSL operators had to set. (`dispatch-framework/dashboard/server.cjs`, `dispatch-framework/docs/TMUX_TOPOLOGY.md`)
+- **Steam Deck split keyboard layout.** `launcher-keyboard.js` renders a split left/right virtual keyboard anchored to screen edges with 2-3x button sizing and dark/light mode toggle. Targets handheld use where the built-in Steam keyboard covers the screen. (`dispatch-framework/dashboard/scripts/launcher-keyboard.js`)
+- **Goals widget.** Dashboard widget shows active session goals with per-goal status, wired to coord server state at `172.25.208.1:3047`. Operator sees streaming goal progress without switching windows. (`dispatch-framework/dashboard/scripts/launcher-goals.js`)
+- **Visual job board dashboard.** `job-board-page.cjs` renders an HTML view of the job board with status lanes, filtering, and per-job detail expand. Served at `/job-board` by the dashboard server. (`dispatch-framework/dashboard/job-board-page.cjs`)
+- **Coordination server dashboard.** `dispatch-framework/coordination/dashboard.html` is now a full-featured HTML dashboard for the coord server state: agent todo panels, resource locks, message log, lessons feed. Replaces the minimal placeholder. (`dispatch-framework/coordination/dashboard.html`)
+- **tmux topology docs and config.** `TMUX_TOPOLOGY.md` documents two topologies (A: one session per persona, B: shared session tiled panes). `multideck.tmux.conf` ships as a default config for topology B. (`dispatch-framework/docs/TMUX_TOPOLOGY.md`, `dispatch-framework/scripts/multideck.tmux.conf`)
+- **WSL setup and systemd service wiring.** `WSL_SETUP.md` documents binfmt, systemd-user service for the dashboard, and persistent coord server setup. `wsl-binfmt.service` ships as a ready-to-install unit. (`dispatch-framework/docs/WSL_SETUP.md`, `dispatch-framework/scripts/wsl/`)
+- **OpenCode integration scripts.** `launch-persona-opencode.ps1` and `convert-personas-to-opencode.py` wire the persona roster to OpenCode sessions. (`dispatch-framework/scripts/launch-persona-opencode.ps1`, `dispatch-framework/scripts/convert-personas-to-opencode.py`)
+- **Lessons-learned system.** `regression-troubleshooting.md` and `video-production.md` capture playbooks from real incidents. Coord server `/lessons` endpoint + dashboard panel surfaces active lessons to all persona sessions. (`dispatch-framework/lessons-learned/`)
+- **Persona wizard.** `persona-wizard.py` is an interactive CLI for authoring new persona markdown from `AGENT_TEMPLATE.md` with validation. (`dispatch-framework/persona-wizard/scripts/persona-wizard.py`)
+
+### Changed
+
+- **Persona files updated** — all nine core personas updated to reference transport-aware coord server check-in pattern, `DISPATCH_COORD_URL` env var, and WSL gateway derivation. Boundary-language bullets replaced with explicit coordination protocol.
+- **`launch-persona.sh`** — tmux launcher rewritten for topology A and B compatibility. Respects `DISPATCH_TMUX_SESSION`, `DISPATCH_CLAUDE_BIN`, and `DISPATCH_KOKORO_VENV`. (`dispatch-framework/scripts/launch-persona.sh`)
+- **Dashboard styles** — launcher, lessons, live, meeting, patterns, shell, variations CSS all updated for consistency and mobile-responsive breakpoints.
+- **`personas.json`** — roster reflects current nine operatives with corrected voice keys, colors, and cwd assignments.
+
 ## [0.7.8] - 2026-05-17
 
 WSL coordination fixes and documentation. No new features — patch release.
