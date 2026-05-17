@@ -5,12 +5,19 @@ Dispatch announce hook — POST a message to the coordination channel.
 Usage:
   python3 hook-announce.py <from> <text> [--to <agent|all>]
 
+Environment:
+  DISPATCH_COORD_URL  Override server URL (default: http://localhost:3047)
+                      WSL/tmux: http://$(ip route|grep default|awk '{print $3}'):3047
+  DISPATCH_COORD_PORT Override port only (ignored when DISPATCH_COORD_URL is set)
+
 Examples:
   python3 hook-announce.py dispatch "Stand by — routing query incoming"
   python3 hook-announce.py dispatch "Engineer: pause T2V run" --to engineer
   python3 hook-announce.py engineer "T2V smoke test complete — Producer unblocked" --to all
+
+Note: avoid backslashes in message text — use forward slashes for paths.
 """
-import json, sys, urllib.request, os
+import json, sys, urllib.request, os, subprocess
 
 # Force UTF-8 on stdio so the Unicode arrow in the success line doesn't crash
 # under Windows' default cp1252 codec when callers don't set PYTHONIOENCODING.
@@ -21,7 +28,28 @@ for _stream in (sys.stdout, sys.stderr):
         pass
 
 PORT = int(os.environ.get('DISPATCH_COORD_PORT', 3047))
-URL  = f'http://localhost:{PORT}/announce'
+
+
+def _resolve_coord_host() -> str:
+    # WSL2: coord server runs on Windows; localhost doesn't cross the bridge.
+    # Derive the Windows-host IP from the default route instead.
+    try:
+        with open('/proc/version') as _f:
+            if 'microsoft' in _f.read().lower():
+                out = subprocess.check_output(
+                    ['ip', 'route'], text=True, timeout=2
+                )
+                for line in out.splitlines():
+                    if line.startswith('default'):
+                        return line.split()[2]  # e.g. 172.25.208.1
+    except Exception:
+        pass
+    return 'localhost'
+
+
+_default_url = f'http://{_resolve_coord_host()}:{PORT}'
+COORD_URL = os.environ.get('DISPATCH_COORD_URL', _default_url)
+URL  = f'{COORD_URL}/announce'
 
 def main():
     args = sys.argv[1:]
@@ -30,7 +58,7 @@ def main():
         sys.exit(1)
 
     sender = args[0]
-    text   = args[1]
+    text   = args[1].replace('\\', '/')  # server Content-Length parser rejects raw backslashes
     to     = 'all'
 
     i = 2
