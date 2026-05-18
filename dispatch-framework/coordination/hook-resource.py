@@ -29,15 +29,40 @@ Exit codes:
   1 — server unreachable or error
 
 Environment:
-  DISPATCH_COORD_URL  Override server URL (default: http://localhost:3047)
+  DISPATCH_COORD_URL          Override server URL (default: auto-derived)
+  DISPATCH_COORD_PORT         Override port only (default: 3047)
+  DISPATCH_COORD_SERVER_LOCAL Set to 1 when server.py runs in WSL — skips
+                              Windows gateway derivation and uses localhost.
 """
 import json
 import os
+import subprocess
 import sys
 import urllib.error
 import urllib.request
 
-COORD_URL = os.environ.get('DISPATCH_COORD_URL', 'http://localhost:3047')
+
+def _resolve_coord_host() -> str:
+    # §11 dependency_tracking: DISPATCH_COORD_SERVER_LOCAL skips gateway
+    # derivation for WSL sessions where server.py runs inside WSL, not Windows.
+    if os.environ.get('DISPATCH_COORD_SERVER_LOCAL'):
+        return 'localhost'
+    # WSL2: coord server runs on Windows; localhost doesn't cross the bridge.
+    try:
+        with open('/proc/version') as _f:
+            if 'microsoft' in _f.read().lower():
+                out = subprocess.check_output(['ip', 'route'], text=True, timeout=2)
+                for line in out.splitlines():
+                    if line.startswith('default'):
+                        return line.split()[2]
+    except Exception:
+        pass
+    return 'localhost'
+
+
+_PORT = int(os.environ.get('DISPATCH_COORD_PORT', 3047))
+_default_url = f'http://{_resolve_coord_host()}:{_PORT}'
+COORD_URL = os.environ.get('DISPATCH_COORD_URL', _default_url)
 
 
 def _post(path: str, payload: dict) -> tuple[dict | None, str | None]:

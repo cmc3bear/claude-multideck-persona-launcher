@@ -356,19 +356,20 @@ Global TTS daemon configuration:
 
 ## Coordination Server Connectivity
 
-The coordination server (`F:/03-INFRASTRUCTURE/coordination/server.py`) runs on the Windows host and binds `0.0.0.0:3047`. How you reach it depends on your transport.
+The coordination server (`dispatch-framework/coordination/server.py`) can run on Windows or inside WSL. How you reach it depends on where the server is running and what transport you use.
 
 ### Transport Matrix
 
-| Transport | Reach coord server at |
-|---|---|
-| Windows Terminal (native) | `http://localhost:3047` |
-| WSL + tmux | Derive gateway: `http://$(ip route\|grep default\|awk '{print $3}'):3047` |
-| Steam Deck + Tailscale | `http://<windows-host-tailscale-ip>:3047` |
+| Transport | Server location | Reach coord server at |
+|---|---|---|
+| Windows Terminal (native) | Windows | `http://localhost:3047` |
+| WSL + tmux | Windows (server on Windows host) | Derive gateway: `http://$(ip route\|grep default\|awk '{print $3}'):3047` |
+| WSL + tmux | WSL (server.py runs in WSL) | `http://localhost:3047` — set `DISPATCH_COORD_SERVER_LOCAL=1` to skip gateway auto-detect |
+| Steam Deck + Tailscale | Windows | `http://<windows-host-tailscale-ip>:3047` |
 
-### Setting DISPATCH_COORD_URL (WSL)
+### Setting DISPATCH_COORD_URL (WSL, server on Windows)
 
-WSL sessions must export `DISPATCH_COORD_URL` before calling any hook, or let `hook-announce.py` auto-derive it:
+When `server.py` runs on Windows and you are calling hooks from WSL, export `DISPATCH_COORD_URL` before calling any hook, or let the hooks auto-derive the gateway:
 
 ```bash
 # Manual: derive Windows host IP from WSL default route
@@ -379,7 +380,18 @@ export DISPATCH_COORD_URL=http://${WIN_IP}:3047
 python3 dispatch-framework/coordination/hook-announce.py architect "online" --to dispatch
 ```
 
-`hook-announce.py` also auto-detects WSL by reading `/proc/version` and derives the gateway automatically if `DISPATCH_COORD_URL` is not set. Exporting the variable is recommended for clarity and for other hooks (`hook-complete.py`, `hook-resource.py`) that do not auto-detect.
+All three hooks (`hook-announce.py`, `hook-complete.py`, `hook-resource.py`) auto-detect WSL by reading `/proc/version` and derive the Windows gateway IP automatically if `DISPATCH_COORD_URL` is not set.
+
+### Setting DISPATCH_COORD_SERVER_LOCAL (WSL, server in WSL)
+
+When `server.py` runs inside WSL (not on Windows), the gateway derivation is wrong — WSL's default route points to the Windows host, not to another WSL process. Set `DISPATCH_COORD_SERVER_LOCAL=1` to skip gateway derivation and use localhost:
+
+```bash
+export DISPATCH_COORD_SERVER_LOCAL=1
+python3 dispatch-framework/coordination/hook-announce.py architect "online" --to dispatch
+```
+
+`DISPATCH_COORD_SERVER_LOCAL` takes priority over the `/proc/version` check in all three hooks. `DISPATCH_COORD_URL` takes priority over both — it always wins when set.
 
 ### Backslash Rule
 

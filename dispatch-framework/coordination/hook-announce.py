@@ -14,7 +14,7 @@ Transport-specific setup:
   Windows Terminal (native):
     No setup needed — coord server is at localhost:3047.
 
-  WSL + tmux:
+  WSL + tmux (server on Windows):
     Coord server runs on Windows host; WSL loopback does not cross the bridge.
     Derive the Windows-host IP from the default route before calling:
 
@@ -24,6 +24,16 @@ Transport-specific setup:
     This hook auto-detects WSL by reading /proc/version and derives the gateway
     if DISPATCH_COORD_URL is unset. Exporting explicitly is recommended so that
     hook-complete.py and hook-resource.py also reach the server.
+
+  WSL + tmux (server in WSL — server.py runs inside WSL, not on Windows):
+    Gateway derivation is wrong in this case. Set DISPATCH_COORD_SERVER_LOCAL=1
+    to skip the gateway derivation and use localhost directly:
+
+      export DISPATCH_COORD_SERVER_LOCAL=1
+      python3 hook-announce.py architect "online" --to dispatch
+
+    DISPATCH_COORD_SERVER_LOCAL takes priority over the /proc/version check.
+    hook-complete.py and hook-resource.py honour the same flag.
 
   Steam Deck + Tailscale:
     export DISPATCH_COORD_URL=http://<windows-host-tailscale-ip>:3047
@@ -52,6 +62,10 @@ PORT = int(os.environ.get('DISPATCH_COORD_PORT', 3047))
 
 
 def _resolve_coord_host() -> str:
+    # §11 dependency_tracking: DISPATCH_COORD_SERVER_LOCAL skips gateway
+    # derivation for WSL sessions where server.py runs inside WSL, not Windows.
+    if os.environ.get('DISPATCH_COORD_SERVER_LOCAL'):
+        return 'localhost'
     # WSL2: coord server runs on Windows; localhost doesn't cross the bridge.
     # Derive the Windows-host IP from the default route instead.
     try:
