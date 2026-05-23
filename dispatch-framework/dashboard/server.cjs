@@ -470,6 +470,16 @@ function listOpencodeModels() {
   }
 }
 
+// Resolve a launcher project id to its filesystem cwd, or null when no project
+// is selected (or when the operator picked WORKSPACE ROOT). Caller uses null to
+// fall back to the persona's default cwd from personas.json.
+function resolveProjectCwd(projectId) {
+  if (!projectId || projectId === 'workspace') return null;
+  const projects = listProjects();
+  const hit = projects.find((p) => p.id === projectId);
+  return hit ? hit.path : null;
+}
+
 function spawnPersonaOpencode(personaKey, initialPrompt, callsignSuffix, model) {
   // OpenCode runtime spawn — wt only for v1. tmux + opencode is a future addition.
   // Voice + /color injector are intentionally skipped (no SSE_PORT equivalent;
@@ -563,6 +573,11 @@ function spawnPersona(personaKey, initialPrompt, transport, options) {
     ];
     if (initialPrompt) args.push(initialPrompt);
     args.push('-Transport', 'wt');
+    // Project cwd override — when the launcher operator selects a target node
+    // (project) in the launcher, that project's path wins over the persona's
+    // default personas.json cwd. Falls through to the persona default when
+    // null/unset (i.e. WORKSPACE ROOT was selected, or no project at all).
+    if (opts.cwd) args.push('-Cwd', opts.cwd);
     const child = spawn('cmd.exe', args, { detached: true, stdio: 'ignore', windowsHide: true });
     child.unref();
   } else {
@@ -811,7 +826,13 @@ function handleLauncher(req, res, url) {
         // exist. If the operator already has a wt window attached to
         // multideck, this single launch slots in silently.
         const sessionExists = (transport === 'tmux' && runtime === 'claude') ? tmuxSessionExists('multideck') : false;
-        spawnPersona(personaKey, effectivePrompt, transport, { sessionExists, runtime, model });
+        // Project cwd override: the launcher UI sends the selected target node
+        // id as `project`. Resolve it to the project's filesystem path. When
+        // the operator selected WORKSPACE ROOT (or no project), this returns
+        // null and the persona's default cwd from personas.json wins.
+        const projectId = typeof body.project === 'string' ? body.project : null;
+        const projectCwd = resolveProjectCwd(projectId);
+        spawnPersona(personaKey, effectivePrompt, transport, { sessionExists, runtime, model, cwd: projectCwd });
         sendJson(res, 200, {
           ok: true,
           persona: personaKey,
@@ -878,7 +899,10 @@ function handleLauncher(req, res, url) {
             const _mp_prompt = _mds
               ? _mds + (initialPrompt ? '\n\n' + initialPrompt : '')
               : initialPrompt;
-            const baseOpts = { runtime, model };
+            // Project cwd override applies to every team member identically.
+            const teamProjectId = typeof body.project === 'string' ? body.project : null;
+            const teamProjectCwd = resolveProjectCwd(teamProjectId);
+            const baseOpts = { runtime, model, cwd: teamProjectCwd };
             const opts = (transport === 'tmux' && runtime === 'claude')
               ? { ...baseOpts, openViewer: i === 0 && !sessionExistsAtLaunch }
               : baseOpts;

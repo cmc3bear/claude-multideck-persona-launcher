@@ -36,7 +36,13 @@ param(
     [string]$InitialPrompt = "",
 
     [ValidateSet("wt", "tmux")]
-    [string]$Transport = ""
+    [string]$Transport = "",
+
+    # Cwd override — when the launcher operator picks a target node project,
+    # the dashboard passes the project's path here. Wins over the persona's
+    # default cwd from personas.json. Empty string keeps persona default
+    # (WORKSPACE ROOT or no project selected).
+    [string]$Cwd = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -75,6 +81,12 @@ $p = $registry.personas.$key
 $callsign = $p.callsign
 $color = $p.tab_color
 $cwd = $p.cwd
+# Cwd override from dashboard: when the launcher operator picked a target node
+# project, the server resolves the project's path and passes it via -Cwd. It
+# wins over the persona's default cwd. Empty/unset = persona default applies.
+if ($Cwd) {
+    $cwd = $Cwd
+}
 $voiceKey = $p.voice_key
 
 # ----------------------------------------------------------------------
