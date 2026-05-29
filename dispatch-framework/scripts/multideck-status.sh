@@ -2,7 +2,7 @@
 # Emit a compact status fragment for tmux status-right, capturing live
 # MultiDeck system metrics:
 #   K:N     Kokoro queue depth (sum of p0+normal+spillover wav counts)
-#   R:M     Pending Redline reviews (count of files in state/pending-reviews/)
+#   R:M     Pending Reviewer reviews (count of files in state/pending-reviews/)
 #   *X      Attached client count (only if >1)
 #
 # Bound to status-right via #(...) in multideck.tmux.conf, called every

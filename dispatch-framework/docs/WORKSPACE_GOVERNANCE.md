@@ -90,7 +90,7 @@ Starting from the effective date, ALL project job boards must include these fiel
 
 ### Push Denial Escalation (5 steps, mandatory)
 When a push is blocked:
-1. Full Redline 6-gate review via sub-agent
+1. Full Reviewer 6-gate review via sub-agent
 2. Job documentation audit (all fields complete?)
 3. Persona alignment check (in scope? why was review skipped?)
 4. Mini-retrospective (root cause, pattern check, mitigation)

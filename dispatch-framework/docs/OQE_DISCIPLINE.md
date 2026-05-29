@@ -190,19 +190,19 @@ Every item on this list is enforced at a downstream gate. Rules without any gate
 
 **Reviewer** agents use OQE to audit completed jobs.
 
-### Auto-Redline Trigger
+### Reviewer Auto-Review Trigger
 
 Gate 2 (Review Gate) is triggered **automatically** when a job reaches `submitted` status. The review runs as a **sub-process of the original job**, not a separate job. No manual intervention is required to initiate review.
 
 **Flow:**
 
 1. Job status transitions to `submitted`
-2. Auto-Redline review spawns as a sub-process of the submitting job
-3. The Redline sub-agent runs the §14 Gate 2 checks (see below)
+2. Reviewer auto-review runs as a sub-process of the submitting job
+3. The Reviewer sub-agent runs the §14 Gate 2 checks (see below)
 4. **PASS** → job auto-closes, dependent jobs unblock, SSE pushes status update to mobile
-5. **FLAG** → one fix loop → re-review → if still failing, **FAIL-ESCALATE** to user
+5. **FLAG** → one producer-owned remediation loop → re-review → if still failing, **FAIL-ESCALATE** to user
 
-The review command is queued via `launch-queue.json` when the status change is detected. The review prompt template lives at `dispatch/scripts/redline-review-prompt.md`.
+The review command is queued via `launch-queue.json` when the status change is detected. The review prompt template lives at `dispatch/scripts/reviewer-review-prompt.md`.
 
 ### Review Audit Points
 
@@ -216,7 +216,7 @@ The Reviewer checks five OQE audit points on every job:
 
 If all five pass: **PASS**. If not: **FLAG** with specific feedback.
 
-The project reviewer (human or senior agent) retains final determination of validity — auto-Redline accelerates the process but does not replace judgment authority.
+The project reviewer (human or senior agent) retains final determination of validity — auto-Reviewer accelerates the process but does not replace judgment authority.
 
 ---
 
@@ -575,10 +575,10 @@ A job passes through three gates: **creation**, **review**, and **standing**. Ea
 
 **Owner:** `reviewer-review.py` (Reviewer agent), spawned automatically as a sub-process.
 **Runs:** Automatically when job status transitions to `submitted`. The review is queued via `launch-queue.json` and runs as a sub-process of the original job — no separate review job is created.
-**Trigger:** Status change to `submitted` → auto-Redline spawn → §14 Gate 2 checks.
-**Failure mode:** Returns FLAG with specific feedback; one fix loop max. If the fix loop fails, FAIL-ESCALATE to user.
+**Trigger:** Status change to `submitted` → auto-Reviewer spawn → §14 Gate 2 checks.
+**Failure mode:** Returns FLAG with specific feedback; one producer-owned remediation loop max. If the remediation loop fails, FAIL-ESCALATE to user.
 **PASS flow:** Job auto-closes, dependent jobs unblock, SSE pushes status to connected clients (including mobile).
-**Prompt template:** `dispatch/scripts/redline-review-prompt.md`
+**Prompt template:** `dispatch/scripts/reviewer-review-prompt.md`
 
 | Check | Rule |
 |-------|------|

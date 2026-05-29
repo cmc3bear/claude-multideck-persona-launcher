@@ -4,35 +4,37 @@
 
 This document describes the review process, decision criteria, feedback loops, and escalation paths.
 
+Reviewer never applies fixes. Reviewer investigates submitted work, records evidence-backed findings, explains impact, and offers remediation alternatives. The producing agent or Dispatch owns every file edit, artifact change, commit amendment, and resubmission.
+
 ---
 
-## Auto-Redline Review Methodology
+## Reviewer Auto-Review Methodology
 
 As of OQE 2.0, the review gate is triggered **automatically** when a job reaches `submitted` status. Review is no longer a manually initiated step — it runs as a **sub-process of the original job**, not a separate job.
 
 ### How Auto-Review Works
 
 1. **Trigger:** When a job's status transitions to `submitted`, a review command is automatically queued via `launch-queue.json`.
-2. **Sub-process spawn:** The Redline review spawns as a sub-process of the submitting job. No separate review job is created — the review is part of the original job's lifecycle.
-3. **Gate 2 checks:** The Redline sub-agent runs all §14 Gate 2 checks from `OQE_DISCIPLINE.md` against the submitted work.
+2. **Sub-process spawn:** Reviewer runs as a sub-process of the submitting job. No separate review job is created — the review is part of the original job's lifecycle.
+3. **Gate 2 checks:** The Reviewer sub-agent runs all §14 Gate 2 checks from `OQE_DISCIPLINE.md` against the submitted work.
 4. **PASS flow:** Job auto-closes, all dependent jobs unblock, and SSE pushes the status update to connected clients (including mobile devices).
-5. **FLAG flow:** The submitting agent gets one fix loop. After the fix, the Redline sub-agent re-reviews. If it still fails: **FAIL-ESCALATE** to user. No further automated loops.
-6. **Review prompt:** The review prompt template lives at `dispatch/scripts/redline-review-prompt.md`.
+5. **FLAG flow:** The submitting agent gets one remediation loop. Reviewer provides findings and alternatives, but does not change the work. After the producing agent fixes and resubmits, the Reviewer sub-agent re-reviews. If it still fails: **FAIL-ESCALATE** to user. No further automated loops.
+6. **Review prompt:** The review prompt template lives at `dispatch/scripts/reviewer-review-prompt.md`.
 
 ### What Didn't Change
 
-The project reviewer (human or senior agent) retains **final determination of validity**. Auto-Redline accelerates the mechanical review process but does not replace judgment authority. The five-gate review criteria, the one-fix-loop rule, and the escalation protocol all remain intact.
+The project reviewer (human or senior agent) retains **final determination of validity**. Auto-Reviewer accelerates the mechanical review process but does not replace judgment authority. The five-gate review criteria, the one-fix-loop rule, and the escalation protocol all remain intact.
 
 ---
 
-## Auto-Redline Queue Markers
+## Auto-Reviewer Queue Markers
 
-When `scripts/job-board.py submit <job_id> --output <path>` runs successfully, the CLI writes a queue marker file at `state/pending-reviews/{job_id}.json`. The marker is the hand-off contract between the submitting agent and the (possibly out-of-process) Redline reviewer. Without it, the gate is silently optional — the operator has no idea which jobs are waiting.
+When `scripts/job-board.py submit <job_id> --output <path>` runs successfully, the CLI writes a queue marker file at `state/pending-reviews/{job_id}.json`. The marker is the hand-off contract between the submitting agent and the (possibly out-of-process) Reviewer. Without it, the gate is silently optional — the operator has no idea which jobs are waiting.
 
 ### Lifecycle
 
 1. **Created on submit.** `cmd_submit()` writes the marker file *after* the status transition is persisted. If the submit gate rejects (job not found, etc.), no marker is written.
-2. **Consumed by the reviewer.** An operator or watcher dispatch agent reads the marker, populates the Redline prompt template at `dispatch/scripts/redline-review-prompt.md`, and runs the review.
+2. **Consumed by the reviewer.** An operator or watcher dispatch agent reads the marker, populates the Reviewer prompt template at `dispatch/scripts/reviewer-review-prompt.md`, and runs the review.
 3. **Removed on review.** `cmd_review()` removes the marker on both `--pass` and `--flag` paths. Missing-marker is not an error (idempotent).
 
 ### Marker File Shape
@@ -52,16 +54,16 @@ Each marker is a single JSON object. Field list, with the source field on the jo
 | `criteria_list` | `job.criteria` | Array of criterion strings, one per gate. |
 | `output_path` | from `--output` | Path to the deliverable being reviewed. |
 | `submitted_at` | ISO timestamp | UTC, set at submit time. |
-| `redline_prompt_template_path` | absolute path | Where the Redline prompt template lives. |
+| `reviewer_prompt_template_path` | absolute path | Where the Reviewer prompt template lives. |
 
 ### Spawning the Reviewer
 
 To run a review by hand:
 
 1. `cat state/pending-reviews/<job_id>.json` to see the populated context.
-2. Open the prompt template at the `redline_prompt_template_path` field.
+2. Open the prompt template at the `reviewer_prompt_template_path` field.
 3. Substitute the `{{job_id}}`, `{{board_key}}`, `{{problem}}`, `{{objective}}`, `{{criteria_count}}`, `{{criteria_list}}`, etc. placeholders with the marker values.
-4. Hand the resulting prompt to a Redline sub-agent.
+4. Hand the resulting prompt to a Reviewer sub-agent.
 5. Record the verdict via `python scripts/job-board.py --project <board_key> review <job_id> --pass|--flag --note "<text>"` — this drains the marker.
 
 ### .gitignore
@@ -76,7 +78,7 @@ Markers themselves are ignored (`state/pending-reviews/*.json`); the directory i
 
 When an agent submits a job (status transitions to `submitted`):
 
-1. Auto-Redline review spawns as a sub-process (see above)
+1. Reviewer auto-review runs as a sub-process (see above)
 2. Reviewer reads:
    - Original objective (O-Frame)
    - Agent's submission summary
@@ -202,15 +204,15 @@ Work has fixable issues. Agent addresses and resubmits.
 
 ```
 Decision: FLAG
-Feedback: "Missing examples in voice rules section. Add 2-3 before/after pairs and resubmit."
+Feedback: "Missing examples in voice rules section. Recommended remediation: add 2-3 before/after pairs and resubmit. Alternative: split examples into a companion guide if the original doc should stay compact."
 ```
 
 Consequences:
 - Job moves back to `active`
 - Agent reads feedback
-- Agent fixes and resubmits
+- Producing agent fixes and resubmits
 - Reviewer re-checks (can approve on second look)
-- **One fix loop allowed.** If flagged twice on same issues, escalates
+- **One producer-owned remediation loop allowed.** If flagged twice on same issues, escalates
 
 ### REJECT ❌
 
@@ -230,7 +232,7 @@ Consequences:
 
 ## The One-Fix-Loop Rule
 
-Reviewer can flag a job once for fixes. If the same issues appear on resubmission, the job escalates to **Dispatch**.
+Reviewer can flag a job once for fixes, but cannot perform those fixes. If the same issues appear on resubmission, the job escalates to **Dispatch**.
 
 ### Why One Loop?
 
@@ -249,7 +251,7 @@ Job escalates to Dispatch → Dispatch reassigns or closes
 When escalating, Reviewer includes:
 - Original objective
 - All feedback (first and second review)
-- Recommended next step (reassign to different agent, close, defer)
+- Recommended next step and alternatives (reassign to different agent, close, defer)
 
 ---
 
@@ -302,12 +304,14 @@ DECISION: FLAG
 ISSUE 1 (Severity: MINOR): [Gate that failed]
 Problem: [What's wrong]
 Evidence: [What you found]
-Fix: [What agent should do]
+Recommended remediation: [What producing agent should change]
+Alternatives: [Other acceptable fix paths, or why there are none]
 
 ISSUE 2 (Severity: MAJOR): [Gate that failed]
 Problem: [What's wrong]
 Evidence: [What you found]
-Fix: [What agent should do]
+Recommended remediation: [What producing agent should change]
+Alternatives: [Other acceptable fix paths, or why there are none]
 
 RESUBMIT: When you've addressed both issues, resubmit.
 ```
@@ -399,7 +403,7 @@ Dispatch then:
 - Reassigns to different agent (if expertise gap)
 - Closes if no longer needed
 - Breaks it into smaller jobs
-- Assigns to Reviewer for help (if review itself is the blocker)
+- Asks Reviewer to clarify findings or alternatives (if review itself is the blocker)
 
 ---
 
@@ -469,6 +473,7 @@ Reviewer's role:
 Reviewer does NOT:
 
 - Rewrite agent's work (feedback, not implementation)
+- Apply fixes, patch files, edit deliverables, amend commits, or directly remediate failed work
 - Change job objectives mid-review (work with Dispatch if objective is wrong)
 - Hold jobs indefinitely (timebox to 2 hours for P0/P1, 1 day for P2)
 - Apply different standards to different agents (consistency)
@@ -479,7 +484,7 @@ Reviewer does NOT:
 
 When the pre-push hook blocks a commit (missing `Reviewed-by:` trailer), the following escalation protocol is MANDATORY. This is not optional. The agent does not simply add the trailer and retry — the denial is a signal that process broke down, and the breakdown must be investigated.
 
-### Step 1: Full Redline Review
+### Step 1: Full Reviewer Gate
 
 The agent that triggered the denial spawns a Reviewer sub-agent to perform a full review of the commit(s) that were blocked. This is not a rubber stamp — it is the same 6-gate review that should have happened before the commit was created.
 
@@ -525,8 +530,8 @@ This entry is appended to the session retrospective file.
 ### Step 5: Amend and Push
 
 Only after Steps 1-4 are complete:
-1. Reviewer adds `Reviewed-by:` trailer to the commit
-2. Agent amends the commit with the trailer
+1. Reviewer records approval and the exact `Reviewed-by:` trailer text in the review result
+2. The producing agent amends the commit with the trailer
 3. Push succeeds
 4. Job is updated with a note documenting the escalation
 

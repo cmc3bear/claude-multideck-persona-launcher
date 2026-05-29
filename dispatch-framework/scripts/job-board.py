@@ -36,12 +36,12 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 FRAMEWORK_ROOT = SCRIPT_DIR.parent
 JOB_BOARD_FILE = FRAMEWORK_ROOT / "state" / "job-board.json"
 
-# Auto-Redline review queue. Per OQE_DISCIPLINE.md §14 the review gate is auto-triggered
+# Auto-Reviewer queue. Per OQE_DISCIPLINE.md §14 the review gate is auto-triggered
 # on submit; the marker is the hand-off contract between the submitting agent and the
-# (possibly out-of-process) Redline reviewer. See docs/REVIEW_WORKFLOW.md.
+# (possibly out-of-process) Reviewer. See docs/REVIEW_WORKFLOW.md.
 PENDING_REVIEWS_DIR = FRAMEWORK_ROOT / "state" / "pending-reviews"
-REDLINE_PROMPT_TEMPLATE = (
-    FRAMEWORK_ROOT.parent / "dispatch" / "scripts" / "redline-review-prompt.md"
+REVIEWER_PROMPT_TEMPLATE = (
+    FRAMEWORK_ROOT / "scripts" / "reviewer-review-prompt.md"
 )
 
 
@@ -379,9 +379,9 @@ def cmd_accept(job_id, board_file=None):
 def cmd_submit(job_id, output_path, board_file=None):
     """Agent submits completed job for review.
 
-    Per OQE_DISCIPLINE.md §14 / docs/REVIEW_WORKFLOW.md the Redline gate auto-triggers
+    Per OQE_DISCIPLINE.md §14 / docs/REVIEW_WORKFLOW.md the Reviewer gate auto-triggers
     on submit. We write a marker file at state/pending-reviews/<job_id>.json with the
-    populated context the redline-review-prompt.md template needs, so an operator or
+    populated context the reviewer-review-prompt.md template needs, so an operator or
     watcher dispatch agent can spawn the reviewer with the right job data. The marker
     is removed by cmd_review() on either --pass or --flag.
     """
@@ -394,7 +394,7 @@ def cmd_submit(job_id, output_path, board_file=None):
             job["submitted_at"] = submitted_at
             save_job_board(board, board_file)
 
-            # Write the auto-Redline queue marker. Only happens after the status
+            # Write the auto-Reviewer queue marker. Only happens after the status
             # transition is persisted, so a missing job ID never produces a marker.
             criteria_list = job.get("criteria", []) or []
             marker = {
@@ -409,7 +409,7 @@ def cmd_submit(job_id, output_path, board_file=None):
                 "criteria_list": criteria_list,
                 "output_path": output_path,
                 "submitted_at": submitted_at,
-                "redline_prompt_template_path": str(REDLINE_PROMPT_TEMPLATE),
+                "reviewer_prompt_template_path": str(REVIEWER_PROMPT_TEMPLATE),
             }
             PENDING_REVIEWS_DIR.mkdir(parents=True, exist_ok=True)
             marker_path = _pending_marker_path(job["id"])
@@ -419,9 +419,9 @@ def cmd_submit(job_id, output_path, board_file=None):
             print(f"Job {job_id} submitted for review")
             print(f"  Output: {output_path}")
             print()
-            print("Redline review queued.")
+            print("Reviewer gate queued.")
             print(f"  Marker:   state/pending-reviews/{job['id']}.json")
-            print(f"  Template: {REDLINE_PROMPT_TEMPLATE}")
+            print(f"  Template: {REVIEWER_PROMPT_TEMPLATE}")
             print("  Spawn the reviewer with the job context from the marker file.")
             return
     print(f"Job not found: {job_id}")
@@ -456,7 +456,7 @@ def cmd_review(job_id, verdict, note, board_file=None):
 
             save_job_board(board, board_file)
 
-            # Drain the auto-Redline marker on both pass and flag — the queue must
+            # Drain the auto-Reviewer marker on both pass and flag — the queue must
             # reflect what is actually awaiting review. Missing marker is fine
             # (idempotent), but permission / IO failures must surface so we don't
             # silently leave a stale marker in the queue.
