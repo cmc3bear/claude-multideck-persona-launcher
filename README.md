@@ -66,6 +66,7 @@ It runs entirely local. Zero API cost with a Claude Code CLI membership. Fork it
 - **Transport auto-detection** - dashboard launch selects tmux when WSL + tmux + native Codex are present, otherwise falls back to Windows Terminal.
 - **Launcher UX upgrades** - split Steam Deck keyboard, goals widget, visual job board view, coordination dashboard, tmux topology docs/config, and OpenCode integration scripts.
 - **Lessons and coordination surface** - lessons-learned playbooks and coord server dashboard expose active lessons, todos, resources, and agent state across sessions.
+
 # V0.7.0 — STEAM DECK NATIVE + GAMEPAD + VOICE IN
 
 - **Steam Deck install** — `scripts/install-steamdeck.sh` puts MultiDeck inside a distrobox Arch container so SteamOS's read-only root is never touched and the install survives OS updates. `scripts/steamdeck-launcher.sh` opens the dashboard in Chromium kiosk mode, ready to add to Steam as a Non-Steam Game. Walks through gamepad-permission first-press, mic auto-grant, and the 7" Deck CSS pass at `@media (max-width: 1280px) and (max-height: 800px)`. Full guide in [STEAMDECK_SETUP.md](docs/STEAMDECK_SETUP.md).
@@ -79,6 +80,7 @@ It runs entirely local. Zero API cost with a Claude Code CLI membership. Fork it
 - **Browser transport** — fourth launcher transport option (`BROWSER`) opens a live Claude session inside the browser itself. No terminal emulator required. Runs via WebSocket to a host pseudo-TTY; the `claude` process has full local filesystem access.
 - **Multi-session tab management** — spawn as many agents as you want; each gets its own tab in the terminal panel header with an independent `×` close. `[ + NEW ]` returns to character select while keeping all sessions alive. `[ − MIN ]` hides the panel without killing anything; a restore tab shows `[ ◈ N TERMINALS ACTIVE ]`.
 - **Matrix rain panel** — cyberpunk character stream to the right of each terminal. Composites all active persona accent colors (each column picks randomly from the pool of running agents). Persona portraits tile as watermarks on the canvas. Density scales with session count, column width shrinks so the rain gets visibly denser as you add agents.
+- **Terminal hacker typer** — run the same Markdown-aware hacker-typer stream in a real Windows Terminal tab or tmux pane, outside the browser. `M` opens an ASCII recent-artifacts menu, `Enter` switches the stream to a selected `.md` file, `P` pauses, `R` reloads, and `Q` quits.
 - **Terminal color theming** — xterm foreground, cursor, and ANSI color slots are set to the persona's accent color at session init. The "SECURE CHANNEL ESTABLISHED" banner uses ANSI true-color to match exactly.
 - **Tailscale remote access** — because the server listens on `0.0.0.0:3046`, any device on your Tailscale network can open the launcher and run a full browser terminal session. The spawned `claude` process runs on your dev machine. Access your local agents from a phone, laptop, or tablet from anywhere.
 
@@ -355,7 +357,15 @@ A new terminal tab opens with the persona color, the persona markdown loaded int
 ### Start the dashboard
 
 ```bash
-node dashboard/server.cjs
+node dispatch-framework/dashboard/server.cjs
+```
+
+Optional terminal-native hacker typer:
+
+```bash
+npm run typer:launch
+npm run typer:terminal -- --scan-recent
+dispatch-framework/scripts/launch-hacker-typer-tmux.sh --scan-recent
 ```
 
 Visit `http://localhost:3046`. Key routes:
@@ -386,7 +396,7 @@ MultiDeck ships with twelve operatives out of the box: nine canonical agents plu
 | **Dispatch** | af_sky | Workspace coordinator. Routes jobs, runs briefings, manages the board. |
 | **Architect** | bm_daniel | Structure and documentation. System design, dependency maps, standards. |
 | **Engineer** | am_eric | Code implementation, testing, debugging. Writes the code that ships. |
-| **Reviewer** | bm_lewis | Quality gate. Reviews every completed job. One fix loop, then pass or escalate. |
+| **Reviewer** | bm_lewis | Quality gate. Reviews every completed job. One producer-owned remediation loop, then pass or escalate. |
 | **Researcher** | bf_emma | Investigation and source grading. Finds answers, cites evidence, rates confidence. |
 | **Launcher-Engineer** | am_michael | Launcher UI, dashboard routes, persona spawning, Windows Terminal integration. |
 | **Voice-Technician** | af_nova | Kokoro TTS hooks, voice config, audio pipeline, voice quality. |
@@ -461,7 +471,7 @@ python scripts/job-board.py review 1 --pass --note "Clean implementation, tests 
 python scripts/job-board.py review 1 --flag --note "Missing error handling on line 42"
 ```
 
-Every job flows through the Reviewer gate before closing. The Reviewer gets one fix loop. If the issue persists after one rework, it escalates. No infinite revision cycles.
+Every job flows through the Reviewer gate before closing. The producing agent gets one remediation loop based on Reviewer findings and alternatives. Reviewer never applies fixes. If the issue persists after one rework, it escalates. No infinite revision cycles.
 
 Jobs are scoped per-project. Multiple projects can run their own boards without collision.
 
@@ -492,7 +502,7 @@ Switch views from the left rail, the segmented button bar, or the TWEAKS panel.
 
 The dashboard ships with sample fixture data so it renders something useful out of the box. When you are ready to see real state:
 
-1. Start the dashboard server: `node dashboard/server.cjs`
+1. Start the dashboard server: `node dispatch-framework/dashboard/server.cjs`
 2. Open `/jobs` in a browser.
 3. Click the data-source pill in the top bar (shows `MOCK`) to toggle to `LIVE`.
 
