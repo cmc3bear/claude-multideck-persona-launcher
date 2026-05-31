@@ -14,7 +14,7 @@ It runs entirely local. Zero API cost with a Claude Code CLI membership. Fork it
     </td>
     <td align="center" width="50%">
       <a href="docs/screenshots/steamdeck-dispatch-terminal.jpg"><img src="docs/screenshots/steamdeck-dispatch-terminal.jpg" alt="MultiDeck on a Steam Deck — Dispatch terminal session live, matrix rain watermarks, toggle mic in the header"></a>
-      <br><em>Dispatch deployed on the deck. Matrix rain, persona portrait watermark, toggle mic in the header. Press X for mic, R1/L1 to cycle terminal tabs. v0.7.4.</em>
+      <br><em>Dispatch deployed on the deck. Matrix rain, persona portrait watermark, toggle mic in the header. Press X for mic, R1/L1 to cycle terminal tabs. Current release: v0.9.2.</em>
     </td>
   </tr>
 </table>
@@ -49,6 +49,23 @@ It runs entirely local. Zero API cost with a Claude Code CLI membership. Fork it
 
 ## What's New
 
+# V0.9.2 - AUTOMATION LEDGER + RELEASE METADATA
+
+- **Automation event ledger** - n8n now has a central `Automation Event Ledger & Router` workflow for normalized automation tracking. `POST /webhook/automation/events` publishes events, `GET /webhook/automation/events` queries by type/status/source/subject, and `POST /webhook/automation/events/ack` marks events handled. Ledger state is append-only JSONL under `dispatch-framework/state/automation-events.jsonl`.
+- **Dispatch intake emits automation events** - `Dispatch - Job Intake & Routing` now writes `job.intake` events into the central ledger whenever a webhook job is classified and routed. Intake remains backward-compatible while gaining cross-workflow tracking.
+- **Version metadata corrected** - README, CHANGELOG, `VERSION`, and `package.json` now identify the current release as `0.9.2`.
+
+# V0.9.0 - REVIEWER AUTHORITY + WSL CODEX RUNTIME
+
+- **Reviewer gate owns review authority** - Redline is retired as an active runtime persona. Reviewer now owns PASS/FLAG decisions, evidence checks, and remediation alternatives while producing agents retain responsibility for edits and resubmission.
+- **WSL/tmux Codex transport hardened** - tmux launch paths require native WSL Codex instead of unstable Windows npm shims, aligning terminal behavior, trust state, and launcher health checks.
+- **Review queue naming cleaned up** - job submission markers and user-facing submit output now consistently point to the Reviewer gate and the reviewer prompt template.
+
+# V0.8.0 - TRANSPORT AUTO-DETECTION + GOALS + COORDINATION
+
+- **Transport auto-detection** - dashboard launch selects tmux when WSL + tmux + native Codex are present, otherwise falls back to Windows Terminal.
+- **Launcher UX upgrades** - split Steam Deck keyboard, goals widget, visual job board view, coordination dashboard, tmux topology docs/config, and OpenCode integration scripts.
+- **Lessons and coordination surface** - lessons-learned playbooks and coord server dashboard expose active lessons, todos, resources, and agent state across sessions.
 # V0.7.0 — STEAM DECK NATIVE + GAMEPAD + VOICE IN
 
 - **Steam Deck install** — `scripts/install-steamdeck.sh` puts MultiDeck inside a distrobox Arch container so SteamOS's read-only root is never touched and the install survives OS updates. `scripts/steamdeck-launcher.sh` opens the dashboard in Chromium kiosk mode, ready to add to Steam as a Non-Steam Game. Walks through gamepad-permission first-press, mic auto-grant, and the 7" Deck CSS pass at `@media (max-width: 1280px) and (max-height: 800px)`. Full guide in [STEAMDECK_SETUP.md](docs/STEAMDECK_SETUP.md).
