@@ -2,7 +2,7 @@
 # =====================================================
 #  MultiDeck Persona Launcher — tmux (WSL) transport
 #
-#  Spawns a Claude Code persona into a tiled pane within a single tmux
+#  Spawns a Codex persona into a tiled pane within a single tmux
 #  session named 'multideck'. Topology B (operator decision 2026-04-26):
 #  one session, one window, N tiled panes — one persona per pane.
 #
@@ -24,7 +24,7 @@
 #    launch-persona-tmux.sh <persona-key> [initial-prompt] [--no-attach]
 #
 #  Examples:
-#    launch-persona-tmux.sh launcher-engineer
+#    launch-persona-tmux.sh engineer
 #    launch-persona-tmux.sh dispatch "quick sanity check"
 #    launch-persona-tmux.sh engineer --no-attach    # for dashboard caller
 #
@@ -34,8 +34,9 @@
 #    DISPATCH_PERSONAS_JSON    Override personas registry path
 #    DISPATCH_KOKORO_VENV      WSL Kokoro venv (default ~/.dispatch-kokoro-venv)
 #    DISPATCH_TMUX_SESSION     Session name (default 'multideck')
-#    DISPATCH_CLAUDE_BIN       Override claude binary (default 'claude'; set to
-#                              'echo' for tmux-only dry runs without a real spawn)
+#    DISPATCH_CODEX_BIN        Override codex binary. When unset, prefers a
+#                              native WSL codex and falls back to the Windows
+#                              npm codex.cmd shim through cmd.exe.
 # =====================================================
 
 set -euo pipefail
@@ -55,6 +56,7 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --no-attach) ATTACH=false; shift ;;
     --safe)      SAFE=true; shift ;;
+    --dangerous) SAFE=false; shift ;;
     --cwd)       CWD_OVERRIDE="$2"; shift 2 ;;
     -h|--help)   usage 0 ;;
     --) shift; break ;;
@@ -76,7 +78,15 @@ DISPATCH_USER_ROOT="${DISPATCH_USER_ROOT:-$(dirname "$DISPATCH_ROOT")}"
 DISPATCH_PERSONAS_JSON="${DISPATCH_PERSONAS_JSON:-$DISPATCH_ROOT/personas/personas.json}"
 DISPATCH_KOKORO_VENV="${DISPATCH_KOKORO_VENV:-$HOME/.dispatch-kokoro-venv}"
 SESSION="${DISPATCH_TMUX_SESSION:-multideck}"
-CLAUDE_BIN="${DISPATCH_CLAUDE_BIN:-claude}"
+CODEX_BIN="${DISPATCH_CODEX_BIN:-}"
+CODEX_MODE="native"
+WINDOWS_CODEX_CMD=""
+WINDOWS_CODEX_JS=""
+
+# Prefer native WSL tools for tmux. Windows PATH interop can put symlinked
+# node.exe/codex shims ahead of Ubuntu binaries; those do not provide a stable
+# TUI inside tmux.
+export PATH="$HOME/.npm-global/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/sbin:/usr/local/bin:$PATH"
 
 [[ -f "$DISPATCH_PERSONAS_JSON" ]] || {
   echo "personas.json not found at $DISPATCH_PERSONAS_JSON" >&2; exit 1
@@ -94,6 +104,51 @@ to_wsl_path() {
     echo "$p"
   fi
 }
+
+to_windows_path() {
+  local p="$1"
+  if command -v wslpath >/dev/null 2>&1; then
+    wslpath -w "$p"
+  else
+    echo "$p"
+  fi
+}
+
+sq() {
+  local s="$1"
+  printf "'%s'" "${s//\'/\'\\\'\'}"
+}
+
+cmd_dq() {
+  local s="$1"
+  s="${s//\"/\"\"}"
+  printf '"%s"' "$s"
+}
+
+resolve_codex_runtime() {
+  if [[ -n "$CODEX_BIN" ]]; then
+    CODEX_MODE="native"
+    return
+  fi
+
+  local found
+  found="$(command -v codex 2>/dev/null || true)"
+  if [[ -n "$found" && "$found" != /mnt/* ]]; then
+    CODEX_BIN="$found"
+    CODEX_MODE="native"
+    return
+  fi
+
+  cat >&2 <<'EOF'
+native codex not found in WSL.
+
+Install native Codex inside WSL. Windows npm shims are intentionally rejected
+because they do not provide a stable tmux TUI and cannot share WSL trust state.
+EOF
+  exit 1
+}
+
+resolve_codex_runtime
 
 # Read a single persona field, resolving ${DISPATCH_*} placeholders
 read_persona_field() {
@@ -135,6 +190,31 @@ if [[ -n "$CWD_OVERRIDE" ]]; then
   [[ -d "$CWD" ]] || { echo "cwd override does not exist: $CWD" >&2; exit 1; }
 fi
 
+ensure_codex_trust() {
+  local trust_path="$1"
+  local config="${CODEX_HOME:-$HOME/.codex}/config.toml"
+  mkdir -p "$(dirname "$config")"
+  CODEX_TRUST_PATH="$trust_path" CODEX_CONFIG="$config" python3 - <<'PY'
+import os
+from pathlib import Path
+
+path = os.environ["CODEX_TRUST_PATH"]
+config = Path(os.environ["CODEX_CONFIG"])
+text = config.read_text(encoding="utf-8") if config.exists() else ""
+
+section = f'[projects."{path.replace(chr(92), chr(92) * 2).replace(chr(34), chr(92) + chr(34))}"]'
+if section not in text:
+    if text and not text.endswith("\n"):
+        text += "\n"
+    text += f'\n{section}\ntrust_level = "trusted"\n'
+    config.write_text(text, encoding="utf-8")
+PY
+}
+
+if [[ "$CODEX_MODE" == "native" ]]; then
+  ensure_codex_trust "$CWD"
+fi
+
 # Resolve hooks dir in WSL terms for the activation prompt.
 # Project-local hooks/ takes precedence; fall back to ~/.claude/hooks/ for
 # projects that don't ship their own (e.g. the dispatch workspace coordinator).
@@ -158,24 +238,55 @@ Your first actions on startup, in this exact order:
 1. Set the terminal title to "$CALLSIGN" by printing the ANSI escape:
    printf '\\033]0;$CALLSIGN\\007'
 
-2. Use the Bash tool to run exactly this command (forward slashes, single-quoted path):
-   python3 '$SET_VOICE_PY' $VOICE_KEY
-   This writes the per-session voice config (uses CLAUDE_CODE_SSE_PORT).
-   Do NOT write to the shared voice-config.json file.
+2. Load the $CALLSIGN persona from $DISPATCH_ROOT/personas/$(read_persona_field agent_file | sed 's|^personas/||').
 
-3. Load the $CALLSIGN persona from $DISPATCH_ROOT/personas/$(read_persona_field agent_file | sed 's|^personas/||').
-
-4. Orient and stand ready for user instructions.
+3. Orient and stand ready for user instructions.
 EOF
 
 if [[ -n "$PROMPT" ]]; then
   printf '\nUser initial request: %s\n' "$PROMPT" >>"$PROMPT_FILE"
 fi
 
-# Persist prompt across script exit (claude reads it after we send-keys)
+# Persist prompt across script exit (codex reads it after we send-keys)
 PERSIST_PROMPT="$HOME/.cache/multideck/prompt-${PERSONA}-$$.txt"
 mkdir -p "$(dirname "$PERSIST_PROMPT")"
 cp "$PROMPT_FILE" "$PERSIST_PROMPT"
+
+PERSIST_RUNNER="$HOME/.cache/multideck/run-${PERSONA}-$$.sh"
+if [[ "$CODEX_MODE" == "windows-cmd" ]]; then
+  [[ -n "$WINDOWS_CODEX_JS" ]] || { echo "codex Windows JS entrypoint not found for $WINDOWS_CODEX_CMD" >&2; exit 1; }
+  WIN_CWD="$(to_windows_path "$CWD")"
+  CODEX_FLAGS=""
+  if ! $SAFE; then
+    CODEX_FLAGS="'--dangerously-bypass-approvals-and-sandbox', '--dangerously-bypass-hook-trust', "
+  fi
+cat >"$PERSIST_RUNNER" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+export PATH="\$HOME/.npm-global/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/sbin:/usr/local/bin:\$PATH"
+PROMPT_B64="\$(base64 -w0 $(sq "$PERSIST_PROMPT"))"
+PS_SCRIPT="\$(cat <<'PS'
+\$prompt = [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('__PROMPT_B64__'))
+\$codexArgs = @(${CODEX_FLAGS}'--cd', '$(printf "%s" "$WIN_CWD" | sed "s/'/''/g")', \$prompt)
+& 'node.exe' '$(printf "%s" "$WINDOWS_CODEX_JS" | sed "s/'/''/g")' @codexArgs
+exit \$LASTEXITCODE
+PS
+)"
+PS_SCRIPT="\${PS_SCRIPT/__PROMPT_B64__/\$PROMPT_B64}"
+PS_B64="\$(printf '%s' "\$PS_SCRIPT" | iconv -f UTF-8 -t UTF-16LE | base64 -w0)"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -EncodedCommand "\$PS_B64"
+EOF
+else
+  CODEX_BIN="${CODEX_BIN:-codex}"
+  cat >"$PERSIST_RUNNER" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+export PATH="\$HOME/.npm-global/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/sbin:/usr/local/bin:\$PATH"
+PROMPT_TEXT="\$(cat $(sq "$PERSIST_PROMPT"))"
+$(sq "$CODEX_BIN") $(if $SAFE; then printf ""; else printf "%s" "--dangerously-bypass-approvals-and-sandbox --dangerously-bypass-hook-trust "; fi)--cd $(sq "$CWD") "\$PROMPT_TEXT"
+EOF
+fi
+chmod +x "$PERSIST_RUNNER"
 
 # ---- tmux topology ----
 # Reference windows/panes by ID (#{window_id}, #{pane_id}) instead of fixed
@@ -195,9 +306,8 @@ if ! tmux has-session -t "$SESSION" 2>/dev/null; then
   PANE_ID="$(tmux list-panes -t "$WINDOW_ID" -F '#{pane_id}' | head -1)"
 else
   WINDOW_ID="$(tmux list-windows -t "$SESSION" -F '#{window_id}' | head -1)"
-  tmux split-window -t "$WINDOW_ID" -c "$CWD"
+  PANE_ID="$(tmux split-window -P -F '#{pane_id}' -t "$WINDOW_ID" -c "$CWD")"
   tmux select-layout -t "$WINDOW_ID" tiled
-  PANE_ID="$(tmux list-panes -t "$WINDOW_ID" -F '#{pane_id}' | tail -1)"
 fi
 PANE_TARGET="$PANE_ID"
 
@@ -217,25 +327,23 @@ if [[ -f "$INTRO_MP3" && -d "$TTS_OUT_DIR" ]]; then
   cp "$INTRO_MP3" "$TTS_OUT_DIR/$(date +%s)-${PERSONA}-intro.mp3" 2>/dev/null || true
 fi
 
-# Boot sequence inside the pane: ASCII banner first, then venv + claude
+# Boot sequence inside the pane: ASCII banner first, then Codex
 SCRIPT_DIR_ESC="$(printf '%q' "$SCRIPT_DIR")"
+RUNNER_ESC="$(printf '%q' "$PERSIST_RUNNER")"
 tmux send-keys -t "$PANE_TARGET" "clear" Enter
 tmux send-keys -t "$PANE_TARGET" \
   "$SCRIPT_DIR_ESC/multideck-banner.sh '$CALLSIGN' '$COLOR_HEX'" Enter
-tmux send-keys -t "$PANE_TARGET" "source '$DISPATCH_KOKORO_VENV/bin/activate' 2>/dev/null" Enter
-if $SAFE; then
-  tmux send-keys -t "$PANE_TARGET" \
-    "$CLAUDE_BIN --name '$CALLSIGN' \"\$(cat '$PERSIST_PROMPT')\"" Enter
-else
-  tmux send-keys -t "$PANE_TARGET" \
-    "$CLAUDE_BIN --dangerously-skip-permissions --name '$CALLSIGN' \"\$(cat '$PERSIST_PROMPT')\"" Enter
-fi
+tmux send-keys -t "$PANE_TARGET" "$RUNNER_ESC" Enter
 
 # ---- Attach unless dashboard caller suppressed it ----
 if $ATTACH; then
   if [[ -n "${TMUX:-}" ]]; then
     tmux switch-client -t "$SESSION"
   else
-    exec tmux attach -t "$SESSION"
+    tmux attach -t "$SESSION"
+    status=$?
+    echo "tmux attach exited with status $status. Press Enter to close this window."
+    read -r _ || true
+    exit "$status"
   fi
 fi

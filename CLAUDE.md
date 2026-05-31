@@ -43,7 +43,7 @@ MultiDeck is the public distribution of a persona-driven Claude Code orchestrati
 
 - **A job board system** — `dispatch-framework/scripts/job-board.py` is a CLI for creating jobs, assigning to agents, submitting for review, running the Reviewer gate, and closing with dependency tracking. Supports per-project scoping via `--project <key>` so each connected project gets its own `dispatch-framework/state/job-board-<project>.json`.
 
-- **A reviewer process capability** — `dispatch-framework/scripts/reviewer-review.py` runs a sanitization and quality check on any job artifact. The review gate fires **automatically** when a job reaches `submitted` status — the Redline review spawns as a sub-process of the original job, with a one-loop fix window before FAIL-ESCALATE. Review prompt template at `dispatch-framework/scripts/redline-review-prompt.md`.
+- **A reviewer process capability** — `dispatch-framework/scripts/reviewer-review.py` runs a sanitization and quality check on any job artifact. The review gate fires **automatically** when a job reaches `submitted` status: Reviewer runs as a sub-process of the original job, and the producing agent gets one remediation loop before FAIL-ESCALATE. Review prompt template at `dispatch-framework/scripts/reviewer-review-prompt.md`.
 
 - **CLI tooling for adding/removing agents** — `dispatch-framework/scripts/dispatch-agent.py add` and `remove` manage the persona roster with interactive prompts, updates to `dispatch-framework/personas/personas.json`, auto-generates launch shortcuts, and keeps `set-voice.py` VOICE_MAP in sync.
 
@@ -201,7 +201,7 @@ When personas complete work on the MultiDeck project, they **auto-advance** with
 - Ambiguity that best judgment cannot resolve
 - A prior assumption proven wrong such that the work needs redirecting
 
-Otherwise the job flows through the Reviewer gate and closes. The Reviewer gate is **auto-triggered** — when a job reaches `submitted` status, a Redline review spawns automatically as a sub-process of the original job (no separate review job is created). The review is one-loop-max: PASS auto-closes the job and unblocks dependents, or one fix attempt then FAIL-ESCALATE to user. The project reviewer retains final determination of validity.
+Otherwise the job flows through the Reviewer gate and closes. The Reviewer gate is **auto-triggered** — when a job reaches `submitted` status, Reviewer runs automatically as a sub-process of the original job (no separate review job is created). The review is one-loop-max: PASS auto-closes the job and unblocks dependents, or one producer-owned remediation attempt based on Reviewer findings and alternatives, then FAIL-ESCALATE to user. Reviewer never applies fixes. The project reviewer retains final determination of validity.
 
 See `dispatch-framework/docs/JOB_BOARD.md` and `dispatch-framework/docs/REVIEW_WORKFLOW.md` for full protocol.
 
@@ -276,7 +276,7 @@ The `dispatch-framework/scripts/reviewer-review.py` script automates most of the
 - Doc question? Start with `README.md`, drill into `dispatch-framework/docs/`
 - Job board issue? `dispatch-framework/scripts/job-board.py` + `dispatch-framework/docs/JOB_BOARD.md`
 - Review gate issue? `dispatch-framework/scripts/reviewer-review.py` + `dispatch-framework/docs/REVIEW_WORKFLOW.md` (auto-triggered on submit)
-- Review prompt template? `dispatch-framework/scripts/redline-review-prompt.md`
+- Review prompt template? `dispatch-framework/scripts/reviewer-review-prompt.md`
 
 ---
 

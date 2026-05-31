@@ -61,20 +61,20 @@
     <div class="select-header">CHOOSE YOUR MODE</div>
     <div class="select-sub">// pick the runtime that drives the deck</div>
     <div class="project-grid mode-grid" id="mode-grid">
-      <div class="project-card mode-card" data-mode="opencode" data-mode-accent="cyan">
-        <div class="project-name">[ LOCAL ]</div>
-        <div class="project-path">runtime &middot; opencode + qwen3-coder:30b</div>
-        <div class="project-desc">true local. zero api cost. lives on your gpu. discipline depends entirely on the local model holding it.</div>
+      <div class="project-card mode-card" data-mode="codex" data-mode-accent="cyan">
+        <div class="project-name">[ CODEX ]</div>
+        <div class="project-path">runtime &middot; codex cli</div>
+        <div class="project-desc">current default. local workspace control, codex tools, dangerous mode follows the toggle.</div>
       </div>
-      <div class="project-card mode-card" data-mode="claude" data-mode-accent="orange">
-        <div class="project-name">[ CO-OP ]</div>
-        <div class="project-path">runtime &middot; claude code</div>
-        <div class="project-desc">cloud claude. baseline. the discipline you already trust. costs api dollars but never drifts.</div>
+      <div class="project-card mode-card" data-mode="opencode" data-mode-accent="orange">
+        <div class="project-name">[ OPENCODE ]</div>
+        <div class="project-path">runtime &middot; opencode + qwen3-coder:30b</div>
+        <div class="project-desc">legacy local path. kept for comparison while launch pointers migrate to codex.</div>
       </div>
       <div class="project-card mode-card" data-mode="vs" data-mode-accent="magenta">
         <div class="project-name">[ VS ]</div>
-        <div class="project-path">runtime &middot; opencode &harr; claude</div>
-        <div class="project-desc">same job, two runtimes, side by side. the comparator scores who held discipline. how you find out if local is ready.</div>
+        <div class="project-path">runtime &middot; codex &harr; opencode</div>
+        <div class="project-desc">same job, two runtimes, side by side. useful for migration checks.</div>
       </div>
     </div>
     <div class="hint-bar">
@@ -158,7 +158,7 @@
     <button class="back-btn" data-back="project-screen">[ ESC ] BACK</button>
     <div class="top-hud" id="top-hud">
       <div><span class="label">PROJECT:</span> <span id="hud-project">-</span></div>
-      <div><span class="label">RUNTIME:</span> <span id="hud-runtime" data-runtime="claude">CO-OP</span></div>
+      <div><span class="label">RUNTIME:</span> <span id="hud-runtime" data-runtime="codex">CODEX</span></div>
     </div>
     <div class="select-header">SELECT OPERATIVE</div>
     <div class="select-sub" id="select-sub">// scanning available agents</div>
@@ -266,6 +266,7 @@
       <button class="terminal-mic-btn" id="terminal-mic-btn" title="Click to toggle mic">[ ◉ MIC ]</button>
       <div class="gamepad-indicator gamepad-disconnected" id="gamepad-indicator" title="No gamepad detected">[ ⎮ ]</div>
       <button class="terminal-help-btn" id="tutorial-help-btn" title="Replay the gamepad walkthrough">[ ? ]</button>
+      <button class="terminal-pause-btn" id="terminal-typer-pause-btn" title="Pause hacker typer">[ PAUSE ]</button>
       <button class="terminal-new-btn" id="terminal-new-btn">[ + NEW ]</button>
       <button class="terminal-min-btn" id="terminal-min-btn">[ &minus; MIN ]</button>
     </div>

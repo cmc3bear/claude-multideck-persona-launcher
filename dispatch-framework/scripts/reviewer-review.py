@@ -51,7 +51,6 @@ CARY_MARKERS = [
     "Ledger",
     "Relay",
     "Broadside",
-    "Redline",
     "Prism",
     "Framelock",
     "Ficsit",
