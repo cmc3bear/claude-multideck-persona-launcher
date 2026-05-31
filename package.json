@@ -2,15 +2,18 @@
   "name": "claude-multideck-persona-launcher",
   "version": "0.9.2",
   "description": "MultiDeck: forkable multi-agent coordination framework for Claude Code with personas, cyberpunk launcher, Kokoro TTS, and OQE-disciplined job board",
-  "main": "dashboard/server.cjs",
+  "main": "dispatch-framework/dashboard/server.cjs",
   "scripts": {
-    "start": "node dashboard/server.cjs",
-    "dashboard": "node dashboard/server.cjs",
-    "job:list": "python scripts/job-board.py list",
-    "job:create": "python scripts/job-board.py create",
-    "agent:list": "python scripts/dispatch-agent.py list",
-    "agent:add": "python scripts/dispatch-agent.py add",
-    "review": "python scripts/reviewer-review.py"
+    "start": "node dispatch-framework/dashboard/server.cjs",
+    "dashboard": "node dispatch-framework/dashboard/server.cjs",
+    "job:list": "python dispatch-framework/scripts/job-board.py list",
+    "job:create": "python dispatch-framework/scripts/job-board.py create",
+    "agent:list": "python dispatch-framework/scripts/dispatch-agent.py list",
+    "agent:add": "python dispatch-framework/scripts/dispatch-agent.py add",
+    "review": "python dispatch-framework/scripts/reviewer-review.py",
+    "typer:source": "python dispatch-framework/hooks/hacker-typer-source.py",
+    "typer:terminal": "python dispatch-framework/hooks/hacker-typer-terminal.py",
+    "typer:launch": "powershell -ExecutionPolicy Bypass -File dispatch-framework/scripts/launch-hacker-typer.ps1"
   },
   "engines": {
     "node": ">=18.0.0"
