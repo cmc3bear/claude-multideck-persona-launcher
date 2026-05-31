@@ -5,8 +5,32 @@ All notable changes to MultiDeck will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.2] - 2026-05-31
+
+Tracking and environment-surface release.
+
+### Added
+
+- **Automation event ledger workflow.** n8n workflow source added for `Automation Event Ledger & Router`, with publish/query/ack endpoints backed by `dispatch-framework/state/automation-events.jsonl`. (`dispatch-framework/scripts/automation-event-ledger.workflow.js`)
+- **Dispatch intake ledger emission.** Dispatch intake now emits normalized `job.intake` events when webhook jobs are routed, giving intake jobs a cross-workflow tracking trail.
+
+### Changed
+
+- **Release metadata corrected to 0.9.2.** README, CHANGELOG, `VERSION`, and `package.json` now identify the current release as `0.9.2`.
 ## [Unreleased]
 
+## [0.9.2] - 2026-05-31
+
+Tracking and environment-surface release.
+
+### Added
+
+- **Automation event ledger workflow.** n8n workflow source added for `Automation Event Ledger & Router`, with publish/query/ack endpoints backed by `dispatch-framework/state/automation-events.jsonl`. (`dispatch-framework/scripts/automation-event-ledger.workflow.js`)
+- **Dispatch intake ledger emission.** Dispatch intake now emits normalized `job.intake` events when webhook jobs are routed, giving intake jobs a cross-workflow tracking trail.
+
+### Changed
+
+- **Release metadata corrected to 0.9.2.** README, CHANGELOG, `VERSION`, and `package.json` now identify the current release as `0.9.2`.
 ## [0.8.0] - 2026-05-17
 
 Minor release. Transport auto-detection, launcher keyboard, goals widget, visual job board, coord dashboard, tmux topology, OpenCode integration, lessons-learned system, WSL service wiring, and full persona roster updates.
@@ -31,6 +55,18 @@ Minor release. Transport auto-detection, launcher keyboard, goals widget, visual
 - **Dashboard styles** — launcher, lessons, live, meeting, patterns, shell, variations CSS all updated for consistency and mobile-responsive breakpoints.
 - **`personas.json`** — roster reflects current nine operatives with corrected voice keys, colors, and cwd assignments.
 
+## [0.9.2] - 2026-05-31
+
+Tracking and environment-surface release.
+
+### Added
+
+- **Automation event ledger workflow.** n8n workflow source added for `Automation Event Ledger & Router`, with publish/query/ack endpoints backed by `dispatch-framework/state/automation-events.jsonl`. (`dispatch-framework/scripts/automation-event-ledger.workflow.js`)
+- **Dispatch intake ledger emission.** Dispatch intake now emits normalized `job.intake` events when webhook jobs are routed, giving intake jobs a cross-workflow tracking trail.
+
+### Changed
+
+- **Release metadata corrected to 0.9.2.** README, CHANGELOG, `VERSION`, and `package.json` now identify the current release as `0.9.2`.
 ## [0.7.8] - 2026-05-17
 
 WSL coordination fixes and documentation. No new features — patch release.
@@ -44,6 +80,18 @@ WSL coordination fixes and documentation. No new features — patch release.
 
 - **`COORDINATION.md` Coordination Server section.** New section covering: canonical server path (`F:/03-INFRASTRUCTURE/coordination/server.py`), connectivity by transport (Windows Terminal / WSL / Steam Deck), `DISPATCH_COORD_URL` setup snippet, backslash rule, and full route table. Previously the doc covered only job board protocol with no server connectivity reference.
 
+## [0.9.2] - 2026-05-31
+
+Tracking and environment-surface release.
+
+### Added
+
+- **Automation event ledger workflow.** n8n workflow source added for `Automation Event Ledger & Router`, with publish/query/ack endpoints backed by `dispatch-framework/state/automation-events.jsonl`. (`dispatch-framework/scripts/automation-event-ledger.workflow.js`)
+- **Dispatch intake ledger emission.** Dispatch intake now emits normalized `job.intake` events when webhook jobs are routed, giving intake jobs a cross-workflow tracking trail.
+
+### Changed
+
+- **Release metadata corrected to 0.9.2.** README, CHANGELOG, `VERSION`, and `package.json` now identify the current release as `0.9.2`.
 ## [0.7.7] - 2026-05-15
 
 Integration release. Merges origin/main feature work (correction tracking pipeline, Internal Affairs persona, gamepad rebinding, gamepad tutorial, Steam Deck screenshots) with local-only operational infrastructure (dispatch-framework/ subdirectory migration, coordination server stack, now-playing widget, mobile-responsive dashboard, voice subsystem hardening).
@@ -68,6 +116,18 @@ Integration release. Merges origin/main feature work (correction tracking pipeli
 - Local main had drifted 14 commits ahead and 61 commits behind origin/main. The reset-and-replay strategy was: hard-reset local main to origin/main, then bring back local-only operational features (coordination/, hooks/, mobile CSS, now-playing widget, lessons-learned/) as a single coherent integration commit. The 13 individual local commits are preserved on the `wip/pre-reset-main` branch for archaeology.
 - Version went from local-claimed v0.7.4 (never tagged on origin) to v0.7.7 to reflect actual feature count since v0.7.3: 4 origin features (correction tracking + Internal Affairs, gamepad bindings, gamepad tutorial, screenshots) plus the local integration commit.
 
+## [0.9.2] - 2026-05-31
+
+Tracking and environment-surface release.
+
+### Added
+
+- **Automation event ledger workflow.** n8n workflow source added for `Automation Event Ledger & Router`, with publish/query/ack endpoints backed by `dispatch-framework/state/automation-events.jsonl`. (`dispatch-framework/scripts/automation-event-ledger.workflow.js`)
+- **Dispatch intake ledger emission.** Dispatch intake now emits normalized `job.intake` events when webhook jobs are routed, giving intake jobs a cross-workflow tracking trail.
+
+### Changed
+
+- **Release metadata corrected to 0.9.2.** README, CHANGELOG, `VERSION`, and `package.json` now identify the current release as `0.9.2`.
 ## [0.7.3-prerelease] - 2026-05-13
 
 Previously documented under [Unreleased] before the v0.7.7 integration. Content rolled forward as-is:
@@ -86,6 +146,18 @@ Previously documented under [Unreleased] before the v0.7.7 integration. Content 
 - **Terminal cycle-via-bumpers wiring.** `window.MultideckTerminal.cycleSession(dir)` cycles forward (+1) or back (-1) through `terminalSessions` keys with wraparound. R1/L1 listeners gate on (a) terminal panel must be open and not minimized, (b) glyph modal must not be visible, (c) at least 2 sessions exist; otherwise the press silently no-ops so it doesn't fight the modal A/B/X/Y picker or steal focus from a single session.
 - **Mic button tooltip updated.** `[ ◉ MIC ]` button title changed from "Push-to-talk (L1 on gamepad)" to "Press X (gamepad) or click to toggle mic" to reflect the new binding.
 
+## [0.9.2] - 2026-05-31
+
+Tracking and environment-surface release.
+
+### Added
+
+- **Automation event ledger workflow.** n8n workflow source added for `Automation Event Ledger & Router`, with publish/query/ack endpoints backed by `dispatch-framework/state/automation-events.jsonl`. (`dispatch-framework/scripts/automation-event-ledger.workflow.js`)
+- **Dispatch intake ledger emission.** Dispatch intake now emits normalized `job.intake` events when webhook jobs are routed, giving intake jobs a cross-workflow tracking trail.
+
+### Changed
+
+- **Release metadata corrected to 0.9.2.** README, CHANGELOG, `VERSION`, and `package.json` now identify the current release as `0.9.2`.
 ## [0.7.3] - 2026-05-13
 
 Driven by real handheld testing on a docked Steam Deck. Big Picture / Gaming Mode launch was failing several distinct ways; the kiosk Chromium crashed on missing display/auth env; touch targets and terminal font were unreadable at arm's length; the Kokoro TTS pipeline silently failed on Linux. Each ships as its own commit; together they make the Steam Deck path actually usable.
@@ -119,6 +191,18 @@ uv pip install --python "$DISPATCH_KOKORO_VENV/bin/python" \
   https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl
 ```
 
+## [0.9.2] - 2026-05-31
+
+Tracking and environment-surface release.
+
+### Added
+
+- **Automation event ledger workflow.** n8n workflow source added for `Automation Event Ledger & Router`, with publish/query/ack endpoints backed by `dispatch-framework/state/automation-events.jsonl`. (`dispatch-framework/scripts/automation-event-ledger.workflow.js`)
+- **Dispatch intake ledger emission.** Dispatch intake now emits normalized `job.intake` events when webhook jobs are routed, giving intake jobs a cross-workflow tracking trail.
+
+### Changed
+
+- **Release metadata corrected to 0.9.2.** README, CHANGELOG, `VERSION`, and `package.json` now identify the current release as `0.9.2`.
 ## [0.7.2] - 2026-05-13
 
 ### Added
@@ -126,6 +210,18 @@ uv pip install --python "$DISPATCH_KOKORO_VENV/bin/python" \
 - **Remote STT backend (`DISPATCH_WHISPER_REMOTE`)** — set this env var to a `whisper-server` URL on another machine (typically a GPU desktop on the same Tailscale network) and the deck dashboard forwards every `/stt/transcribe` request there instead of running whisper locally. Lets the deck run as a thin client for STT while using a 4090 (or any GPU box) for the actual transcription. Falls back to local warm `whisper-server` when unset. New `/stt/status` field `mode` reports `remote` / `local-warm` / `local-fallback`. Documented in `docs/REMOTE_STT.md` with Windows and Linux server setup.
 - **STT dictionary biasing (`~/.config/multideck/dictionary.txt`)** — one term per line; the dashboard reads it on each `/stt/transcribe` call and passes it as whisper's `prompt` parameter so the model biases decoding toward your acronyms, project names, and proper nouns. Soft bias (not hard), capped at whisper's ~224-token prompt limit. Template at `templates/dictionary.txt`. Loaded state visible in `/stt/status` (`dictionaryLoaded`, `dictionaryTerms`).
 
+## [0.9.2] - 2026-05-31
+
+Tracking and environment-surface release.
+
+### Added
+
+- **Automation event ledger workflow.** n8n workflow source added for `Automation Event Ledger & Router`, with publish/query/ack endpoints backed by `dispatch-framework/state/automation-events.jsonl`. (`dispatch-framework/scripts/automation-event-ledger.workflow.js`)
+- **Dispatch intake ledger emission.** Dispatch intake now emits normalized `job.intake` events when webhook jobs are routed, giving intake jobs a cross-workflow tracking trail.
+
+### Changed
+
+- **Release metadata corrected to 0.9.2.** README, CHANGELOG, `VERSION`, and `package.json` now identify the current release as `0.9.2`.
 ## [0.7.1] - 2026-05-13
 
 ### Added
@@ -134,6 +230,18 @@ uv pip install --python "$DISPATCH_KOKORO_VENV/bin/python" \
 - **Terminal width sync** — `dashboard/scripts/launcher-terminal.js` now passes the live xterm `cols` and `rows` as query params on the `/terminal/ws` WebSocket connection, and `dashboard/server.cjs` sets `COLUMNS` and `LINES` env vars plus runs `stty cols rows` inside the PTY before exec'ing `claude`. Long lines now wrap to the visible width of the launcher's terminal panel instead of running off the right edge.
 - **Bundled Node 22 in Steamworks tarball** — `packaging/steamworks/build-tarball.sh` now downloads pinned Node 22.11.0 Linux x64 from nodejs.org/dist and stages `bin/node` inside the depot. The `bin/multideck` entry script prefers the bundled Node over system Node so depot-installed users never depend on host Node availability. Skip with `--skip-node` for faster dev builds.
 
+## [0.9.2] - 2026-05-31
+
+Tracking and environment-surface release.
+
+### Added
+
+- **Automation event ledger workflow.** n8n workflow source added for `Automation Event Ledger & Router`, with publish/query/ack endpoints backed by `dispatch-framework/state/automation-events.jsonl`. (`dispatch-framework/scripts/automation-event-ledger.workflow.js`)
+- **Dispatch intake ledger emission.** Dispatch intake now emits normalized `job.intake` events when webhook jobs are routed, giving intake jobs a cross-workflow tracking trail.
+
+### Changed
+
+- **Release metadata corrected to 0.9.2.** README, CHANGELOG, `VERSION`, and `package.json` now identify the current release as `0.9.2`.
 ## [0.7.0] - 2026-05-13
 
 ### Added
@@ -175,6 +283,18 @@ uv pip install --python "$DISPATCH_KOKORO_VENV/bin/python" \
 
 ---
 
+## [0.9.2] - 2026-05-31
+
+Tracking and environment-surface release.
+
+### Added
+
+- **Automation event ledger workflow.** n8n workflow source added for `Automation Event Ledger & Router`, with publish/query/ack endpoints backed by `dispatch-framework/state/automation-events.jsonl`. (`dispatch-framework/scripts/automation-event-ledger.workflow.js`)
+- **Dispatch intake ledger emission.** Dispatch intake now emits normalized `job.intake` events when webhook jobs are routed, giving intake jobs a cross-workflow tracking trail.
+
+### Changed
+
+- **Release metadata corrected to 0.9.2.** README, CHANGELOG, `VERSION`, and `package.json` now identify the current release as `0.9.2`.
 ## [0.6.0] - 2026-05-11
 
 ### Added
@@ -202,6 +322,18 @@ uv pip install --python "$DISPATCH_KOKORO_VENV/bin/python" \
 
 ---
 
+## [0.9.2] - 2026-05-31
+
+Tracking and environment-surface release.
+
+### Added
+
+- **Automation event ledger workflow.** n8n workflow source added for `Automation Event Ledger & Router`, with publish/query/ack endpoints backed by `dispatch-framework/state/automation-events.jsonl`. (`dispatch-framework/scripts/automation-event-ledger.workflow.js`)
+- **Dispatch intake ledger emission.** Dispatch intake now emits normalized `job.intake` events when webhook jobs are routed, giving intake jobs a cross-workflow tracking trail.
+
+### Changed
+
+- **Release metadata corrected to 0.9.2.** README, CHANGELOG, `VERSION`, and `package.json` now identify the current release as `0.9.2`.
 ## [0.5.0] - 2026-05-02
 
 ### Added
@@ -223,6 +355,18 @@ uv pip install --python "$DISPATCH_KOKORO_VENV/bin/python" \
 
 ---
 
+## [0.9.2] - 2026-05-31
+
+Tracking and environment-surface release.
+
+### Added
+
+- **Automation event ledger workflow.** n8n workflow source added for `Automation Event Ledger & Router`, with publish/query/ack endpoints backed by `dispatch-framework/state/automation-events.jsonl`. (`dispatch-framework/scripts/automation-event-ledger.workflow.js`)
+- **Dispatch intake ledger emission.** Dispatch intake now emits normalized `job.intake` events when webhook jobs are routed, giving intake jobs a cross-workflow tracking trail.
+
+### Changed
+
+- **Release metadata corrected to 0.9.2.** README, CHANGELOG, `VERSION`, and `package.json` now identify the current release as `0.9.2`.
 ## [0.4.0] - 2026-04-21
 
 ### Added
@@ -247,6 +391,18 @@ uv pip install --python "$DISPATCH_KOKORO_VENV/bin/python" \
 
 ---
 
+## [0.9.2] - 2026-05-31
+
+Tracking and environment-surface release.
+
+### Added
+
+- **Automation event ledger workflow.** n8n workflow source added for `Automation Event Ledger & Router`, with publish/query/ack endpoints backed by `dispatch-framework/state/automation-events.jsonl`. (`dispatch-framework/scripts/automation-event-ledger.workflow.js`)
+- **Dispatch intake ledger emission.** Dispatch intake now emits normalized `job.intake` events when webhook jobs are routed, giving intake jobs a cross-workflow tracking trail.
+
+### Changed
+
+- **Release metadata corrected to 0.9.2.** README, CHANGELOG, `VERSION`, and `package.json` now identify the current release as `0.9.2`.
 ## [0.3.0] - 2026-04-18
 
 ### Added
@@ -258,6 +414,18 @@ uv pip install --python "$DISPATCH_KOKORO_VENV/bin/python" \
 
 ---
 
+## [0.9.2] - 2026-05-31
+
+Tracking and environment-surface release.
+
+### Added
+
+- **Automation event ledger workflow.** n8n workflow source added for `Automation Event Ledger & Router`, with publish/query/ack endpoints backed by `dispatch-framework/state/automation-events.jsonl`. (`dispatch-framework/scripts/automation-event-ledger.workflow.js`)
+- **Dispatch intake ledger emission.** Dispatch intake now emits normalized `job.intake` events when webhook jobs are routed, giving intake jobs a cross-workflow tracking trail.
+
+### Changed
+
+- **Release metadata corrected to 0.9.2.** README, CHANGELOG, `VERSION`, and `package.json` now identify the current release as `0.9.2`.
 ## [0.2.0] - 2026-04-16
 
 ### Added
@@ -270,6 +438,18 @@ uv pip install --python "$DISPATCH_KOKORO_VENV/bin/python" \
 
 ---
 
+## [0.9.2] - 2026-05-31
+
+Tracking and environment-surface release.
+
+### Added
+
+- **Automation event ledger workflow.** n8n workflow source added for `Automation Event Ledger & Router`, with publish/query/ack endpoints backed by `dispatch-framework/state/automation-events.jsonl`. (`dispatch-framework/scripts/automation-event-ledger.workflow.js`)
+- **Dispatch intake ledger emission.** Dispatch intake now emits normalized `job.intake` events when webhook jobs are routed, giving intake jobs a cross-workflow tracking trail.
+
+### Changed
+
+- **Release metadata corrected to 0.9.2.** README, CHANGELOG, `VERSION`, and `package.json` now identify the current release as `0.9.2`.
 ## [0.1.2] - 2026-04-15
 
 ### Added
@@ -293,6 +473,18 @@ uv pip install --python "$DISPATCH_KOKORO_VENV/bin/python" \
 
 ---
 
+## [0.9.2] - 2026-05-31
+
+Tracking and environment-surface release.
+
+### Added
+
+- **Automation event ledger workflow.** n8n workflow source added for `Automation Event Ledger & Router`, with publish/query/ack endpoints backed by `dispatch-framework/state/automation-events.jsonl`. (`dispatch-framework/scripts/automation-event-ledger.workflow.js`)
+- **Dispatch intake ledger emission.** Dispatch intake now emits normalized `job.intake` events when webhook jobs are routed, giving intake jobs a cross-workflow tracking trail.
+
+### Changed
+
+- **Release metadata corrected to 0.9.2.** README, CHANGELOG, `VERSION`, and `package.json` now identify the current release as `0.9.2`.
 ## [0.1.1] - 2026-04-15
 
 ### Added
@@ -306,6 +498,18 @@ uv pip install --python "$DISPATCH_KOKORO_VENV/bin/python" \
 
 ---
 
+## [0.9.2] - 2026-05-31
+
+Tracking and environment-surface release.
+
+### Added
+
+- **Automation event ledger workflow.** n8n workflow source added for `Automation Event Ledger & Router`, with publish/query/ack endpoints backed by `dispatch-framework/state/automation-events.jsonl`. (`dispatch-framework/scripts/automation-event-ledger.workflow.js`)
+- **Dispatch intake ledger emission.** Dispatch intake now emits normalized `job.intake` events when webhook jobs are routed, giving intake jobs a cross-workflow tracking trail.
+
+### Changed
+
+- **Release metadata corrected to 0.9.2.** README, CHANGELOG, `VERSION`, and `package.json` now identify the current release as `0.9.2`.
 ## [0.1.0] - 2026-04-15
 
 ### Added
